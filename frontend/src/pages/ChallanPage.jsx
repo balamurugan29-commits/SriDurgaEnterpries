@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { fetchItems, fetchItemByCode, fetchNextChallanNumber, createChallan, updateChallan, fetchCustomers, createCustomer, updateCustomer, getIndianFySuffix, formatUnitWithQty, fetchCertificates } from '../services/api';
-import { ChallanPrintModal } from '../components/ChallanPrintModal';
+import { printTaxInvoiceDirect } from '../utils/taxInvoicePrint';
 import { Toast } from '../components/Toast';
 import { FileSpreadsheet, Plus, Trash2, Printer, Save, Zap, Edit3, X, RefreshCw, ShieldCheck, Building2, HelpCircle, CheckCircle2, XCircle, RotateCcw, ChevronDown } from 'lucide-react';
 
@@ -209,8 +209,11 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [vendorCode, setVendorCode] = useState('253540');
-  const [poNumber, setPoNumber] = useState('');
+  const [vendorCode, setVendorCode] = useState('840305');
+  const [contractNo, setContractNo] = useState('9010038288');
+  const [contractPeriod, setContractPeriod] = useState('01.05.2024 to 30.04.2027');
+  const [bgNo, setBgNo] = useState('8110IPEBG240001  Validity Upto : 30.09.2027');
+  const [poNumber, setPoNumber] = useState('5060173862');
   const [poDate, setPoDate] = useState('');
   const [epfCode, setEpfCode] = useState('PC 1758');
   const [esiCode, setEsiCode] = useState('55000426770000602');
@@ -219,8 +222,8 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
   const [stateCode, setStateCode] = useState('Puducherry (34)');
   const [customerPan, setCustomerPan] = useState('');
   const [customerGstin, setCustomerGstin] = useState('');
-  const [customerStateCode, setCustomerStateCode] = useState('PUDUCHERRY (34)');
-  const [sacCode, setSacCode] = useState('995464');
+  const [customerStateCode, setCustomerStateCode] = useState('TAMILNADU (33)');
+  const [sacCode, setSacCode] = useState('995469');
   const [gstPercent, setGstPercent] = useState('18');
   const [equipmentHeader, setEquipmentHeader] = useState('');
 
@@ -229,7 +232,6 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
     { serialNumber: 1, itemCode: '', description: '', quantity: 1, unit: 'No', rate: 0, amount: 0, fetched: false }
   ]);
 
-  const [printModalOpen, setPrintModalOpen] = useState(false);
   const [savedChallan, setSavedChallan] = useState(null);
   const [saving, setSaving] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
@@ -890,20 +892,23 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
       customerName: trimmedCustName,
       customerAddress: customerAddress.trim(),
       customerPhone: customerPhone.trim(),
-      vendorCode,
-      poNumber,
-      poDate,
-      epfCode,
-      esiCode,
-      gstin,
-      pan,
-      stateCode,
+      vendorCode: vendorCode.trim(),
+      contractNo: contractNo.trim(),
+      contractPeriod: contractPeriod.trim(),
+      bgNo: bgNo.trim(),
+      poNumber: poNumber.trim(),
+      poDate: poDate || null,
+      epfCode: epfCode.trim(),
+      esiCode: esiCode.trim(),
+      gstin: gstin.trim(),
+      pan: pan.trim(),
+      stateCode: stateCode.trim(),
       customerPan: customerPan.trim(),
       customerGstin: customerGstin.trim(),
       customerStateCode: customerStateCode.trim(),
-      sacCode,
+      sacCode: sacCode.trim(),
       gstPercent: Number(gstPercent),
-      equipmentHeader,
+      equipmentHeader: equipmentHeader.trim(),
       totalAmount: grossTotalAmount,
       items: validItems.map(i => ({
         serialNumber: i.serialNumber,
@@ -933,10 +938,10 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
       setHasDraft(false);
 
       if (shouldPrint) {
-        setPrintModalOpen(true);
-      } else {
-        resetFormToNewBill();
+        // Direct Chrome Print with exact matching format - Zero popup/modal!
+        printTaxInvoiceDirect(result || challanData);
       }
+      resetFormToNewBill();
     } catch (err) {
       if (err.message && err.message.toLowerCase().includes('not found')) {
         setToast({ message: 'The Tax Invoice you are editing was not found in the database. Switched to New Invoice mode.', type: 'error' });
@@ -948,11 +953,6 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleClosePrintModal = () => {
-    setPrintModalOpen(false);
-    resetFormToNewBill();
   };
 
   const displayChallanNumber = parseChallanString(challanNumber);
@@ -1316,6 +1316,38 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
             />
           </div>
 
+          {/* Contract No & Contract Period */}
+          <div>
+            <label className="form-label">Contract Number</label>
+            <input
+              type="text"
+              className="form-input"
+              value={contractNo}
+              onChange={e => setContractNo(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="form-label">Contract Period (C. Period)</label>
+            <input
+              type="text"
+              className="form-input"
+              value={contractPeriod}
+              onChange={e => setContractPeriod(e.target.value)}
+            />
+          </div>
+
+          {/* Bank Guarantee (B.G. No) */}
+          <div style={{ gridColumn: 'span 2' }}>
+            <label className="form-label">B.G. Number & Validity</label>
+            <input
+              type="text"
+              className="form-input"
+              value={bgNo}
+              onChange={e => setBgNo(e.target.value)}
+            />
+          </div>
+
           {/* Equipment Header Description */}
           <div style={{ gridColumn: 'span 2' }}>
             <label className="form-label">Equipment / Job Scope Header</label>
@@ -1562,12 +1594,6 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
         </div>
 
       </div>
-
-      <ChallanPrintModal
-        isOpen={printModalOpen}
-        onClose={handleClosePrintModal}
-        challan={savedChallan}
-      />
 
       {/* WCC Selection Modal */}
       {wccModalOpen && (

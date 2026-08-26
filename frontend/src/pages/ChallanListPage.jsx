@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchChallans, deleteChallan, calculateChallanTotalAmount } from '../services/api';
-import { ChallanPrintModal } from '../components/ChallanPrintModal';
+import { printTaxInvoiceDirect } from '../utils/taxInvoicePrint';
 import { MultiInvoiceExportModal } from '../components/MultiInvoiceExportModal';
 import { ExportDesignerModal } from '../components/ExportDesignerModal';
 import { Toast } from '../components/Toast';
@@ -385,10 +385,10 @@ export const ChallanListPage = ({ onEditChallan }) => {
                           </button>
                           
                           <button 
-                            onClick={() => handleOpenPrint(challan)} 
+                            onClick={() => printTaxInvoiceDirect(challan)} 
                             className="btn btn-primary" 
                             style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }} 
-                            title="View & Print Tax Invoice"
+                            title="Direct Print Tax Invoice"
                           >
                             <Printer size={13} /> Print
                           </button>
@@ -411,13 +411,6 @@ export const ChallanListPage = ({ onEditChallan }) => {
           </table>
         </div>
       </div>
-
-      {/* Single Challan Print Modal */}
-      <ChallanPrintModal
-        isOpen={printModalOpen}
-        onClose={() => setPrintModalOpen(false)}
-        challan={selectedChallan}
-      />
 
       {/* Multi-Invoice Batch Export / Multipage PDF Print Modal (1 Invoice Per Page) */}
       <MultiInvoiceExportModal
