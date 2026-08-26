@@ -72,8 +72,9 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
               .invoice-page {
                 border: 2px solid #000000 !important;
                 padding: 8mm !important;
-                width: 100% !important;
-                min-height: 295mm !important;
+                width: 210mm !important;
+                height: 297mm !important;
+                box-sizing: border-box !important;
                 background: #ffffff !important;
                 color: #000000 !important;
                 display: flex !important;
@@ -81,6 +82,7 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                 justify-content: space-between !important;
                 page-break-after: always !important;
                 break-after: page !important;
+                overflow: hidden !important;
               }
               .invoice-page:last-child {
                 page-break-after: avoid !important;
@@ -247,8 +249,9 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
           .invoice-page {
             border: 2px solid #000000 !important;
             padding: 8mm !important;
-            width: 100% !important;
-            min-height: 295mm !important;
+            width: 210mm !important;
+            height: 297mm !important;
+            box-sizing: border-box !important;
             background: #ffffff !important;
             color: #000000 !important;
             display: flex !important;
@@ -257,6 +260,7 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
             page-break-after: always !important;
             break-after: page !important;
             margin-bottom: 0 !important;
+            overflow: hidden !important;
           }
           .invoice-page:last-child {
             page-break-after: avoid !important;
@@ -346,10 +350,12 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                     background: '#ffffff',
                     color: '#000000',
                     boxSizing: 'border-box',
-                    minHeight: '282mm',
+                    width: '210mm',
+                    height: '297mm',
                     display: 'flex',
                     flexDirection: 'column',
-                    justifyContent: 'space-between'
+                    justifyContent: 'space-between',
+                    overflow: 'hidden'
                   }}
                 >
                   <div>
