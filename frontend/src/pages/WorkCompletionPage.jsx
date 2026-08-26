@@ -131,7 +131,7 @@ export const WorkCompletionPage = ({ editingCertificate, onCancelEdit }) => {
   };
 
   // RC Item No Change & Auto-fetch from Item Master
-  const handleRcItemChange = async (index, code) => {
+  const handleRcItemChange = (index, code) => {
     const updated = [...formData.items];
     const trimmedCode = (code || '').trim();
     updated[index].rcItemNo = trimmedCode;
@@ -141,15 +141,9 @@ export const WorkCompletionPage = ({ editingCertificate, onCancelEdit }) => {
       return;
     }
 
-    let matchedItem = masterItems.find(
+    const matchedItem = masterItems.find(
       i => i.itemCode && i.itemCode.toLowerCase().trim() === trimmedCode.toLowerCase().trim()
     );
-
-    if (!matchedItem) {
-      try {
-        matchedItem = await fetchItemByCode(trimmedCode);
-      } catch (e) {}
-    }
 
     if (matchedItem) {
       updated[index].description = matchedItem.description || updated[index].description;
@@ -314,20 +308,13 @@ export const WorkCompletionPage = ({ editingCertificate, onCancelEdit }) => {
                 <td>
                   <input 
                     type="text" 
-                    list={`rc-items-${type}-${idx}`} 
+                    list="rc-master-items-datalist" 
                     className="form-input" 
                     style={{ fontWeight: 700, color: type === 'SERVICE' ? '#fbbf24' : '#34d399' }} 
                     placeholder="Select / Type RC Item" 
                     value={item.rcItemNo || ''} 
                     onChange={e => handleRcItemChange(item.mainIndex, e.target.value)} 
                   />
-                  <datalist id={`rc-items-${type}-${idx}`}>
-                    {masterItems.map(m => (
-                      <option key={m.id} value={m.itemCode}>
-                        {m.description ? m.description.slice(0, 45) + '...' : ''}
-                      </option>
-                    ))}
-                  </datalist>
                 </td>
                 <td>
                   <textarea 
@@ -806,6 +793,14 @@ export const WorkCompletionPage = ({ editingCertificate, onCancelEdit }) => {
         certificate={savedCertificate} 
       />
 
+      {/* Shared Datalist for Performance Optimization */}
+      <datalist id="rc-master-items-datalist">
+        {masterItems.map(m => (
+          <option key={m.id} value={m.itemCode}>
+            {m.description ? m.description.slice(0, 45) + '...' : ''}
+          </option>
+        ))}
+      </datalist>
     </div>
   );
 };

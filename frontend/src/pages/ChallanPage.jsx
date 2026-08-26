@@ -459,7 +459,7 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
   };
 
   // SELECT or DESELECT ITEM CODE Workflow (Auto-Fetches Unit from Item Master!)
-  const handleItemCodeChange = async (index, inputCode) => {
+  const handleItemCodeChange = (index, inputCode) => {
     const updated = [...lineItems];
     const code = (inputCode || '').trim().toUpperCase();
     updated[index].itemCode = code;
@@ -471,12 +471,7 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
       return;
     }
 
-    let foundMasterItem = masterItems.find(i => i.itemCode.toUpperCase() === code);
-    if (!foundMasterItem) {
-      try {
-        foundMasterItem = await fetchItemByCode(code);
-      } catch (e) {}
-    }
+    const foundMasterItem = masterItems.find(i => i.itemCode.toUpperCase() === code);
 
     if (foundMasterItem) {
       const baseRate = Number(foundMasterItem.rate) || 0;
@@ -507,6 +502,7 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
       }
     } else {
       updated[index].fetched = false;
+      setLineItems(updated);
     }
   };
 
@@ -1177,20 +1173,13 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
                     <td>
                       <input
                         type="text"
-                        list={`items-list-${idx}`}
+                        list="master-items-datalist"
                         className="form-input"
                         style={{ padding: '0.5rem 0.65rem', fontSize: '0.85rem', fontWeight: 700, color: item.fetched ? '#34d399' : '#818cf8' }}
                         placeholder="Select / Type Code"
                         value={item.itemCode}
                         onChange={e => handleItemCodeChange(idx, e.target.value)}
                       />
-                      <datalist id={`items-list-${idx}`}>
-                        {masterItems.map(m => (
-                          <option key={m.id} value={m.itemCode}>
-                            {m.description ? m.description.slice(0, 45) + '...' : ''} (Unit: {m.unit || 'No'}, Rate: ₹{m.rate}{m.serviceCharge > 0 ? ` + SC: ₹${m.serviceCharge}` : ''})
-                          </option>
-                        ))}
-                      </datalist>
                     </td>
 
                     {/* Description (Supports Multiline Text & Unlimited Specifications) */}
@@ -1559,6 +1548,15 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
           </div>
         </div>
       )}
+
+      {/* Shared Datalist for Performance Optimization */}
+      <datalist id="master-items-datalist">
+        {masterItems.map(m => (
+          <option key={m.id} value={m.itemCode}>
+            {m.description ? m.description.slice(0, 45) + '...' : ''} (Unit: {m.unit || 'No'}, Rate: ₹{m.rate}{m.serviceCharge > 0 ? ` + SC: ₹${m.serviceCharge}` : ''})
+          </option>
+        ))}
+      </datalist>
     </div>
   );
 };
