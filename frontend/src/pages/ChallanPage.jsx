@@ -1173,7 +1173,7 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
                 type="text"
                 list="customer-suggestions"
                 className="form-input"
-                style={{ fontWeight: 600, color: '#ffffff', paddingRight: '2rem' }}
+                style={{ fontWeight: 600, color: 'var(--text-main)', paddingRight: '2rem' }}
                 placeholder="e.g. M/s, Ocean Sparkle Ltd, Karaikal Port Pvt., Ltd."
                 value={customerName}
                 onChange={e => handleCustomerNameChange(e.target.value)}

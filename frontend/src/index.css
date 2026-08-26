@@ -122,6 +122,14 @@ body {
   color: var(--text-main);
 }
 
+[data-theme="light"] .form-input,
+[data-theme="light"] input,
+[data-theme="light"] textarea,
+[data-theme="light"] select {
+  color: var(--text-main) !important;
+  background-color: var(--input-bg);
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   letter-spacing: -0.02em;
