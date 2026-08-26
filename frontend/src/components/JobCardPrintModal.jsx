@@ -127,10 +127,7 @@ export const JobCardPrintModal = ({ isOpen, onClose, jobCard }) => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {/* Logo Icon */}
                 <div style={{ width: '42px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="40" height="40" viewBox="0 0 100 100" fill="none" stroke="#000" strokeWidth="8" strokeLinecap="round">
-                    <path d="M 50 15 C 30 15, 25 35, 45 45 C 70 55, 65 85, 40 85 C 20 85, 20 65, 35 65" />
-                    <circle cx="50" cy="12" r="6" fill="#000" />
-                  </svg>
+                  <img src="/logo.jpg" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </div>
 
                 <h1 style={{ fontSize: '26px', fontWeight: '900', color: '#000', margin: 0, letterSpacing: '0.5px', fontFamily: 'Georgia, serif' }}>
