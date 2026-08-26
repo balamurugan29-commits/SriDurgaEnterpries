@@ -148,15 +148,22 @@ export const GatePassPrintModal = ({ isOpen, onClose, gatePass }) => {
               </div>
             </div>
 
-            {/* Business Logo Header */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '12px' }}>
-              <img src="/logo.jpg" alt="Logo" style={{ height: '48px', marginBottom: '4px', objectFit: 'contain' }} />
-              <div style={{ fontSize: '24px', fontWeight: 'bold', fontFamily: 'Georgia, serif', letterSpacing: '1px', marginBottom: '2px' }}>
-                Sri Durga Enterprises
+            {/* Business Logo Header Row */}
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+              {/* Logo on the left corner */}
+              <div style={{ width: '80px', display: 'flex', justifyContent: 'flex-start' }}>
+                <img src="/logo.jpg" alt="Logo" style={{ height: '55px', objectFit: 'contain' }} />
               </div>
-              <div style={{ fontSize: '11px', lineHeight: '1.3' }}>
-                No.10, V.G.Nagar Kovilpathu, Karaikal - 609 602. U.T. of Puducherry.<br />
-                Cell : 98424 92946
+              
+              {/* Company Details centered */}
+              <div style={{ flex: 1, textAlign: 'center', marginRight: '80px' }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', fontFamily: 'Georgia, serif', letterSpacing: '1px', marginBottom: '2px' }}>
+                  Sri Durga Enterprises
+                </div>
+                <div style={{ fontSize: '11px', lineHeight: '1.3' }}>
+                  No.10, V.G.Nagar Kovilpathu, Karaikal - 609 602. U.T. of Puducherry.<br />
+                  Cell : 98424 92946
+                </div>
               </div>
             </div>
 
