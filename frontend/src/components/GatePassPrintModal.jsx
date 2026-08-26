@@ -151,12 +151,12 @@ export const GatePassPrintModal = ({ isOpen, onClose, gatePass }) => {
             {/* Business Logo Header Row */}
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
               {/* Logo on the left corner */}
-              <div style={{ width: '80px', display: 'flex', justifyContent: 'flex-start' }}>
+              <div style={{ width: '100px', display: 'flex', justifyContent: 'center' }}>
                 <img src="/logo.jpg" alt="Logo" style={{ height: '55px', objectFit: 'contain' }} />
               </div>
               
               {/* Company Details centered */}
-              <div style={{ flex: 1, textAlign: 'center', marginRight: '80px' }}>
+              <div style={{ flex: 1, textAlign: 'center', marginRight: '100px' }}>
                 <div style={{ fontSize: '24px', fontWeight: 'bold', fontFamily: 'Georgia, serif', letterSpacing: '1px', marginBottom: '2px' }}>
                   Sri Durga Enterprises
                 </div>
