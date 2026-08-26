@@ -34,7 +34,7 @@ function numberToWordsINR(amount) {
 }
 
 export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
-  const [copyType, setCopyType] = React.useState('OFFICE COPY');
+  const [copyType, setCopyType] = React.useState('ORIGINAL');
 
   if (!isOpen || !challan) return null;
 
@@ -276,11 +276,9 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                   outline: 'none'
                 }}
               >
-                <option value="ORIGINAL FOR BUYER">Original for Buyer</option>
-                <option value="DUPLICATE FOR TRANSPORTER">Duplicate for Transporter</option>
-                <option value="TRIPLICATE FOR ASSESSEE">Triplicate for Assessee</option>
+                <option value="ORIGINAL">Original</option>
+                <option value="DUPLICATE">Duplicate</option>
                 <option value="OFFICE COPY">Office Copy</option>
-                <option value="EXTRA COPY">Extra Copy</option>
               </select>
             </div>
 
