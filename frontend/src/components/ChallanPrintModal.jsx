@@ -64,6 +64,8 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                 font-family: Arial, sans-serif;
                 background: #ffffff;
                 color: #000000;
+                margin: 0 !important;
+                padding: 0 !important;
               }
               #invoice-print-area {
                 width: 100% !important;
@@ -87,6 +89,10 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
               .invoice-page:last-child {
                 page-break-after: avoid !important;
                 break-after: avoid !important;
+              }
+              @page {
+                size: A4 portrait;
+                margin: 0 !important;
               }
             </style>
           </head>
@@ -151,16 +157,16 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
     i => i.itemCode && i.itemCode.trim() !== '' && i.itemCode.trim().toUpperCase() !== 'CUSTOM'
   );
 
-  // Pagination Chunking Logic matching screenshots
+  // Pagination Chunking Logic to match user's physical PDF screenshots
   const chunkItems = (itemList) => {
     const pages = [];
     let remaining = [...itemList];
     
-    // Conservative limits to ensure browser never breaks summary blocks
+    // exact match bounds from screenshots
     const SINGLE_PAGE_MAX = 18;
-    const PAGE_1_MAX = 22;
-    const PAGE_2_MAX = 20;
-    const INTERMEDIATE_MAX = 24;
+    const PAGE_1_MAX = 30;
+    const PAGE_2_MAX = 25;
+    const INTERMEDIATE_MAX = 30;
     
     if (remaining.length <= SINGLE_PAGE_MAX) {
       pages.push(remaining);
@@ -211,12 +217,12 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
     for (let i = 0; i < count; i++) {
       rows.push(
         <tr key={`empty-${i}`} style={{ height: '22px' }}>
-          <td style={{ padding: '4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>
-          {hasAnyItemCode && <td style={{ padding: '4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>}
-          <td style={{ padding: '4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>
-          <td style={{ padding: '4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>
-          <td style={{ padding: '4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>
-          <td style={{ padding: '4px', borderBottom: 'none' }}>&nbsp;</td>
+          <td style={{ padding: '3px 4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>
+          {hasAnyItemCode && <td style={{ padding: '3px 4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>}
+          <td style={{ padding: '3px 4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>
+          <td style={{ padding: '3px 4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>
+          <td style={{ padding: '3px 4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>
+          <td style={{ padding: '3px 4px', borderBottom: 'none' }}>&nbsp;</td>
         </tr>
       );
     }
@@ -329,13 +335,11 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
               const pTotal = getPageTotalAmount(pageIdx);
 
               // Calculate spacing / empty rows needed for table height alignment
-              let targetRows = 24; // Default intermediate
+              let targetRows = 30; // Default intermediate / page 1
               if (pages.length === 1) {
                 targetRows = 18;
-              } else if (pageIdx === 0) {
-                targetRows = 22;
               } else if (pageIdx === pages.length - 1) {
-                targetRows = 20;
+                targetRows = 25;
               }
               const emptyRowsCount = Math.max(0, targetRows - pageItems.length);
 
@@ -398,51 +402,51 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', borderBottom: '1px solid #000' }}>
                         <tbody>
                           <tr style={{ borderBottom: '1px solid #000' }}>
-                            <td style={{ width: '100px', padding: '3px 6px', fontWeight: 'bold' }}>Invoice No.</td>
+                            <td style={{ width: '100px', padding: '3px 6px', fontWeight: 'bold', backgroundColor: '#f2f2f2' }}>Invoice No.</td>
                             <td style={{ width: '230px', padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>{challan.challanNumber}</td>
-                            <td style={{ width: '90px', padding: '3px 6px', fontWeight: 'bold' }}>Date :</td>
+                            <td style={{ width: '90px', padding: '3px 6px', fontWeight: 'bold', backgroundColor: '#f2f2f2' }}>Date :</td>
                             <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{formattedDate}</td>
                           </tr>
                           <tr style={{ borderBottom: '1px solid #000' }}>
-                            <td style={{ padding: '3px 6px' }}>Contract No.</td>
+                            <td style={{ padding: '3px 6px', backgroundColor: '#f2f2f2' }}>Contract No.</td>
                             <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>9010038288</td>
-                            <td style={{ padding: '3px 6px' }}>Page</td>
+                            <td style={{ padding: '3px 6px', backgroundColor: '#f2f2f2' }}>Page</td>
                             <td style={{ padding: '3px 6px' }}>1 of {pages.length}</td>
                           </tr>
                           <tr style={{ borderBottom: '1px solid #000' }}>
-                            <td style={{ padding: '3px 6px' }}>C. Period</td>
+                            <td style={{ padding: '3px 6px', backgroundColor: '#f2f2f2' }}>C. Period</td>
                             <td style={{ padding: '3px 6px', borderRight: '1px solid #000' }}>01.05.2024 to 30.04.2027</td>
-                            <td style={{ padding: '3px 6px' }}>Vendor Code</td>
+                            <td style={{ padding: '3px 6px', backgroundColor: '#f2f2f2' }}>Vendor Code</td>
                             <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{challan.vendorCode || '840305'}</td>
                           </tr>
                           <tr style={{ borderBottom: '1px solid #000' }}>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>P.O. No.</td>
+                            <td style={{ padding: '3px 6px', fontWeight: 'bold', backgroundColor: '#f2f2f2' }}>P.O. No.</td>
                             <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '10px', wordBreak: 'break-all' }}>{challan.poNumber || '5060173862'}</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>GSTIN</td>
+                            <td style={{ padding: '3px 6px', fontWeight: 'bold', backgroundColor: '#f2f2f2' }}>GSTIN</td>
                             <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{challan.gstin || '34ABDFS4476N1ZN'}</td>
                           </tr>
                           <tr style={{ borderBottom: '1px solid #000' }}>
-                            <td style={{ padding: '3px 6px' }}>B.G. NO.</td>
+                            <td style={{ padding: '3px 6px', backgroundColor: '#f2f2f2' }}>B.G. NO.</td>
                             <td style={{ padding: '3px 6px', borderRight: '1px solid #000' }}>8110IPEBG240001 Validity Upto : 30.09.2027</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>PAN</td>
+                            <td style={{ padding: '3px 6px', fontWeight: 'bold', backgroundColor: '#f2f2f2' }}>PAN</td>
                             <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{challan.pan || 'ABDFS4476N'}</td>
                           </tr>
                           <tr style={{ borderBottom: '1px solid #000' }}>
-                            <td style={{ padding: '3px 6px' }}>EPF Code</td>
+                            <td style={{ padding: '3px 6px', backgroundColor: '#f2f2f2' }}>EPF Code</td>
                             <td style={{ padding: '3px 6px', borderRight: '1px solid #000' }}>{challan.epfCode || 'PC 1758'}</td>
-                            <td style={{ padding: '3px 6px' }}>State Code</td>
+                            <td style={{ padding: '3px 6px', backgroundColor: '#f2f2f2' }}>State Code</td>
                             <td style={{ padding: '3px 6px' }}>{challan.stateCode || 'Puducherry (34)'}</td>
                           </tr>
                           <tr style={{ borderBottom: '1px solid #000' }}>
-                            <td style={{ padding: '3px 6px' }}>ESI CODE</td>
+                            <td style={{ padding: '3px 6px', backgroundColor: '#f2f2f2' }}>ESI CODE</td>
                             <td style={{ padding: '3px 6px', borderRight: '1px solid #000' }}>{challan.esiCode || '55000426770000602'}</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>Invoice Value</td>
+                            <td style={{ padding: '3px 6px', fontWeight: 'bold', backgroundColor: '#f2f2f2' }}>Invoice Value</td>
                             <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>Rs. {grossAmount.toFixed(2)}</td>
                           </tr>
 
                           {/* Billed To Row */}
                           <tr>
-                            <td style={{ padding: '4px 6px', fontWeight: 'bold', verticalAlign: 'top' }}>BILLED TO</td>
+                            <td style={{ padding: '4px 6px', fontWeight: 'bold', verticalAlign: 'top', backgroundColor: '#f2f2f2' }}>BILLED TO</td>
                             <td style={{ padding: '4px 6px', borderRight: '1px solid #000', verticalAlign: 'top' }}>
                               <div style={{ fontWeight: 'bold' }}>{challan.customerName || ''}</div>
                               <div style={{ whiteSpace: 'pre-line' }}>{challan.customerAddress || ''}</div>
@@ -451,11 +455,11 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
                                 <tbody>
                                   <tr style={{ borderBottom: '1px solid #000' }}>
-                                    <td style={{ width: '90px', padding: '3px 6px', fontWeight: 'bold' }}>PAN</td>
+                                    <td style={{ width: '90px', padding: '3px 6px', fontWeight: 'bold', backgroundColor: '#f2f2f2' }}>PAN</td>
                                     <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{challan.customerPan || 'AAACO1598A'}</td>
                                   </tr>
                                   <tr>
-                                    <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>State Code</td>
+                                    <td style={{ padding: '3px 6px', fontWeight: 'bold', backgroundColor: '#f2f2f2' }}>State Code</td>
                                     <td style={{ padding: '3px 6px' }}>{challan.customerStateCode || 'TAMILNADU (33)'}</td>
                                   </tr>
                                 </tbody>
@@ -464,7 +468,7 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                           </tr>
 
                           <tr style={{ borderTop: '1px solid #000' }}>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>GST</td>
+                            <td style={{ padding: '3px 6px', fontWeight: 'bold', backgroundColor: '#f2f2f2' }}>GST</td>
                             <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>{challan.customerGstin || '33AAACO1598A1ZU'}</td>
                             <td colSpan={2} style={{ padding: 0 }}></td>
                           </tr>
@@ -475,15 +479,15 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', borderBottom: '1px solid #000' }}>
                         <tbody>
                           <tr style={{ borderBottom: '1px solid #000' }}>
-                            <td style={{ width: '100px', padding: '3px 6px', fontWeight: 'bold' }}>Invoice No.</td>
+                            <td style={{ width: '100px', padding: '3px 6px', fontWeight: 'bold', backgroundColor: '#f2f2f2' }}>Invoice No.</td>
                             <td style={{ width: '230px', padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>{challan.challanNumber}</td>
-                            <td style={{ width: '90px', padding: '3px 6px', fontWeight: 'bold' }}>Date :</td>
+                            <td style={{ width: '90px', padding: '3px 6px', fontWeight: 'bold', backgroundColor: '#f2f2f2' }}>Date :</td>
                             <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{formattedDate}</td>
                           </tr>
                           <tr>
-                            <td style={{ padding: '3px 6px' }}>Contract No.</td>
+                            <td style={{ padding: '3px 6px', backgroundColor: '#f2f2f2' }}>Contract No.</td>
                             <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>9010038288</td>
-                            <td style={{ padding: '3px 6px' }}>Page</td>
+                            <td style={{ padding: '3px 6px', backgroundColor: '#f2f2f2' }}>Page</td>
                             <td style={{ padding: '3px 6px' }}>{pageIdx + 1} of {pages.length}</td>
                           </tr>
                         </tbody>
@@ -493,10 +497,10 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                     {/* Items Table */}
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', borderBottom: '1px solid #000' }}>
                       <thead>
-                        <tr style={{ borderBottom: '1px solid #000' }}>
+                        <tr style={{ borderBottom: '1px solid #000', backgroundColor: '#f2f2f2' }}>
                           <th style={{ width: '45px', padding: '4px', textAlign: 'center', borderRight: '1px solid #000' }}>Sl.No.</th>
                           {hasAnyItemCode && (
-                            <th style={{ width: '95px', padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #000' }}>Item Code</th>
+                            <th style={{ width: '95px', padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #000' }}>Item No.</th>
                           )}
                           <th style={{ padding: '4px 8px', textAlign: 'center', borderRight: '1px solid #000' }}>Description</th>
                           <th style={{ width: '75px', padding: '4px 8px', textAlign: 'right', borderRight: '1px solid #000' }}>Rate</th>
@@ -507,7 +511,7 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                       <tbody>
                         {/* Brought Forward row (if pageIdx > 0) */}
                         {pageIdx > 0 && (
-                          <tr style={{ borderBottom: '1px solid #000', fontWeight: 'bold', fontStyle: 'italic' }}>
+                          <tr style={{ borderBottom: '1px solid #000', fontWeight: 'bold', fontStyle: 'italic', backgroundColor: '#f2f2f2' }}>
                             <td style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>&nbsp;</td>
                             {hasAnyItemCode && <td style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>&nbsp;</td>}
                             <td style={{ padding: '5px 8px', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>
@@ -515,7 +519,7 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                             </td>
                             <td style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>&nbsp;</td>
                             <td style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>&nbsp;</td>
-                            <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 'bold', borderBottom: '1px solid #000' }}>
+                            <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 'bold', borderBottom: '1px solid #000', backgroundColor: '#ffffff' }}>
                               {bForward.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                             </td>
                           </tr>
@@ -540,24 +544,24 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                           const absoluteIndex = pages.slice(0, pageIdx).reduce((sum, p) => sum + p.length, 0) + idx + 1;
                           return (
                             <tr key={idx} style={{ height: '22px' }}>
-                              <td style={{ padding: '5px 4px', textAlign: 'center', verticalAlign: 'top', borderRight: '1px solid #000', borderBottom: 'none' }}>
+                              <td style={{ padding: '4px', textAlign: 'center', verticalAlign: 'top', borderRight: '1px solid #000', borderBottom: 'none' }}>
                                 {item.serialNumber || absoluteIndex}
                               </td>
                               {hasAnyItemCode && (
-                                <td style={{ padding: '5px 6px', textAlign: 'center', verticalAlign: 'top', fontWeight: 'bold', borderRight: '1px solid #000', borderBottom: 'none' }}>
+                                <td style={{ padding: '4px', textAlign: 'center', verticalAlign: 'top', fontWeight: 'bold', borderRight: '1px solid #000', borderBottom: 'none' }}>
                                   {item.itemCode && item.itemCode !== 'CUSTOM' ? item.itemCode : ''}
                                 </td>
                               )}
-                              <td style={{ padding: '5px 8px', verticalAlign: 'top', borderRight: '1px solid #000', borderBottom: 'none', whiteSpace: 'pre-line' }}>
+                              <td style={{ padding: '4px 8px', verticalAlign: 'top', borderRight: '1px solid #000', borderBottom: 'none', whiteSpace: 'pre-line' }}>
                                 <div>{item.description}</div>
                               </td>
-                              <td style={{ padding: '5px 8px', textAlign: 'right', verticalAlign: 'top', borderRight: '1px solid #000', borderBottom: 'none' }}>
+                              <td style={{ padding: '4px 8px', textAlign: 'right', verticalAlign: 'top', borderRight: '1px solid #000', borderBottom: 'none' }}>
                                 {Number(item.rate).toFixed(2)}
                               </td>
-                              <td style={{ padding: '5px 8px', textAlign: 'center', verticalAlign: 'top', borderRight: '1px solid #000', borderBottom: 'none' }}>
+                              <td style={{ padding: '4px 8px', textAlign: 'center', verticalAlign: 'top', borderRight: '1px solid #000', borderBottom: 'none' }}>
                                 {item.quantity} {item.unit || 'No'}
                               </td>
-                              <td style={{ padding: '5px 8px', textAlign: 'right', verticalAlign: 'top', fontWeight: 'bold', borderBottom: 'none' }}>
+                              <td style={{ padding: '4px 8px', textAlign: 'right', verticalAlign: 'top', fontWeight: 'bold', borderBottom: 'none' }}>
                                 {Number(item.amount || (item.quantity * item.rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                               </td>
                             </tr>
@@ -569,7 +573,7 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
 
                         {/* Page Total row (if not the last page) */}
                         {pageIdx < pages.length - 1 && (
-                          <tr style={{ borderTop: '1px solid #000', fontWeight: 'bold', height: '24px' }}>
+                          <tr style={{ borderTop: '1px solid #000', fontWeight: 'bold', height: '24px', backgroundColor: '#f2f2f2' }}>
                             <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>
                             {hasAnyItemCode && <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>}
                             <td style={{ padding: '6px 8px', borderRight: '1px solid #000', textAlign: 'center', fontWeight: 'bold', fontStyle: 'italic' }}>
@@ -577,7 +581,7 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                             </td>
                             <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>
                             <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>
-                            <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>
+                            <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold', backgroundColor: '#ffffff' }}>
                               {pTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                             </td>
                           </tr>
@@ -601,86 +605,85 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
                           <tbody>
                             <tr style={{ borderBottom: '1px solid #000' }}>
-                              <td colSpan={hasAnyItemCode ? 4 : 3} style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 'bold', fontStyle: 'italic', borderRight: '1px solid #000' }}>Sub-Total</td>
+                              <td colSpan={hasAnyItemCode ? 4 : 3} style={{ backgroundColor: '#f2f2f2', textAlign: 'right', padding: '6px 8px', fontWeight: 'bold', fontStyle: 'italic', borderRight: '1px solid #000' }}>Sub-Total</td>
                               <td style={{ width: '95px', textAlign: 'right', padding: '6px 8px', fontWeight: 'bold' }}>
                                 {subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                               </td>
                             </tr>
 
-                            {/* Intra-State (34 Prefix) -> CGST & UGST / SGST */}
                             {isIntraState ? (
                               <>
                                 <tr style={{ borderBottom: '1px solid #000' }}>
-                                  <td colSpan={hasAnyItemCode ? 3 : 2} style={{ padding: '4px 8px', fontWeight: 'bold', borderRight: '1px solid #000' }}>
-                                    SAC Code : {challan.sacCode || '995464'}, GST : {gstPercent}%
+                                  <td colSpan={hasAnyItemCode ? 3 : 2} style={{ backgroundColor: '#f2f2f2', fontWeight: 'bold', padding: '6px 8px', borderRight: '1px solid #000' }}>
+                                    SAC Code : {challan.sacCode || '995469'}
                                   </td>
-                                  <td style={{ textAlign: 'right', padding: '4px 8px', borderRight: '1px solid #000' }}>
+                                  <td style={{ backgroundColor: '#f2f2f2', fontWeight: 'bold', padding: '6px 8px', borderRight: '1px solid #000', textAlign: 'right' }}>
                                     CGST @ {halfGst}%
                                   </td>
-                                  <td style={{ textAlign: 'right', padding: '4px 8px' }}>
+                                  <td style={{ width: '95px', textAlign: 'right', padding: '6px 8px', fontWeight: 'bold' }}>
                                     {cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                   </td>
                                 </tr>
-
                                 <tr style={{ borderBottom: '1px solid #000' }}>
-                                  <td colSpan={hasAnyItemCode ? 3 : 2} style={{ padding: '4px 8px', fontStyle: 'italic', borderRight: '1px solid #000' }}>
+                                  <td colSpan={hasAnyItemCode ? 3 : 2} style={{ fontStyle: 'italic', padding: '6px 8px', borderRight: '1px solid #000' }}>
                                     {amountInWords}
                                   </td>
-                                  <td style={{ textAlign: 'right', padding: '4px 8px', borderRight: '1px solid #000' }}>
+                                  <td style={{ backgroundColor: '#f2f2f2', fontWeight: 'bold', padding: '6px 8px', borderRight: '1px solid #000', textAlign: 'right' }}>
                                     UGST / SGST @ {halfGst}%
                                   </td>
-                                  <td style={{ textAlign: 'right', padding: '4px 8px' }}>
+                                  <td style={{ width: '95px', textAlign: 'right', padding: '6px 8px', fontWeight: 'bold' }}>
                                     {sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                  </td>
+                                </tr>
+                                <tr style={{ borderBottom: '1px solid #000', fontWeight: 'bold' }}>
+                                  <td colSpan={hasAnyItemCode ? 3 : 2} style={{ borderRight: '1px solid #000' }}></td>
+                                  <td style={{ backgroundColor: '#f2f2f2', textAlign: 'right', padding: '6px 8px', borderRight: '1px solid #000' }}>
+                                    GROSS AMOUNT
+                                  </td>
+                                  <td style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 'bold' }}>
+                                    Rs. {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                   </td>
                                 </tr>
                               </>
                             ) : (
-                              /* Inter-State (Non-34 Prefix) -> IGST */
                               <>
                                 <tr style={{ borderBottom: '1px solid #000' }}>
-                                  <td colSpan={hasAnyItemCode ? 3 : 2} style={{ padding: '4px 8px', fontWeight: 'bold', borderRight: '1px solid #000' }}>
-                                    SAC Code : {challan.sacCode || '995464'}, GST : {gstPercent}%
+                                  <td colSpan={hasAnyItemCode ? 3 : 2} style={{ backgroundColor: '#f2f2f2', fontWeight: 'bold', padding: '6px 8px', borderRight: '1px solid #000' }}>
+                                    SAC Code : {challan.sacCode || '995469'}
                                   </td>
-                                  <td style={{ textAlign: 'right', padding: '4px 8px', borderRight: '1px solid #000' }}>
+                                  <td style={{ backgroundColor: '#f2f2f2', fontWeight: 'bold', padding: '6px 8px', borderRight: '1px solid #000', textAlign: 'right' }}>
                                     IGST @ {gstPercent}%
                                   </td>
-                                  <td style={{ textAlign: 'right', padding: '4px 8px' }}>
+                                  <td style={{ width: '95px', textAlign: 'right', padding: '6px 8px', fontWeight: 'bold' }}>
                                     {igst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                   </td>
                                 </tr>
-
-                                <tr style={{ borderBottom: '1px solid #000' }}>
-                                  <td colSpan={hasAnyItemCode ? 3 : 2} style={{ padding: '4px 8px', fontStyle: 'italic', borderRight: '1px solid #000' }}>
+                                <tr style={{ borderBottom: '1px solid #000', fontWeight: 'bold' }}>
+                                  <td colSpan={hasAnyItemCode ? 3 : 2} style={{ fontStyle: 'italic', padding: '6px 8px', borderRight: '1px solid #000' }}>
                                     {amountInWords}
                                   </td>
-                                  <td style={{ borderRight: '1px solid #000' }}></td>
-                                  <td></td>
+                                  <td style={{ backgroundColor: '#f2f2f2', textAlign: 'right', padding: '6px 8px', borderRight: '1px solid #000' }}>
+                                    GROSS AMOUNT
+                                  </td>
+                                  <td style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 'bold' }}>
+                                    Rs. {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                  </td>
                                 </tr>
                               </>
                             )}
-
-                            <tr style={{ borderBottom: '1px solid #000', fontWeight: 'bold' }}>
-                              <td colSpan={hasAnyItemCode ? 3 : 2} style={{ borderRight: '1px solid #000' }}></td>
-                              <td style={{ textAlign: 'right', padding: '6px 8px', borderRight: '1px solid #000' }}>
-                                GROSS AMOUNT
-                              </td>
-                              <td style={{ textAlign: 'right', padding: '6px 8px', fontSize: '11.5px', color: '#000' }}>
-                                Rs. {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                              </td>
-                            </tr>
                           </tbody>
                         </table>
 
                         {/* Declaration & Signature Block */}
-                        <div style={{ display: 'flex', fontSize: '10.5px' }}>
+                        <div style={{ display: 'flex', fontSize: '10.5px', borderTop: '1px solid #000' }}>
                           
                           {/* Declaration */}
                           <div style={{ flex: 1, padding: '5px 8px', borderRight: '1px solid #000' }}>
-                            <div style={{ fontWeight: 'bold', marginBottom: '2px', textDecoration: 'underline' }}>DECLARATION</div>
-                            <div style={{ fontSize: '9.5px', lineHeight: '1.3' }}>
+                            <div style={{ fontWeight: 'bold', marginBottom: '2px', textDecoration: 'underline', textAlign: 'center' }}>DECLARATION</div>
+                            <div style={{ fontSize: '9.5px', lineHeight: '1.4', textAlign: 'center' }}>
                               We hereby certifying that all the clause of the contract agreement including statutory clauses, Remittance of EPF payment have been complied.
                             </div>
-                            <div style={{ marginTop: '8px', fontWeight: 'bold' }}>E & O.E</div>
+                            <div style={{ marginTop: '10px', fontWeight: 'bold' }}>E & O.E</div>
                           </div>
 
                           {/* Signatory */}
@@ -689,7 +692,7 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                               For SRI DURGA ENTERPRISES
                             </div>
 
-                            <div style={{ marginTop: '40px', textAlign: 'right' }}>
+                            <div style={{ marginTop: '35px', textAlign: 'right' }}>
                               <div style={{ fontWeight: 'bold', fontSize: '10.5px' }}>MANAGING PARTNER</div>
                             </div>
                           </div>
