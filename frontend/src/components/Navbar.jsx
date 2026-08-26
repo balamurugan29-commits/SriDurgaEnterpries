@@ -113,8 +113,18 @@ export const Navbar = ({ activePage, setActivePage }) => {
             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
 
-          {/* Logo & Company Title */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+          {/* Logo & Company Title (Click to Redirect to Home / Dashboard) */}
+          <div 
+            onClick={() => setActivePage('dashboard')}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.875rem',
+              cursor: 'pointer',
+              userSelect: 'none'
+            }}
+            title="Go to Dashboard / Home"
+          >
             <div style={{ 
               background: 'linear-gradient(135deg, #4f46e5 0%, #10b981 100%)', 
               width: '40px', 
@@ -124,7 +134,8 @@ export const Navbar = ({ activePage, setActivePage }) => {
               alignItems: 'center', 
               justifyContent: 'center', 
               boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)',
-              flexShrink: 0 
+              flexShrink: 0,
+              transition: 'transform 0.2s ease'
             }}>
               <Factory size={22} color="white" />
             </div>
