@@ -33,23 +33,6 @@ public class SriDurgaApplication {
 				System.out.println(">>> Initialized default user: admin / admin123");
 			}
 
-			// Seed Initial Item Master Records
-			if (itemMasterRepository.count() == 0) {
-				createSampleItem(itemMasterRepository, 1, "W101", "Industrial Washer 10mm Standard Heavy Duty", new BigDecimal("100.00"), new BigDecimal("15.50"));
-				createSampleItem(itemMasterRepository, 2, "W102", "Spring Lock Washer 12mm High Tensile", new BigDecimal("250.00"), new BigDecimal("22.00"));
-				System.out.println(">>> Initialized 2 sample items in Item Master");
-			}
 		};
-	}
-
-	private void createSampleItem(ItemMasterRepository repo, Integer serialNo, String code, String desc, BigDecimal qty, BigDecimal rate) {
-		ItemMaster item = new ItemMaster();
-		item.setSerialNumber(serialNo);
-		item.setItemCode(code);
-		item.setDescription(desc);
-		item.setQuantity(qty);
-		item.setRate(rate);
-		item.setAmount(qty.multiply(rate));
-		repo.save(item);
 	}
 }

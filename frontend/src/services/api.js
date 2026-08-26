@@ -10,13 +10,10 @@ const api = axios.create({
   timeout: 120000, // 2 minutes timeout for large dataset operations (1000 - 1500+ items)
 });
 
-// Seed data for standalone fallback
 const DEFAULT_INITIAL_ITEMS = [
   { id: 1, serialNumber: 1, itemCode: '70.3', description: 'Supply of RCCB 4P, 63A, 100mA Sensitivity', quantity: 4, unit: 'No', rate: 4500, serviceCharge: 0, amount: 18000 },
   { id: 2, serialNumber: 2, itemCode: '122', description: 'S&I of 50mm, 3Mtr GI Earth pipe including chamber', quantity: 3, unit: 'No', rate: 6200, serviceCharge: 0, amount: 18600 },
   { id: 3, serialNumber: 3, itemCode: '24.7', description: 'Supply of 3P Power Contactor - 70A', quantity: 1, unit: 'No', rate: 8900, serviceCharge: 0, amount: 8900 },
-  { id: 4, serialNumber: 4, itemCode: 'W101', description: 'Industrial Washer 10mm Standard Heavy Duty', quantity: 10, unit: 'Nos', rate: 100, serviceCharge: 0, amount: 1000 },
-  { id: 5, serialNumber: 5, itemCode: 'W102', description: 'Spring Lock Washer 12mm High Tensile', quantity: 250, unit: 'Nos', rate: 22, serviceCharge: 0, amount: 5500 },
 ];
 
 const DEFAULT_INITIAL_CUSTOMERS = [
