@@ -102,6 +102,7 @@ export const GatePassListPage = ({ onEditGatePass, onNewGatePass }) => {
                   <th style={{ padding: '0.9rem 1.25rem', textAlign: 'left' }}>Gate Pass Details</th>
                   <th style={{ padding: '0.9rem 1.25rem', textAlign: 'left' }}>Date</th>
                   <th style={{ padding: '0.9rem 1.25rem', textAlign: 'left' }}>Receiver / Sender</th>
+                  <th style={{ padding: '0.9rem 1.25rem', textAlign: 'left' }}>Site Name</th>
                   <th style={{ padding: '0.9rem 1.25rem', textAlign: 'center' }}>Items Count</th>
                   <th style={{ padding: '0.9rem 1.25rem', textAlign: 'center' }}>Actions</th>
                 </tr>
@@ -141,6 +142,11 @@ export const GatePassListPage = ({ onEditGatePass, onNewGatePass }) => {
                           <User size={14} color="#34d399" style={{ marginTop: '3px' }} />
                           <span>{gp.receiverName}</span>
                         </div>
+                      </td>
+                      <td style={{ padding: '0.9rem 1.25rem' }}>
+                        <span style={{ fontWeight: '500', color: gp.siteName ? 'white' : 'var(--text-muted)' }}>
+                          {gp.siteName || '-'}
+                        </span>
                       </td>
                       <td style={{ padding: '0.9rem 1.25rem', textAlign: 'center' }}>
                         <span style={{ background: 'rgba(251, 191, 36, 0.1)', color: '#fbbf24', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '700' }}>
