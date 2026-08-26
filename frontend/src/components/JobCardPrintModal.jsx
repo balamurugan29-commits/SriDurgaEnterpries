@@ -126,7 +126,7 @@ export const JobCardPrintModal = ({ isOpen, onClose, jobCard }) => {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', paddingBottom: '6px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {/* Logo Icon */}
-                <div style={{ width: '42px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '42px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                   <img src="/logo.jpg" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </div>
 

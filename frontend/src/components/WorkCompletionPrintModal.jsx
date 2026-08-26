@@ -241,21 +241,9 @@ export const WorkCompletionPrintModal = ({ isOpen, onClose, certificate }) => {
                   flexDirection: 'column'
                 }}
               >
-                {/* Brand Header */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '2px solid #000', paddingBottom: '8px', marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <img src="/logo.jpg" alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-                    <span style={{ fontSize: '18px', fontWeight: '900', fontFamily: 'Georgia, serif' }}>Sri Durga Enterprises</span>
-                  </div>
-                  <div style={{ fontSize: '10px', textAlign: 'right', fontWeight: '600', color: '#333' }}>
-                    No. 10 V.G. Nagar, Kovilpathu, Karaikal<br />
-                    Cell: 9842492946
-                  </div>
-                </div>
-
                 {/* Title */}
-                <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                  <h2 style={{ fontSize: '15px', fontWeight: 'bold', textDecoration: 'underline', letterSpacing: '0.5px', margin: 0, textTransform: 'uppercase' }}>
+                <div style={{ textAlign: 'center', marginBottom: '25px' }}>
+                  <h2 style={{ fontSize: '16px', fontWeight: 'bold', textDecoration: 'underline', letterSpacing: '0.5px', margin: 0, textTransform: 'uppercase' }}>
                     JOINT INSPECTION / DEFECT REPORT
                   </h2>
                 </div>
@@ -325,21 +313,9 @@ export const WorkCompletionPrintModal = ({ isOpen, onClose, certificate }) => {
                   flexDirection: 'column'
                 }}
               >
-                {/* Brand Header */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '2px solid #000', paddingBottom: '8px', marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <img src="/logo.jpg" alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-                    <span style={{ fontSize: '18px', fontWeight: '900', fontFamily: 'Georgia, serif' }}>Sri Durga Enterprises</span>
-                  </div>
-                  <div style={{ fontSize: '10px', textAlign: 'right', fontWeight: '600', color: '#333' }}>
-                    No. 10 V.G. Nagar, Kovilpathu, Karaikal<br />
-                    Cell: 9842492946
-                  </div>
-                </div>
-
                 {/* Title */}
-                <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                  <h2 style={{ fontSize: '15px', fontWeight: 'bold', textDecoration: 'underline', letterSpacing: '0.5px', margin: 0, textTransform: 'uppercase' }}>
+                <div style={{ textAlign: 'center', marginBottom: '25px' }}>
+                  <h2 style={{ fontSize: '16px', fontWeight: 'bold', textDecoration: 'underline', letterSpacing: '0.5px', margin: 0, textTransform: 'uppercase' }}>
                     WORK COMPLETION CERTIFICATE
                   </h2>
                 </div>
