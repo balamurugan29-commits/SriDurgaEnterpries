@@ -1,0 +1,842 @@
+import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:8080/api';
+
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 120000, // 2 minutes timeout for large dataset operations (1000 - 1500+ items)
+});
+
+// Seed data for standalone fallback
+const DEFAULT_INITIAL_ITEMS = [
+  { id: 1, serialNumber: 1, itemCode: '70.3', description: 'Supply of RCCB 4P, 63A, 100mA Sensitivity', quantity: 4, unit: 'No', rate: 4500, serviceCharge: 0, amount: 18000 },
+  { id: 2, serialNumber: 2, itemCode: '122', description: 'S&I of 50mm, 3Mtr GI Earth pipe including chamber', quantity: 3, unit: 'No', rate: 6200, serviceCharge: 0, amount: 18600 },
+  { id: 3, serialNumber: 3, itemCode: '24.7', description: 'Supply of 3P Power Contactor - 70A', quantity: 1, unit: 'No', rate: 8900, serviceCharge: 0, amount: 8900 },
+  { id: 4, serialNumber: 4, itemCode: 'W101', description: 'Industrial Washer 10mm Standard Heavy Duty', quantity: 10, unit: 'Nos', rate: 100, serviceCharge: 0, amount: 1000 },
+  { id: 5, serialNumber: 5, itemCode: 'W102', description: 'Spring Lock Washer 12mm High Tensile', quantity: 250, unit: 'Nos', rate: 22, serviceCharge: 0, amount: 5500 },
+];
+
+const DEFAULT_INITIAL_CUSTOMERS = [
+  { 
+    id: 1, 
+    serialNumber: 1, 
+    customerName: 'M/s, Ocean Sparkle Ltd, Karaikal Port Pvt., Ltd.', 
+    gstin: '34AAACO2519H1ZR', 
+    pan: 'AAACO2519H', 
+    stateCode: 'PUDUCHERRY (34)', 
+    phone: '9842492946', 
+    address: 'Keezhavanjore, Thirumalairajan Pattinam, Karaikal - 609606.' 
+  }
+];
+
+const DEFAULT_INITIAL_JOB_CARDS = [
+  {
+    id: 1,
+    jobNo: 'JC-01/26-27',
+    gPass: 'GP-8842',
+    jobDate: '2026-08-25',
+    customerName: 'M/s, Ocean Sparkle Ltd, Karaikal Port Pvt., Ltd.',
+    site: 'Karaikal Port',
+    make: 'Kirloskar',
+    equipment: 'Induction Motor 50HP',
+    slNo: 'SL-99482',
+    deliveredOn: '2026-08-28',
+    others: 'Urgent overhaul job',
+    ratingHp: '50',
+    ratingKw: '37.5',
+    ratingKva: '45',
+    volt: '415V',
+    current: '68A',
+    frameSize: '225M',
+    type: 'Squirrel Cage',
+    bearingDe: '6313 C3',
+    bearingNde: '6312 C3',
+    coolingFanId: '65mm',
+    coolingFanOd: '320mm',
+    fanCoverCircumference: '1100mm',
+    fanCoverHeight: '180mm',
+    fanCoverDia: '350mm',
+    speed: '1480 RPM',
+    terminalBox: 'RIGHT',
+    connection: 'DELTA',
+    pitch: '1-10',
+    turns: '14',
+    bobbin: 'Nomex Class H',
+    coreLength: '240mm',
+    swg: '17 SWG Double',
+    coilWeight1Set: '2.4 Kg',
+    coilWeightTotal: '14.4 Kg',
+    setOfCoil: '6 Sets',
+    noOfSlots: '48',
+    totalNoCoil: '24',
+    jobCarried: 'Complete rewinding with Class H insulation, replacement of DE/NDE bearings, dynamic balancing, and varnishing.',
+    testWwResistance: '0.42 Ohms',
+    testWbResistance: '> 100 M-Ohms',
+    testNoLoadCurrent: '18.5 A',
+    testRpm: '1492 RPM',
+    remarks: 'Motor tested on full load test bench. Performance within standard limits.',
+    dismantledBy: 'R. Kumar',
+    coilDismantledBy: 'S. Murugan',
+    windingBy: 'M. Ramesh',
+    assembledBy: 'K. Balan',
+    testedBy: 'A. Engineer'
+  }
+];
+
+const DEFAULT_INITIAL_CERTIFICATES = [
+  {
+    id: 1,
+    certificateNo: 'WCC-01/26-27',
+    certificateDate: '2026-08-25',
+    agency: 'SRI DURGA ENTERPRISES, # 10 V.G. Nagar, Kovilpathu, Karaikal',
+    rateContractRef: 'KKL/CAU-ASSET/SUPPORT/2023/1240914/SDE/9010038288',
+    equipmentDescription: 'Material',
+    location: 'RMD#GCS',
+    make: '-',
+    slNo: '-',
+    capacity: '-',
+    typeModel: '-',
+    completionTime: '5 Day(s)',
+    dateHandingOver: '03/04/2026',
+    dateCompletion: '06/04/2026',
+    delayInCompletion: 'NIL',
+    performanceOfMachines: 'OK',
+    defectiveSparesReturned: 'NA',
+    items: [
+      { serialNumber: 1, rcItemNo: '70.3', description: 'Supply of RCCB 4P, 63A, 100mA Sensitivity', quantity: 4, unit: 'No.' },
+      { serialNumber: 2, rcItemNo: '122', description: 'S&I of 50mm, 3Mtr GI Earth pipe including chamber', quantity: 3, unit: 'No' },
+      { serialNumber: 3, rcItemNo: '24.7', description: 'Supply of 3P Power Contactor - 70A', quantity: 1, unit: 'No.' }
+    ]
+  }
+];
+
+// Helper to format Unit based on QTY rules:
+export function formatUnitWithQty(unitInput, qty = 1) {
+  if (!unitInput) {
+    return Number(qty) === 1 ? 'No' : 'Nos';
+  }
+  const u = String(unitInput).trim();
+  const uLower = u.toLowerCase();
+  
+  if (uLower === 'no' || uLower === 'nos' || uLower === 'no.') {
+    return Number(qty) === 1 ? 'No' : 'Nos';
+  }
+  if (uLower === 'mtr' || uLower === 'mtrs' || uLower === 'meter' || uLower === 'meters') {
+    return Number(qty) === 1 ? 'Mtr' : 'Mtrs';
+  }
+  if (uLower === 'set' || uLower === 'sets') {
+    return Number(qty) === 1 ? 'Set' : 'Sets';
+  }
+  if (uLower === 'kg' || uLower === 'kgs') {
+    return Number(qty) === 1 ? 'Kg' : 'Kgs';
+  }
+  if (uLower === 'ltr' || uLower === 'ltrs' || uLower === 'liter' || uLower === 'liters') {
+    return Number(qty) === 1 ? 'Ltr' : 'Ltrs';
+  }
+  if (uLower === 'pair' || uLower === 'pairs') {
+    return Number(qty) === 1 ? 'Pair' : 'Pairs';
+  }
+  if (uLower === 'box' || uLower === 'boxes') {
+    return Number(qty) === 1 ? 'Box' : 'Boxes';
+  }
+  
+  return u;
+}
+
+// Helper to compute Total Amount (Subtotal + GST) for a Tax Invoice safely
+export function calculateChallanTotalAmount(challan) {
+  if (!challan) return 0;
+  if (challan.totalAmount && Number(challan.totalAmount) > 0) {
+    return Number(challan.totalAmount);
+  }
+  if (!challan.items || challan.items.length === 0) return 0;
+  const subtotal = challan.items.reduce((sum, item) => {
+    const qty = Number(item.quantity) || 0;
+    const rate = Number(item.rate) || 0;
+    const amt = Number(item.amount) !== undefined && Number(item.amount) !== 0 ? Number(item.amount) : (qty * rate);
+    return sum + amt;
+  }, 0);
+  const gstPct = Number(challan.gstPercent) !== undefined && Number(challan.gstPercent) !== null ? Number(challan.gstPercent) : 18;
+  return subtotal + (subtotal * gstPct / 100);
+}
+
+const getStoredItems = () => {
+  const local = localStorage.getItem('sri_durga_item_master');
+  if (local) {
+    try {
+      const parsed = JSON.parse(local);
+      return parsed.map(item => ({
+        ...item,
+        unit: item.unit || formatUnitWithQty('No', item.quantity || 1),
+        serviceCharge: item.serviceCharge !== undefined && item.serviceCharge !== null ? Number(item.serviceCharge) : 0
+      }));
+    } catch(e) {}
+  }
+  localStorage.setItem('sri_durga_item_master', JSON.stringify(DEFAULT_INITIAL_ITEMS));
+  return DEFAULT_INITIAL_ITEMS;
+};
+
+const saveStoredItems = (items) => {
+  localStorage.setItem('sri_durga_item_master', JSON.stringify(items));
+};
+
+const getStoredCustomers = () => {
+  const local = localStorage.getItem('sri_durga_customer_master');
+  if (local) {
+    try { return JSON.parse(local); } catch(e) {}
+  }
+  localStorage.setItem('sri_durga_customer_master', JSON.stringify(DEFAULT_INITIAL_CUSTOMERS));
+  return DEFAULT_INITIAL_CUSTOMERS;
+};
+
+const saveStoredCustomers = (customers) => {
+  localStorage.setItem('sri_durga_customer_master', JSON.stringify(customers));
+};
+
+const getStoredJobCards = () => {
+  const local = localStorage.getItem('sri_durga_job_cards');
+  if (local) {
+    try { return JSON.parse(local); } catch(e) {}
+  }
+  localStorage.setItem('sri_durga_job_cards', JSON.stringify(DEFAULT_INITIAL_JOB_CARDS));
+  return DEFAULT_INITIAL_JOB_CARDS;
+};
+
+const saveStoredJobCards = (jobCards) => {
+  localStorage.setItem('sri_durga_job_cards', JSON.stringify(jobCards));
+};
+
+const getStoredCertificates = () => {
+  const local = localStorage.getItem('sri_durga_work_certificates');
+  if (local) {
+    try { return JSON.parse(local); } catch(e) {}
+  }
+  localStorage.setItem('sri_durga_work_certificates', JSON.stringify(DEFAULT_INITIAL_CERTIFICATES));
+  return DEFAULT_INITIAL_CERTIFICATES;
+};
+
+const saveStoredCertificates = (certs) => {
+  localStorage.setItem('sri_durga_work_certificates', JSON.stringify(certs));
+};
+
+// Helper for Indian Financial Year Suffix (April 1 to March 31 e.g. "26-27")
+export function getIndianFySuffix(dateObj = new Date()) {
+  const year = dateObj.getFullYear();
+  const month = dateObj.getMonth(); // 0-based: April = 3
+  const startYear = month >= 3 ? year : year - 1;
+  const endYear = startYear + 1;
+  const startYY = String(startYear).slice(-2);
+  const endYY = String(endYear).slice(-2);
+  return `${startYY}-${endYY}`;
+}
+
+// Authentication API Call
+export const loginApi = async (userId, password) => {
+  try {
+    const res = await api.post('/auth/login', { userId, password });
+    return res.data;
+  } catch (err) {
+    if (userId === 'admin' && password === 'admin123') {
+      return { userId: 'admin', fullName: 'Sri Durga Administrator', role: 'ADMIN' };
+    }
+    throw new Error('Invalid credentials');
+  }
+};
+
+// Item Master API Calls
+export const fetchItems = async (searchQuery = '') => {
+  try {
+    const res = await api.get('/items', { params: { search: searchQuery } });
+    if (res.data) {
+      return res.data.map(item => ({
+        ...item,
+        unit: item.unit || formatUnitWithQty('No', item.quantity || 1),
+        serviceCharge: item.serviceCharge !== undefined && item.serviceCharge !== null ? Number(item.serviceCharge) : 0
+      }));
+    }
+    return [];
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for fetchItems');
+    const items = getStoredItems();
+    if (!searchQuery) return items;
+    const q = searchQuery.toLowerCase();
+    return items.filter(
+      item => item.itemCode.toLowerCase().includes(q) || item.description.toLowerCase().includes(q)
+    );
+  }
+};
+
+export const fetchItemByCode = async (code) => {
+  try {
+    const res = await api.get(`/items/code/${code}`);
+    if (res.data) {
+      return {
+        ...res.data,
+        unit: res.data.unit || formatUnitWithQty('No', res.data.quantity || 1),
+        serviceCharge: res.data.serviceCharge !== undefined && res.data.serviceCharge !== null ? Number(res.data.serviceCharge) : 0
+      };
+    }
+    return null;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for fetchItemByCode');
+    const items = getStoredItems();
+    return items.find(i => i.itemCode.toLowerCase() === code.toLowerCase()) || null;
+  }
+};
+
+export const createItem = async (itemData) => {
+  try {
+    const res = await api.post('/items', itemData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for createItem');
+    const items = getStoredItems();
+    const rate = Number(itemData.rate) || 0;
+    const sc = Number(itemData.serviceCharge) || 0;
+    const qty = Number(itemData.quantity) || 0;
+
+    const newItem = {
+      id: Date.now(),
+      serialNumber: itemData.serialNumber || (items.length + 1),
+      itemCode: itemData.itemCode,
+      description: itemData.description,
+      quantity: qty,
+      unit: itemData.unit || formatUnitWithQty('No', qty),
+      rate: rate,
+      serviceCharge: sc,
+      amount: qty * (rate + sc)
+    };
+    items.push(newItem);
+    saveStoredItems(items);
+    return newItem;
+  }
+};
+
+export const bulkCreateItems = async (itemsList) => {
+  try {
+    const res = await api.post('/items/bulk', itemsList);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for bulkCreateItems');
+    const items = getStoredItems();
+    itemsList.forEach(itemData => {
+      if (!itemData.itemCode || !itemData.itemCode.trim()) return;
+      const code = itemData.itemCode.trim().toUpperCase();
+      const existingIdx = items.findIndex(i => i.itemCode.toUpperCase() === code);
+      const rate = Number(itemData.rate) || 0;
+      const sc = Number(itemData.serviceCharge) || 0;
+      const qty = Number(itemData.quantity) || 0;
+      const unit = itemData.unit || formatUnitWithQty('No', qty);
+
+      if (existingIdx !== -1) {
+        items[existingIdx] = {
+          ...items[existingIdx],
+          description: itemData.description || items[existingIdx].description,
+          rate: rate || items[existingIdx].rate,
+          unit,
+          serviceCharge: sc,
+          quantity: qty,
+          amount: qty * ((rate || items[existingIdx].rate) + sc)
+        };
+      } else {
+        items.push({
+          id: Date.now() + Math.random(),
+          serialNumber: items.length + 1,
+          itemCode: code,
+          description: itemData.description || 'Item specification',
+          quantity: qty,
+          unit,
+          rate: rate,
+          serviceCharge: sc,
+          amount: qty * (rate + sc)
+        });
+      }
+    });
+    saveStoredItems(items);
+    return items;
+  }
+};
+
+export const updateItem = async (id, itemData) => {
+  try {
+    const res = await api.put(`/items/${id}`, itemData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for updateItem');
+    const items = getStoredItems();
+    const index = items.findIndex(i => i.id === id);
+    if (index !== -1) {
+      const rate = Number(itemData.rate) || 0;
+      const sc = Number(itemData.serviceCharge) || 0;
+      const qty = Number(itemData.quantity) || 0;
+      const unit = itemData.unit || formatUnitWithQty('No', qty);
+
+      const updated = {
+        ...items[index],
+        ...itemData,
+        rate,
+        unit,
+        serviceCharge: sc,
+        quantity: qty,
+        amount: qty * (rate + sc)
+      };
+      items[index] = updated;
+      saveStoredItems(items);
+      return updated;
+    }
+    throw new Error('Item not found');
+  }
+};
+
+export const deleteItem = async (id) => {
+  try {
+    const res = await api.delete(`/items/${id}`);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for deleteItem');
+    let items = getStoredItems();
+    items = items.filter(i => i.id !== id).map((item, idx) => ({ ...item, serialNumber: idx + 1 }));
+    saveStoredItems(items);
+    return { message: 'Item deleted successfully' };
+  }
+};
+
+// Customer Master API Calls
+export const fetchCustomers = async (searchQuery = '') => {
+  try {
+    const res = await api.get('/customers', { params: { search: searchQuery } });
+    return res.data || [];
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for fetchCustomers');
+    const customers = getStoredCustomers();
+    if (!searchQuery) return customers;
+    const q = searchQuery.toLowerCase();
+    return customers.filter(
+      c => c.customerName.toLowerCase().includes(q) || (c.gstin && c.gstin.toLowerCase().includes(q))
+    );
+  }
+};
+
+export const createCustomer = async (customerData) => {
+  try {
+    const res = await api.post('/customers', customerData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for createCustomer');
+    const customers = getStoredCustomers();
+    const newCust = {
+      id: Date.now(),
+      serialNumber: customerData.serialNumber || (customers.length + 1),
+      customerName: customerData.customerName,
+      gstin: customerData.gstin || '',
+      pan: customerData.pan || '',
+      stateCode: customerData.stateCode || 'PUDUCHERRY (34)',
+      phone: customerData.phone || '',
+      address: customerData.address || ''
+    };
+    customers.push(newCust);
+    saveStoredCustomers(customers);
+    return newCust;
+  }
+};
+
+export const updateCustomer = async (id, customerData) => {
+  try {
+    const res = await api.put(`/customers/${id}`, customerData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for updateCustomer');
+    const customers = getStoredCustomers();
+    const index = customers.findIndex(c => c.id === id);
+    if (index !== -1) {
+      const updated = {
+        ...customers[index],
+        ...customerData
+      };
+      customers[index] = updated;
+      saveStoredCustomers(customers);
+      return updated;
+    }
+    throw new Error('Customer not found');
+  }
+};
+
+export const deleteCustomer = async (id) => {
+  try {
+    const res = await api.delete(`/customers/${id}`);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for deleteCustomer');
+    let customers = getStoredCustomers();
+    customers = customers.filter(c => c.id !== id).map((item, idx) => ({ ...item, serialNumber: idx + 1 }));
+    saveStoredCustomers(customers);
+    return { message: 'Customer deleted successfully' };
+  }
+};
+
+// Delivery Challan API Calls
+export const fetchChallans = async () => {
+  try {
+    const res = await api.get('/challans');
+    return res.data || [];
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for fetchChallans');
+    const local = localStorage.getItem('sri_durga_challan_history');
+    return local ? JSON.parse(local) : [];
+  }
+};
+
+export const fetchNextChallanNumber = async () => {
+  try {
+    const res = await api.get('/challans/next-number');
+    if (res.data) {
+      if (typeof res.data === 'string') return res.data;
+      if (typeof res.data === 'object' && res.data.nextChallanNumber) return String(res.data.nextChallanNumber);
+      if (typeof res.data === 'object' && res.data.challanNumber) return String(res.data.challanNumber);
+    }
+    const fySuffix = getIndianFySuffix();
+    return `01/${fySuffix}`;
+  } catch (err) {
+    const fySuffix = getIndianFySuffix();
+    const local = localStorage.getItem('sri_durga_challan_history');
+    const list = local ? JSON.parse(local) : [];
+    const currentFyList = list.filter(c => {
+      if (c.challanNumber && c.challanNumber.endsWith(fySuffix)) return true;
+      if (c.challanDate) {
+        const d = new Date(c.challanDate);
+        return getIndianFySuffix(d) === fySuffix;
+      }
+      return false;
+    });
+    const count = currentFyList.length + 1;
+    return `${String(count).padStart(2, '0')}/${fySuffix}`;
+  }
+};
+
+export const createChallan = async (challanData) => {
+  try {
+    const res = await api.post('/challans', challanData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for createChallan');
+    const local = localStorage.getItem('sri_durga_challan_history');
+    const list = local ? JSON.parse(local) : [];
+    const newChallan = {
+      ...challanData,
+      id: Date.now(),
+      createdAt: new Date().toISOString()
+    };
+    list.unshift(newChallan);
+    localStorage.setItem('sri_durga_challan_history', JSON.stringify(list));
+    return newChallan;
+  }
+};
+
+export const updateChallan = async (id, challanData) => {
+  try {
+    const res = await api.put(`/challans/${id}`, challanData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for updateChallan');
+    const local = localStorage.getItem('sri_durga_challan_history');
+    let list = local ? JSON.parse(local) : [];
+    const idx = list.findIndex(c => c.id === id);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...challanData, updatedAt: new Date().toISOString() };
+      localStorage.setItem('sri_durga_challan_history', JSON.stringify(list));
+      return list[idx];
+    }
+    throw new Error('Tax Invoice not found');
+  }
+};
+
+export const deleteChallan = async (id) => {
+  try {
+    const res = await api.delete(`/challans/${id}`);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for deleteChallan');
+    const local = localStorage.getItem('sri_durga_challan_history');
+    let list = local ? JSON.parse(local) : [];
+    list = list.filter(c => c.id !== id);
+    localStorage.setItem('sri_durga_challan_history', JSON.stringify(list));
+    return { message: 'Tax Invoice deleted' };
+  }
+};
+
+// Job Card API Calls
+export const fetchJobCards = async (searchQuery = '') => {
+  try {
+    const res = await api.get('/job-cards');
+    const list = res.data || [];
+    if (!searchQuery) return list;
+    const q = searchQuery.toLowerCase();
+    return list.filter(jc => 
+      (jc.jobNo && jc.jobNo.toLowerCase().includes(q)) ||
+      (jc.customerName && jc.customerName.toLowerCase().includes(q)) ||
+      (jc.equipment && jc.equipment.toLowerCase().includes(q)) ||
+      (jc.slNo && jc.slNo.toLowerCase().includes(q))
+    );
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for fetchJobCards');
+    const cards = getStoredJobCards();
+    if (!searchQuery) return cards;
+    const q = searchQuery.toLowerCase();
+    return cards.filter(jc =>
+      (jc.jobNo && jc.jobNo.toLowerCase().includes(q)) ||
+      (jc.customerName && jc.customerName.toLowerCase().includes(q)) ||
+      (jc.equipment && jc.equipment.toLowerCase().includes(q)) ||
+      (jc.slNo && jc.slNo.toLowerCase().includes(q))
+    );
+  }
+};
+
+export const fetchNextJobNo = async () => {
+  try {
+    const res = await api.get('/job-cards/next-number');
+    if (res.data && (res.data.nextJobNo || res.data.jobNo)) {
+      return res.data.nextJobNo || res.data.jobNo;
+    }
+    const fySuffix = getIndianFySuffix();
+    return `JC-01/${fySuffix}`;
+  } catch (err) {
+    const fySuffix = getIndianFySuffix();
+    const cards = getStoredJobCards();
+    const count = cards.length + 1;
+    return `JC-${String(count).padStart(2, '0')}/${fySuffix}`;
+  }
+};
+
+export const createJobCard = async (jobCardData) => {
+  try {
+    const res = await api.post('/job-cards', jobCardData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for createJobCard');
+    const cards = getStoredJobCards();
+    const newCard = {
+      ...jobCardData,
+      id: Date.now(),
+      createdAt: new Date().toISOString()
+    };
+    cards.unshift(newCard);
+    saveStoredJobCards(cards);
+    return newCard;
+  }
+};
+
+export const updateJobCard = async (id, jobCardData) => {
+  try {
+    const res = await api.put(`/job-cards/${id}`, jobCardData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for updateJobCard');
+    const cards = getStoredJobCards();
+    const idx = cards.findIndex(c => c.id === id);
+    if (idx !== -1) {
+      cards[idx] = { ...cards[idx], ...jobCardData, updatedAt: new Date().toISOString() };
+      saveStoredJobCards(cards);
+      return cards[idx];
+    }
+    throw new Error('Job Card not found');
+  }
+};
+
+export const deleteJobCard = async (id) => {
+  try {
+    const res = await api.delete(`/job-cards/${id}`);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for deleteJobCard');
+    let cards = getStoredJobCards();
+    cards = cards.filter(c => c.id !== id);
+    saveStoredJobCards(cards);
+    return { message: 'Job Card deleted successfully' };
+  }
+};
+
+// Work Completion Certificate API Calls
+export const fetchCertificates = async (searchQuery = '') => {
+  try {
+    const res = await api.get('/work-completion-certificates');
+    const list = res.data || [];
+    if (!searchQuery) return list;
+    const q = searchQuery.toLowerCase();
+    return list.filter(wcc =>
+      (wcc.certificateNo && wcc.certificateNo.toLowerCase().includes(q)) ||
+      (wcc.rateContractRef && wcc.rateContractRef.toLowerCase().includes(q)) ||
+      (wcc.equipmentDescription && wcc.equipmentDescription.toLowerCase().includes(q)) ||
+      (wcc.location && wcc.location.toLowerCase().includes(q))
+    );
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for fetchCertificates');
+    const certs = getStoredCertificates();
+    if (!searchQuery) return certs;
+    const q = searchQuery.toLowerCase();
+    return certs.filter(wcc =>
+      (wcc.certificateNo && wcc.certificateNo.toLowerCase().includes(q)) ||
+      (wcc.rateContractRef && wcc.rateContractRef.toLowerCase().includes(q)) ||
+      (wcc.equipmentDescription && wcc.equipmentDescription.toLowerCase().includes(q)) ||
+      (wcc.location && wcc.location.toLowerCase().includes(q))
+    );
+  }
+};
+
+export const fetchNextCertificateNo = async () => {
+  try {
+    const res = await api.get('/work-completion-certificates/next-number');
+    if (res.data && (res.data.nextCertificateNo || res.data.certificateNo)) {
+      return res.data.nextCertificateNo || res.data.certificateNo;
+    }
+    const fySuffix = getIndianFySuffix();
+    return `WCC-01/${fySuffix}`;
+  } catch (err) {
+    const fySuffix = getIndianFySuffix();
+    const certs = getStoredCertificates();
+    const count = certs.length + 1;
+    return `WCC-${String(count).padStart(2, '0')}/${fySuffix}`;
+  }
+};
+
+export const createCertificate = async (certificateData) => {
+  try {
+    const res = await api.post('/work-completion-certificates', certificateData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for createCertificate');
+    const certs = getStoredCertificates();
+    const newCert = {
+      ...certificateData,
+      id: Date.now(),
+      createdAt: new Date().toISOString()
+    };
+    certs.unshift(newCert);
+    saveStoredCertificates(certs);
+    return newCert;
+  }
+};
+
+export const updateCertificate = async (id, certificateData) => {
+  try {
+    const res = await api.put(`/work-completion-certificates/${id}`, certificateData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for updateCertificate');
+    const certs = getStoredCertificates();
+    const idx = certs.findIndex(c => c.id === id);
+    if (idx !== -1) {
+      certs[idx] = { ...certs[idx], ...certificateData, updatedAt: new Date().toISOString() };
+      saveStoredCertificates(certs);
+      return certs[idx];
+    }
+    throw new Error('Certificate not found');
+  }
+};
+
+export const deleteCertificate = async (id) => {
+  try {
+    const res = await api.delete(`/work-completion-certificates/${id}`);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for deleteCertificate');
+    let certs = getStoredCertificates();
+    certs = certs.filter(c => c.id !== id);
+    saveStoredCertificates(certs);
+    return { message: 'Certificate deleted successfully' };
+  }
+};
+
+// In & Out Gate Pass API Calls
+export const fetchGatePasses = async (searchQuery = '') => {
+  try {
+    const res = await api.get('/gate-passes');
+    const list = res.data || [];
+    if (!searchQuery) return list;
+    const q = searchQuery.toLowerCase();
+    return list.filter(gp => 
+      (gp.gatePassNo && gp.gatePassNo.toLowerCase().includes(q)) ||
+      (gp.receiverName && gp.receiverName.toLowerCase().includes(q))
+    );
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for fetchGatePasses');
+    const local = localStorage.getItem('sri_durga_gate_passes');
+    const list = local ? JSON.parse(local) : [];
+    if (!searchQuery) return list;
+    const q = searchQuery.toLowerCase();
+    return list.filter(gp => 
+      (gp.gatePassNo && gp.gatePassNo.toLowerCase().includes(q)) ||
+      (gp.receiverName && gp.receiverName.toLowerCase().includes(q))
+    );
+  }
+};
+
+export const fetchNextGatePassNo = async () => {
+  try {
+    const res = await api.get('/gate-passes/next-number');
+    if (res.data && (res.data.nextGatePassNo || res.data.gatePassNo)) {
+      return res.data.nextGatePassNo || res.data.gatePassNo;
+    }
+    const fySuffix = getIndianFySuffix();
+    return `GP-01/${fySuffix}`;
+  } catch (err) {
+    const fySuffix = getIndianFySuffix();
+    const local = localStorage.getItem('sri_durga_gate_passes');
+    const list = local ? JSON.parse(local) : [];
+    const count = list.length + 1;
+    return `GP-${String(count).padStart(2, '0')}/${fySuffix}`;
+  }
+};
+
+export const createGatePass = async (gatePassData) => {
+  try {
+    const res = await api.post('/gate-passes', gatePassData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for createGatePass');
+    const local = localStorage.getItem('sri_durga_gate_passes');
+    const list = local ? JSON.parse(local) : [];
+    const newGp = {
+      ...gatePassData,
+      id: Date.now(),
+      createdAt: new Date().toISOString()
+    };
+    list.unshift(newGp);
+    localStorage.setItem('sri_durga_gate_passes', JSON.stringify(list));
+    return newGp;
+  }
+};
+
+export const updateGatePass = async (id, gatePassData) => {
+  try {
+    const res = await api.put(`/gate-passes/${id}`, gatePassData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for updateGatePass');
+    const local = localStorage.getItem('sri_durga_gate_passes');
+    let list = local ? JSON.parse(local) : [];
+    const idx = list.findIndex(c => c.id === id);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...gatePassData, updatedAt: new Date().toISOString() };
+      localStorage.setItem('sri_durga_gate_passes', JSON.stringify(list));
+      return list[idx];
+    }
+    throw new Error('Gate Pass not found');
+  }
+};
+
+export const deleteGatePass = async (id) => {
+  try {
+    const res = await api.delete(`/gate-passes/${id}`);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for deleteGatePass');
+    const local = localStorage.getItem('sri_durga_gate_passes');
+    let list = local ? JSON.parse(local) : [];
+    list = list.filter(c => c.id !== id);
+    localStorage.setItem('sri_durga_gate_passes', JSON.stringify(list));
+    return { message: 'Gate Pass deleted successfully' };
+  }
+};
