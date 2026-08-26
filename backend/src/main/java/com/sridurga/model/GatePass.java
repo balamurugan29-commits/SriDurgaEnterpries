@@ -31,6 +31,9 @@ public class GatePass {
     @Column(name = "pass_type", length = 10)
     private String passType = "OUT";
 
+    @Column(name = "site_name", length = 255)
+    private String siteName;
+
     @OneToMany(mappedBy = "gatePass", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<GatePassItem> items = new ArrayList<>();
 

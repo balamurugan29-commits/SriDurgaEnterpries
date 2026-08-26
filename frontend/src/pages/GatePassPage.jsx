@@ -19,6 +19,7 @@ export const GatePassPage = ({ editingGatePass, onCancelEdit }) => {
     gatePassNo: '',
     gatePassDate: new Date().toISOString().split('T')[0],
     receiverName: '',
+    siteName: '',
     passType: 'OUT',
     items: [
       { serialNumber: 1, description: '', quantity: '', remarks: '' }
@@ -44,6 +45,7 @@ export const GatePassPage = ({ editingGatePass, onCancelEdit }) => {
             gatePassNo: editingGatePass.gatePassNo,
             gatePassDate: editingGatePass.gatePassDate ? editingGatePass.gatePassDate : new Date().toISOString().split('T')[0],
             receiverName: editingGatePass.receiverName || '',
+            siteName: editingGatePass.siteName || '',
             passType: editingGatePass.passType || 'OUT',
             items: editingGatePass.items && editingGatePass.items.length > 0
               ? editingGatePass.items.map((it, idx) => ({
@@ -262,7 +264,7 @@ export const GatePassPage = ({ editingGatePass, onCancelEdit }) => {
           </div>
 
           {/* To / Receiver Selector (Autocomplete) */}
-          <div style={{ gridColumn: 'span 2' }}>
+          <div style={{ gridColumn: 'span 1' }}>
             <label className="form-label">
               {formData.passType === 'IN' ? 'From (Sender / Customer Details)' : 'To (Receiver / Customer Details)'}
             </label>
@@ -290,6 +292,21 @@ export const GatePassPage = ({ editingGatePass, onCancelEdit }) => {
                   <option key={c.id} value={c.customerName}>{c.customerName}</option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          {/* Site Name Field */}
+          <div style={{ gridColumn: 'span 1' }}>
+            <label className="form-label">Site Name</label>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <input 
+                type="text" 
+                className="form-input" 
+                value={formData.siteName || ''} 
+                onChange={e => handleInputChange('siteName', e.target.value)} 
+                placeholder="e.g. ONGC Neravy Site / Karaikal Site"
+                style={{ height: '42px' }}
+              />
             </div>
           </div>
         </div>

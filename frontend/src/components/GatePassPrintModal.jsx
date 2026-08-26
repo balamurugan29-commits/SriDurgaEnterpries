@@ -163,14 +163,24 @@ export const GatePassPrintModal = ({ isOpen, onClose, gatePass }) => {
             <hr style={{ border: '0', borderTop: '1px solid #000', margin: '8px 0' }} />
 
             {/* To & Date row */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'flex-end' }}>
-              <div style={{ display: 'flex', flex: 1, marginRight: '20px' }}>
-                <span style={{ fontWeight: 'bold', marginRight: '6px' }}>{gatePass.passType === 'IN' ? 'From:' : 'To:'}</span>
-                <span style={{ borderBottom: '1px dotted #000', flex: 1, paddingLeft: '4px', whiteSpace: 'pre-wrap', fontWeight: 'bold' }}>
-                  {gatePass.receiverName || ''}
-                </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, marginRight: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-end', marginBottom: '4px' }}>
+                  <span style={{ fontWeight: 'bold', marginRight: '6px', whiteSpace: 'nowrap' }}>{gatePass.passType === 'IN' ? 'From:' : 'To:'}</span>
+                  <span style={{ borderBottom: '1px dotted #000', flex: 1, paddingLeft: '4px', whiteSpace: 'pre-wrap', fontWeight: 'bold' }}>
+                    {gatePass.receiverName || ''}
+                  </span>
+                </div>
+                {gatePass.siteName && (
+                  <div style={{ display: 'flex', alignItems: 'flex-end', marginTop: '4px' }}>
+                    <span style={{ fontWeight: 'bold', marginRight: '6px', whiteSpace: 'nowrap' }}>Site Name:</span>
+                    <span style={{ borderBottom: '1px dotted #000', flex: 1, paddingLeft: '4px', fontWeight: 'bold' }}>
+                      {gatePass.siteName}
+                    </span>
+                  </div>
+                )}
               </div>
-              <div style={{ display: 'flex', width: '180px' }}>
+              <div style={{ display: 'flex', width: '180px', alignItems: 'flex-end' }}>
                 <span style={{ fontWeight: 'bold', marginRight: '6px' }}>Date:</span>
                 <span style={{ borderBottom: '1px dotted #000', flex: 1, textAlign: 'center', fontWeight: 'bold' }}>
                   {formattedDate}
