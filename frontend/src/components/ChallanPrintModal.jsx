@@ -154,27 +154,30 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
     const pages = [];
     let remaining = [...itemList];
     
-    // Page 1
-    if (remaining.length <= 30) {
+    // Conservative limits to ensure browser never breaks summary blocks
+    const SINGLE_PAGE_MAX = 18;
+    const PAGE_1_MAX = 22;
+    const PAGE_2_MAX = 20;
+    const INTERMEDIATE_MAX = 24;
+    
+    if (remaining.length <= SINGLE_PAGE_MAX) {
       pages.push(remaining);
       return pages;
     }
     
-    // Page 1 gets exactly 30 items
-    pages.push(remaining.splice(0, 30));
+    // Page 1 gets exactly PAGE_1_MAX
+    pages.push(remaining.splice(0, PAGE_1_MAX));
     
     // Subsequent pages
     while (remaining.length > 0) {
-      if (remaining.length <= 25) {
+      if (remaining.length <= PAGE_2_MAX) {
         pages.push(remaining);
         break;
       } else {
-        if (remaining.length <= 30) {
-          // If remaining is between 26 and 30, split it so the last page doesn't overflow
-          pages.push(remaining.splice(0, 25));
+        if (remaining.length <= INTERMEDIATE_MAX) {
+          pages.push(remaining.splice(0, PAGE_2_MAX));
         } else {
-          // Intermediate pages can take 30
-          pages.push(remaining.splice(0, 30));
+          pages.push(remaining.splice(0, INTERMEDIATE_MAX));
         }
       }
     }
@@ -198,6 +201,24 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
       0
     );
     return getBroughtForwardAmount(pageIdx) + currentSubtotal;
+  };
+
+  // Helper to generate empty rows to stretch the table vertical lines
+  const getEmptyRows = (count) => {
+    const rows = [];
+    for (let i = 0; i < count; i++) {
+      rows.push(
+        <tr key={`empty-${i}`} style={{ height: '22px' }}>
+          <td style={{ padding: '4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>
+          {hasAnyItemCode && <td style={{ padding: '4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>}
+          <td style={{ padding: '4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>
+          <td style={{ padding: '4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>
+          <td style={{ padding: '4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>
+          <td style={{ padding: '4px', borderBottom: 'none' }}>&nbsp;</td>
+        </tr>
+      );
+    }
+    return rows;
   };
 
   return (
@@ -243,7 +264,7 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
           }
           @page {
             size: A4 portrait;
-            margin: 8mm;
+            margin: 0 !important; /* Hides default browser date/time and header/footer */
           }
         }
       `}</style>
@@ -303,6 +324,17 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
               const bForward = getBroughtForwardAmount(pageIdx);
               const pTotal = getPageTotalAmount(pageIdx);
 
+              // Calculate spacing / empty rows needed for table height alignment
+              let targetRows = 24; // Default intermediate
+              if (pages.length === 1) {
+                targetRows = 18;
+              } else if (pageIdx === 0) {
+                targetRows = 22;
+              } else if (pageIdx === pages.length - 1) {
+                targetRows = 20;
+              }
+              const emptyRowsCount = Math.max(0, targetRows - pageItems.length);
+
               return (
                 <div 
                   key={pageIdx} 
@@ -314,40 +346,43 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                     background: '#ffffff',
                     color: '#000000',
                     boxSizing: 'border-box',
-                    minHeight: '280mm',
+                    minHeight: '282mm',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between'
                   }}
                 >
                   <div>
-                    {/* Header Section */}
+                    {/* Header Row 1: TAX INVOICE aligned left, Copy Type aligned right */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #000', padding: '0.4rem 0.75rem', alignItems: 'center' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 'bold', textDecoration: 'underline', letterSpacing: '1.2px' }}>
+                        TAX INVOICE
+                      </div>
+                      <div style={{ fontWeight: 'bold', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        {copyType}
+                      </div>
+                    </div>
+
+                    {/* Header Row 2: Logo box and Company Info details */}
                     <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
-                      
-                      {/* Logo */}
-                      <div style={{ width: '100px', borderRight: '1px solid #000', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <div style={{ border: '2px solid #000', borderRadius: '50% 0 50% 0', width: '60px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '26px', fontFamily: 'Georgia, serif' }}>
+                      {/* Logo Square */}
+                      <div style={{ width: '85px', borderRight: '1px solid #000', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ border: '2.5px solid #000', borderRadius: '50% 0 50% 0', width: '55px', height: '55px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '24px', fontFamily: 'Georgia, serif' }}>
                           S
                         </div>
                       </div>
 
-                      {/* Title & Company Info */}
+                      {/* Company Info */}
                       <div style={{ flex: 1, padding: '0.4rem 0.75rem', textAlign: 'center' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 'bold', textDecoration: 'underline', letterSpacing: '1px' }}>TAX INVOICE</span>
-                        <h1 style={{ fontSize: '19px', fontWeight: '900', margin: '2px 0', letterSpacing: '1.5px', fontFamily: 'Arial Black, sans-serif' }}>
+                        <h1 style={{ fontSize: '18px', fontWeight: '900', margin: '1px 0', letterSpacing: '1.2px', fontFamily: 'Arial Black, sans-serif' }}>
                           SRI DURGA ENTERPRISES
                         </h1>
-                        <p style={{ margin: '1px 0', fontSize: '10.5px' }}>
+                        <p style={{ margin: '1px 0', fontSize: '10px', fontWeight: '600' }}>
                           No. 10 V.G. Nagar, Kovilpathu, Karaikal – 609 602
                         </p>
-                        <p style={{ margin: '1px 0', fontSize: '10.5px' }}>
+                        <p style={{ margin: '1px 0', fontSize: '10px', fontWeight: '600' }}>
                           E-mail : sridurgaenterprises@yahoo.com Cell: 9842492946
                         </p>
-                      </div>
-
-                      {/* Top Right Copy Tag */}
-                      <div style={{ width: '100px', borderLeft: '1px solid #000', padding: '0.4rem', textAlign: 'right', fontWeight: 'bold', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', textTransform: 'uppercase' }}>
-                        {copyType}
                       </div>
                     </div>
 
@@ -376,7 +411,7 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                           </tr>
                           <tr style={{ borderBottom: '1px solid #000' }}>
                             <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>P.O. No.</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>{challan.poNumber || '5060173862'}</td>
+                            <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '10px', wordBreak: 'break-all' }}>{challan.poNumber || '5060173862'}</td>
                             <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>GSTIN</td>
                             <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{challan.gstin || '34ABDFS4476N1ZN'}</td>
                           </tr>
@@ -430,7 +465,7 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                         </tbody>
                       </table>
                     ) : (
-                      /* Simple Meta Grid on subsequent pages */
+                      /* Full Meta Grid repeated on subsequent pages too, just with simplified details as requested */
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', borderBottom: '1px solid #000' }}>
                         <tbody>
                           <tr style={{ borderBottom: '1px solid #000' }}>
@@ -439,18 +474,30 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                             <td style={{ width: '90px', padding: '3px 6px', fontWeight: 'bold' }}>Date :</td>
                             <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{formattedDate}</td>
                           </tr>
-                          <tr>
+                          <tr style={{ borderBottom: '1px solid #000' }}>
                             <td style={{ padding: '3px 6px' }}>Contract No.</td>
                             <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>9010038288</td>
                             <td style={{ padding: '3px 6px' }}>Page</td>
                             <td style={{ padding: '3px 6px' }}>{pageIdx + 1} of {pages.length}</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #000' }}>
+                            <td style={{ padding: '3px 6px' }}>C. Period</td>
+                            <td style={{ padding: '3px 6px', borderRight: '1px solid #000' }}>01.05.2024 to 30.04.2027</td>
+                            <td style={{ padding: '3px 6px' }}>Vendor Code</td>
+                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{challan.vendorCode || '840305'}</td>
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #000' }}>
+                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>P.O. No.</td>
+                            <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '10px', wordBreak: 'break-all' }}>{challan.poNumber || '5060173862'}</td>
+                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>GSTIN</td>
+                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{challan.gstin || '34ABDFS4476N1ZN'}</td>
                           </tr>
                         </tbody>
                       </table>
                     )}
 
                     {/* Items Table */}
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', borderBottom: '1px solid #000' }}>
                       <thead>
                         <tr style={{ borderBottom: '1px solid #000' }}>
                           <th style={{ width: '45px', padding: '4px', textAlign: 'center', borderRight: '1px solid #000' }}>Sl.No.</th>
@@ -467,14 +514,14 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                         {/* Brought Forward row (if pageIdx > 0) */}
                         {pageIdx > 0 && (
                           <tr style={{ borderBottom: '1px solid #000', fontWeight: 'bold', fontStyle: 'italic' }}>
-                            <td style={{ borderRight: '1px solid #000' }}></td>
-                            {hasAnyItemCode && <td style={{ borderRight: '1px solid #000' }}></td>}
-                            <td style={{ padding: '5px 8px', borderRight: '1px solid #000' }}>
+                            <td style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>&nbsp;</td>
+                            {hasAnyItemCode && <td style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>&nbsp;</td>}
+                            <td style={{ padding: '5px 8px', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>
                               Brought Forward (Page {pageIdx})
                             </td>
-                            <td style={{ borderRight: '1px solid #000' }}></td>
-                            <td style={{ borderRight: '1px solid #000' }}></td>
-                            <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 'bold' }}>
+                            <td style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>&nbsp;</td>
+                            <td style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>&nbsp;</td>
+                            <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 'bold', borderBottom: '1px solid #000' }}>
                               {bForward.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                             </td>
                           </tr>
@@ -482,15 +529,15 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
 
                         {/* Equipment Header (Page 1 only) */}
                         {pageIdx === 0 && challan.equipmentHeader && (
-                          <tr>
-                            <td style={{ borderRight: '1px solid #000' }}></td>
-                            {hasAnyItemCode && <td style={{ borderRight: '1px solid #000' }}></td>}
-                            <td style={{ padding: '5px 8px', fontWeight: 'bold', textDecoration: 'underline', borderRight: '1px solid #000' }}>
+                          <tr style={{ height: '22px' }}>
+                            <td style={{ borderRight: '1px solid #000', borderBottom: 'none' }}></td>
+                            {hasAnyItemCode && <td style={{ borderRight: '1px solid #000', borderBottom: 'none' }}></td>}
+                            <td style={{ padding: '5px 8px', fontWeight: 'bold', textDecoration: 'underline', borderRight: '1px solid #000', borderBottom: 'none' }}>
                               {challan.equipmentHeader}
                             </td>
-                            <td style={{ borderRight: '1px solid #000' }}></td>
-                            <td style={{ borderRight: '1px solid #000' }}></td>
-                            <td></td>
+                            <td style={{ borderRight: '1px solid #000', borderBottom: 'none' }}></td>
+                            <td style={{ borderRight: '1px solid #000', borderBottom: 'none' }}></td>
+                            <td style={{ borderBottom: 'none' }}></td>
                           </tr>
                         )}
 
@@ -498,41 +545,44 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                         {pageItems.map((item, idx) => {
                           const absoluteIndex = pages.slice(0, pageIdx).reduce((sum, p) => sum + p.length, 0) + idx + 1;
                           return (
-                            <tr key={idx}>
-                              <td style={{ padding: '5px 4px', textAlign: 'center', verticalAlign: 'top', borderRight: '1px solid #000' }}>
+                            <tr key={idx} style={{ height: '22px' }}>
+                              <td style={{ padding: '5px 4px', textAlign: 'center', verticalAlign: 'top', borderRight: '1px solid #000', borderBottom: 'none' }}>
                                 {item.serialNumber || absoluteIndex}
                               </td>
                               {hasAnyItemCode && (
-                                <td style={{ padding: '5px 6px', textAlign: 'center', verticalAlign: 'top', fontWeight: 'bold', borderRight: '1px solid #000' }}>
+                                <td style={{ padding: '5px 6px', textAlign: 'center', verticalAlign: 'top', fontWeight: 'bold', borderRight: '1px solid #000', borderBottom: 'none' }}>
                                   {item.itemCode && item.itemCode !== 'CUSTOM' ? item.itemCode : ''}
                                 </td>
                               )}
-                              <td style={{ padding: '5px 8px', verticalAlign: 'top', borderRight: '1px solid #000', whiteSpace: 'pre-line' }}>
+                              <td style={{ padding: '5px 8px', verticalAlign: 'top', borderRight: '1px solid #000', borderBottom: 'none', whiteSpace: 'pre-line' }}>
                                 <div>{item.description}</div>
                               </td>
-                              <td style={{ padding: '5px 8px', textAlign: 'right', verticalAlign: 'top', borderRight: '1px solid #000' }}>
+                              <td style={{ padding: '5px 8px', textAlign: 'right', verticalAlign: 'top', borderRight: '1px solid #000', borderBottom: 'none' }}>
                                 {Number(item.rate).toFixed(2)}
                               </td>
-                              <td style={{ padding: '5px 8px', textAlign: 'center', verticalAlign: 'top', borderRight: '1px solid #000' }}>
+                              <td style={{ padding: '5px 8px', textAlign: 'center', verticalAlign: 'top', borderRight: '1px solid #000', borderBottom: 'none' }}>
                                 {item.quantity} {item.unit || 'No'}
                               </td>
-                              <td style={{ padding: '5px 8px', textAlign: 'right', verticalAlign: 'top', fontWeight: 'bold' }}>
+                              <td style={{ padding: '5px 8px', textAlign: 'right', verticalAlign: 'top', fontWeight: 'bold', borderBottom: 'none' }}>
                                 {Number(item.amount || (item.quantity * item.rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                               </td>
                             </tr>
                           );
                         })}
 
+                        {/* Spacer Rows to stretch borders vertically */}
+                        {getEmptyRows(emptyRowsCount)}
+
                         {/* Page Total row (if not the last page) */}
                         {pageIdx < pages.length - 1 && (
-                          <tr style={{ borderTop: '1px solid #000', fontWeight: 'bold' }}>
-                            <td style={{ borderRight: '1px solid #000' }}></td>
-                            {hasAnyItemCode && <td style={{ borderRight: '1px solid #000' }}></td>}
+                          <tr style={{ borderTop: '1px solid #000', fontWeight: 'bold', height: '24px' }}>
+                            <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>
+                            {hasAnyItemCode && <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>}
                             <td style={{ padding: '6px 8px', borderRight: '1px solid #000', textAlign: 'center', fontWeight: 'bold', fontStyle: 'italic' }}>
                               Page - {pageIdx + 1} Total
                             </td>
-                            <td style={{ borderRight: '1px solid #000' }}></td>
-                            <td style={{ borderRight: '1px solid #000' }}></td>
+                            <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>
+                            <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>
                             <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>
                               {pTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                             </td>
@@ -553,7 +603,7 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
 
                     {/* Subtotal, GST, Grand Total, and Signatures (Only on last page) */}
                     {pageIdx === pages.length - 1 && (
-                      <div style={{ borderTop: '1px solid #000', marginTop: 'auto' }}>
+                      <div style={{ borderTop: 'none', marginTop: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
                           <tbody>
                             <tr style={{ borderBottom: '1px solid #000' }}>
