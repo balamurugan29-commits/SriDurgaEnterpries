@@ -372,10 +372,8 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                     {/* Header Row 2: Logo box and Company Info details */}
                     <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
                       {/* Logo Square */}
-                      <div style={{ width: '85px', borderRight: '1px solid #000', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <div style={{ border: '2.5px solid #000', borderRadius: '50% 0 50% 0', width: '55px', height: '55px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '24px', fontFamily: 'Georgia, serif' }}>
-                          S
-                        </div>
+                      <div style={{ width: '85px', borderRight: '1px solid #000', padding: '0.3rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <img src="/logo.jpg" alt="Logo" style={{ width: '70px', height: '70px', objectFit: 'contain' }} />
                       </div>
 
                       {/* Company Info */}

@@ -126,18 +126,18 @@ export const Navbar = ({ activePage, setActivePage }) => {
             title="Go to Dashboard / Home"
           >
             <div style={{ 
-              background: 'linear-gradient(135deg, #4f46e5 0%, #10b981 100%)', 
               width: '40px', 
               height: '40px', 
-              borderRadius: '12px', 
+              borderRadius: '10px', 
+              overflow: 'hidden',
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center', 
-              boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
               flexShrink: 0,
-              transition: 'transform 0.2s ease'
+              background: '#ffffff'
             }}>
-              <Factory size={22} color="white" />
+              <img src="/logo.jpg" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
             <div>
               <h1 className="navbar-brand-title" style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
