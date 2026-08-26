@@ -353,12 +353,12 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                   }}
                 >
                   <div>
-                    {/* Header Row 1: TAX INVOICE aligned left, Copy Type aligned right */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #000', padding: '0.4rem 0.75rem', alignItems: 'center' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 'bold', textDecoration: 'underline', letterSpacing: '1.2px' }}>
+                    {/* Header Row 1: TAX INVOICE centered, Copy Type aligned right */}
+                    <div style={{ display: 'flex', borderBottom: '1px solid #000', padding: '0.4rem 0.75rem', position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 'bold', textDecoration: 'underline', letterSpacing: '1.2px', textAlign: 'center' }}>
                         TAX INVOICE
                       </div>
-                      <div style={{ fontWeight: 'bold', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      <div style={{ position: 'absolute', right: '0.75rem', fontWeight: 'bold', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                         {copyType}
                       </div>
                     </div>
@@ -465,7 +465,7 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                         </tbody>
                       </table>
                     ) : (
-                      /* Full Meta Grid repeated on subsequent pages too, just with simplified details as requested */
+                      /* Simplified Meta Grid on subsequent pages */
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', borderBottom: '1px solid #000' }}>
                         <tbody>
                           <tr style={{ borderBottom: '1px solid #000' }}>
@@ -474,23 +474,11 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                             <td style={{ width: '90px', padding: '3px 6px', fontWeight: 'bold' }}>Date :</td>
                             <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{formattedDate}</td>
                           </tr>
-                          <tr style={{ borderBottom: '1px solid #000' }}>
+                          <tr>
                             <td style={{ padding: '3px 6px' }}>Contract No.</td>
                             <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>9010038288</td>
                             <td style={{ padding: '3px 6px' }}>Page</td>
                             <td style={{ padding: '3px 6px' }}>{pageIdx + 1} of {pages.length}</td>
-                          </tr>
-                          <tr style={{ borderBottom: '1px solid #000' }}>
-                            <td style={{ padding: '3px 6px' }}>C. Period</td>
-                            <td style={{ padding: '3px 6px', borderRight: '1px solid #000' }}>01.05.2024 to 30.04.2027</td>
-                            <td style={{ padding: '3px 6px' }}>Vendor Code</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{challan.vendorCode || '840305'}</td>
-                          </tr>
-                          <tr style={{ borderBottom: '1px solid #000' }}>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>P.O. No.</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '10px', wordBreak: 'break-all' }}>{challan.poNumber || '5060173862'}</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>GSTIN</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{challan.gstin || '34ABDFS4476N1ZN'}</td>
                           </tr>
                         </tbody>
                       </table>
