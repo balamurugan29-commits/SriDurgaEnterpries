@@ -63,6 +63,7 @@ export const MultiInvoiceExportModal = ({ isOpen, onClose, selectedChallans = []
                 background: #ffffff;
                 color: #000000;
                 padding: 0;
+                font-size: 11.5px;
               }
               .single-invoice-page {
                 border: 2px solid #000000;
@@ -82,7 +83,7 @@ export const MultiInvoiceExportModal = ({ isOpen, onClose, selectedChallans = []
               }
               @page {
                 size: A4 portrait;
-                margin: 8mm;
+                margin: 6mm 8mm !important;
               }
               @media print {
                 body {
@@ -210,103 +211,112 @@ export const MultiInvoiceExportModal = ({ isOpen, onClose, selectedChallans = []
                     <span>TAX INVOICE NO: {challan.challanNumber}</span>
                   </div>
 
-                  {/* Header Section with Logo & Company Title */}
-                  <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
-                    
-                    {/* Logo Box */}
-                    <div style={{ width: '100px', borderRight: '1px solid #000', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ border: '2px solid #000', borderRadius: '50% 0 50% 0', width: '60px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '26px', fontFamily: 'Georgia, serif' }}>
-                        S
-                      </div>
+                  {/* Header Section with Logo & Company Title matching User Photo */}
+                  <div style={{ display: 'flex', borderBottom: '1px solid #000', position: 'relative' }}>
+                    {/* Left: Logo Box */}
+                    <div style={{ width: '85px', minWidth: '85px', borderRight: '1px solid #000', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <img src="/logo.jpg" alt="Logo" style={{ width: '70px', height: '70px', objectFit: 'contain' }} />
                     </div>
 
-                    {/* Title & Company Info */}
-                    <div style={{ flex: 1, padding: '0.4rem 0.75rem', textAlign: 'center' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 'bold', textDecoration: 'underline', letterSpacing: '1px' }}>TAX INVOICE</span>
-                      <h1 style={{ fontSize: '19px', fontWeight: '900', margin: '2px 0', letterSpacing: '1.5px', fontFamily: 'Arial Black, sans-serif' }}>
-                        SRI DURGA ENTERPRISES
+                    {/* Center: Title & Company Info */}
+                    <div style={{ flex: 1, padding: '4px 8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 'bold', textDecoration: 'underline', letterSpacing: '1px', marginBottom: '2px' }}>
+                        TAX INVOICE
+                      </div>
+                      <h1 style={{ fontSize: '18px', fontWeight: '900', margin: '2px 0', letterSpacing: '3px', fontFamily: 'Arial, sans-serif' }}>
+                        SRI &nbsp; DURGA &nbsp; ENTERPRISES
                       </h1>
-                      <p style={{ margin: '1px 0', fontSize: '10.5px' }}>
+                      <p style={{ margin: '1px 0', fontSize: '11px', fontWeight: '600' }}>
                         No. 10 V.G. Nagar, Kovilpathu, Karaikal – 609 602
                       </p>
-                      <p style={{ margin: '1px 0', fontSize: '10.5px' }}>
-                        E-mail : sridurgaenterprises@yahoo.com Cell: 9842492946
+                      <p style={{ margin: '1px 0', fontSize: '11px', fontWeight: '600' }}>
+                        E-mail : sridurgaenterprises@yahoo.com &nbsp;&nbsp; Cell: 9842492946
                       </p>
                     </div>
 
-                    {/* Original Badge */}
-                    <div style={{ width: '85px', borderLeft: '1px solid #000', padding: '0.4rem', textAlign: 'right', fontWeight: 'bold', fontSize: '10.5px' }}>
-                      ORIGINAL
+                    {/* Top Right Copy */}
+                    <div style={{ position: 'absolute', right: '10px', top: '6px', fontWeight: 'bold', fontSize: '11.5px', textTransform: 'uppercase' }}>
+                      OFFICE COPY
                     </div>
                   </div>
 
-                  {/* Invoice Meta Grid */}
+                  {/* Exact Metadata Grid Matching User Reference Photo */}
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', borderBottom: '1px solid #000' }}>
                     <tbody>
-                      <tr style={{ borderBottom: '1px solid #000' }}>
-                        <td style={{ width: '100px', padding: '3px 6px', fontWeight: 'bold' }}>Invoice No.</td>
-                        <td style={{ width: '230px', padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>{challan.challanNumber}</td>
-                        <td style={{ width: '90px', padding: '3px 6px', fontWeight: 'bold' }}>Date :</td>
-                        <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{formattedDate}</td>
+                      {/* Row 1: Invoice No & Date */}
+                      <tr style={{ background: '#dce4dc', borderBottom: '1px solid #000' }}>
+                        <td style={{ width: '15%', padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>Invoice No.</td>
+                        <td style={{ width: '45%', padding: '3px 6px', fontWeight: '900', fontSize: '12px', borderRight: '1px solid #000' }}>{challan.challanNumber}</td>
+                        <td style={{ width: '15%', padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>Date :</td>
+                        <td style={{ width: '25%', padding: '3px 6px', fontWeight: '900', fontSize: '12px' }}>{formattedDate}</td>
                       </tr>
+
+                      {/* Row 2: Contract No & Page */}
                       <tr style={{ borderBottom: '1px solid #000' }}>
-                        <td style={{ padding: '3px 6px' }}>Vendor Code</td>
-                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>{challan.vendorCode || '253540'}</td>
-                        <td style={{ padding: '3px 6px' }}>Page</td>
-                        <td style={{ padding: '3px 6px' }}>1 of 1</td>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>Contract No.</td>
+                        <td style={{ padding: '3px 6px', borderRight: '1px solid #000' }}>{challan.contractNo || '9010038288'}</td>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>Page</td>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>1 of 1</td>
                       </tr>
+
+                      {/* Row 3: C. Period & Vendor Code */}
                       <tr style={{ borderBottom: '1px solid #000' }}>
-                        <td style={{ padding: '3px 6px' }}>P.O. No.</td>
-                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>{challan.poNumber || ''}</td>
-                        <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>GSTIN</td>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>C. Period</td>
+                        <td style={{ padding: '3px 6px', borderRight: '1px solid #000' }}>{challan.contractPeriod || '01.05.2024 to 30.04.2027'}</td>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>Vendor Code</td>
+                        <td style={{ padding: '3px 6px' }}>{challan.vendorCode || '840305'}</td>
+                      </tr>
+
+                      {/* Row 4: P.O. No. & GSTIN */}
+                      <tr style={{ borderBottom: '1px solid #000' }}>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>P.O. No.</td>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>{challan.poNumber || '5060173862'} {challan.poDate ? `Dt: ${new Date(challan.poDate).toLocaleDateString('en-GB')}` : ''}</td>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>GSTIN</td>
                         <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{challan.gstin || '34ABDFS4476N1ZN'}</td>
                       </tr>
+
+                      {/* Row 5: B.G. NO. & PAN */}
                       <tr style={{ borderBottom: '1px solid #000' }}>
-                        <td style={{ padding: '3px 6px' }}>P.O. Date</td>
-                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>{challan.poDate || ''}</td>
-                        <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>PAN</td>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>B.G. NO.</td>
+                        <td style={{ padding: '3px 6px', borderRight: '1px solid #000' }}>{challan.bgNo || '8110IPEBG240001  Validity Upto : 30.09.2027'}</td>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>PAN</td>
                         <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{challan.pan || 'ABDFS4476N'}</td>
                       </tr>
+
+                      {/* Row 6: EPF Code & State Code */}
                       <tr style={{ borderBottom: '1px solid #000' }}>
-                        <td style={{ padding: '3px 6px' }}>EPF Code</td>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>EPF Code</td>
                         <td style={{ padding: '3px 6px', borderRight: '1px solid #000' }}>{challan.epfCode || 'PC 1758'}</td>
-                        <td style={{ padding: '3px 6px' }}>State Code</td>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>State Code</td>
                         <td style={{ padding: '3px 6px' }}>{challan.stateCode || 'Puducherry (34)'}</td>
                       </tr>
+
+                      {/* Row 7: ESI CODE & Invoice Value */}
                       <tr style={{ borderBottom: '1px solid #000' }}>
-                        <td style={{ padding: '3px 6px' }}>ESI CODE</td>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>ESI CODE</td>
                         <td style={{ padding: '3px 6px', borderRight: '1px solid #000' }}>{challan.esiCode || '55000426770000602'}</td>
-                        <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>Invoice Value</td>
-                        <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>Rs. {grossAmount.toFixed(2)}</td>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>Invoice Value</td>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>Rs. {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       </tr>
 
-                      {/* Billed To Row */}
-                      <tr>
-                        <td style={{ padding: '4px 6px', fontWeight: 'bold', verticalAlign: 'top' }}>BILLED TO</td>
-                        <td style={{ padding: '4px 6px', borderRight: '1px solid #000', verticalAlign: 'top' }}>
-                          <div style={{ fontWeight: 'bold' }}>{challan.customerName || ''}</div>
-                          <div style={{ whiteSpace: 'pre-line' }}>{challan.customerAddress || ''}</div>
+                      {/* Row 8: BILLED TO */}
+                      <tr style={{ borderBottom: '1px solid #000' }}>
+                        <td style={{ padding: '4px 6px', fontWeight: 'bold', background: '#dce4dc', verticalAlign: 'top', borderRight: '1px solid #000' }}>BILLED TO</td>
+                        <td style={{ padding: '4px 6px', fontWeight: 'bold', lineHeight: '1.35', borderRight: '1px solid #000' }}>
+                          <div>{challan.customerName || ''}</div>
+                          {challan.customerAddress && <div style={{ fontWeight: 'normal', fontSize: '10px' }}>{challan.customerAddress}</div>}
+                          {challan.customerPhone && <div style={{ fontWeight: 'normal', fontSize: '10px' }}>Phone: {challan.customerPhone}</div>}
                         </td>
-                        <td colSpan={2} style={{ padding: 0, verticalAlign: 'top' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
-                            <tbody>
-                              <tr style={{ borderBottom: '1px solid #000' }}>
-                                <td style={{ width: '90px', padding: '3px 6px', fontWeight: 'bold' }}>PAN</td>
-                                <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{challan.customerPan || ''}</td>
-                              </tr>
-                              <tr>
-                                <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>State Code</td>
-                                <td style={{ padding: '3px 6px' }}>{challan.customerStateCode || 'PUDUCHERRY (34)'}</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </td>
+                        <td style={{ padding: '4px 6px', fontWeight: 'bold', verticalAlign: 'top', borderRight: '1px solid #000' }}>PAN</td>
+                        <td style={{ padding: '4px 6px', fontWeight: 'bold', verticalAlign: 'top' }}>{challan.customerPan || ''}</td>
                       </tr>
 
-                      <tr style={{ borderTop: '1px solid #000' }}>
-                        <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>GST</td>
+                      {/* Row 9: Customer GST & Customer State Code */}
+                      <tr style={{ borderBottom: '1px solid #000' }}>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold', background: '#dce4dc', borderRight: '1px solid #000' }}>GST</td>
                         <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>{challan.customerGstin || ''}</td>
-                        <td colSpan={2} style={{ padding: 0 }}></td>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>State Code</td>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{challan.customerStateCode || 'TAMILNADU (33)'}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -314,7 +324,7 @@ export const MultiInvoiceExportModal = ({ isOpen, onClose, selectedChallans = []
                   {/* Line Items Table */}
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
                     <thead>
-                      <tr style={{ borderBottom: '1px solid #000' }}>
+                      <tr style={{ borderBottom: '1px solid #000', background: '#f1f5f9' }}>
                         <th style={{ width: '45px', padding: '4px', textAlign: 'center', borderRight: '1px solid #000' }}>Sl.No.</th>
                         {hasAnyItemCode && (
                           <th style={{ width: '95px', padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #000' }}>Item Code</th>

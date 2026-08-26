@@ -17,6 +17,8 @@ import { JobCardPage } from './pages/JobCardPage';
 import { JobCardListPage } from './pages/JobCardListPage';
 import { GatePassPage } from './pages/GatePassPage';
 import { GatePassListPage } from './pages/GatePassListPage';
+import { SalesLedgerPage } from './pages/SalesLedgerPage';
+import { PurchaseLedgerPage } from './pages/PurchaseLedgerPage';
 
 const MainApp = () => {
   const { isAuthenticated } = useAuth();
@@ -195,6 +197,8 @@ const MainApp = () => {
               path="/gate-pass-history" 
               element={<Navigate to="/gate-pass-list" replace />} 
             />
+            <Route path="/sales-ledger" element={<SalesLedgerPage />} />
+            <Route path="/purchase-ledger" element={<PurchaseLedgerPage />} />
             <Route path="*" element={<Navigate to="/master" replace />} />
           </Routes>
         </main>

@@ -1,22 +1,9 @@
 -- =============================================================================
--- Sri Durga Enterprises - MS SQL Server Database Migration & Schema Script
--- Dialect: Microsoft SQL Server (2019 / 2022 / Azure SQL)
--- Database: SriDurgaDB
+-- Sri Durga Enterprises - Flyway V1 Initial Schema Migration
+-- Compatible with MS SQL Server (2019/2022) and standard SQL
 -- =============================================================================
 
--- Ensure Database Exists
-IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'SriDurgaDB')
-BEGIN
-    CREATE DATABASE SriDurgaDB;
-END;
-GO
-
-USE SriDurgaDB;
-GO
-
--- =============================================================================
--- 1. USERS TABLE (Authentication & Role-Based Access Control)
--- =============================================================================
+-- 1. Users Table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'users')
 BEGIN
     CREATE TABLE users (
@@ -28,11 +15,8 @@ BEGIN
         created_at DATETIME2 DEFAULT GETDATE()
     );
 END;
-GO
 
--- =============================================================================
--- 2. ITEM MASTER TABLE (Rate Contract Items & Pricing)
--- =============================================================================
+-- 2. Item Master Table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'item_master')
 BEGIN
     CREATE TABLE item_master (
@@ -50,24 +34,8 @@ BEGIN
     );
     CREATE INDEX idx_item_code ON item_master(item_code);
 END;
-GO
 
--- Add missing columns to item_master if table already existed previously
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('item_master') AND name = 'unit')
-BEGIN
-    ALTER TABLE item_master ADD unit VARCHAR(20) DEFAULT 'No';
-END;
-GO
-
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('item_master') AND name = 'service_charge')
-BEGIN
-    ALTER TABLE item_master ADD service_charge DECIMAL(18,2) DEFAULT 0.00;
-END;
-GO
-
--- =============================================================================
--- 3. CUSTOMER MASTER TABLE (Clients, GSTIN, PAN, Address)
--- =============================================================================
+-- 3. Customer Master Table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'customer_master')
 BEGIN
     CREATE TABLE customer_master (
@@ -84,11 +52,8 @@ BEGIN
     );
     CREATE INDEX idx_customer_name ON customer_master(customer_name);
 END;
-GO
 
--- =============================================================================
--- 4. DELIVERY CHALLAN / TAX INVOICE TABLE
--- =============================================================================
+-- 4. Delivery Challan Table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'delivery_challan')
 BEGIN
     CREATE TABLE delivery_challan (
@@ -118,11 +83,8 @@ BEGIN
     );
     CREATE INDEX idx_challan_number ON delivery_challan(challan_number);
 END;
-GO
 
--- =============================================================================
--- 5. CHALLAN LINE ITEMS TABLE
--- =============================================================================
+-- 5. Challan Items Table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'challan_items')
 BEGIN
     CREATE TABLE challan_items (
@@ -138,11 +100,8 @@ BEGIN
     );
     CREATE INDEX idx_challan_id ON challan_items(delivery_challan_id);
 END;
-GO
 
--- =============================================================================
--- 6. MOTOR OVERHAULING & REWINDING JOB CARD TABLE
--- =============================================================================
+-- 6. Motor Overhauling & Rewinding Job Card Table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'job_card')
 BEGIN
     CREATE TABLE job_card (
@@ -224,11 +183,8 @@ BEGIN
     );
     CREATE INDEX idx_job_no ON job_card(job_no);
 END;
-GO
 
--- =============================================================================
--- 7. WORK COMPLETION CERTIFICATES TABLE
--- =============================================================================
+-- 7. Work Completion Certificates Table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'work_completion_certificates')
 BEGIN
     CREATE TABLE work_completion_certificates (
@@ -254,11 +210,8 @@ BEGIN
     );
     CREATE INDEX idx_cert_no ON work_completion_certificates(certificate_no);
 END;
-GO
 
--- =============================================================================
--- 8. WORK COMPLETION LINE ITEMS TABLE
--- =============================================================================
+-- 8. Work Completion Line Items Table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'work_completion_items')
 BEGIN
     CREATE TABLE work_completion_items (
@@ -274,11 +227,8 @@ BEGIN
     );
     CREATE INDEX idx_cert_id ON work_completion_items(certificate_id);
 END;
-GO
 
--- =============================================================================
--- 9. IN / OUT GATE PASS TABLE
--- =============================================================================
+-- 9. In / Out Gate Pass Table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'gate_pass')
 BEGIN
     CREATE TABLE gate_pass (
@@ -292,11 +242,8 @@ BEGIN
     );
     CREATE INDEX idx_gate_pass_no ON gate_pass(gate_pass_no);
 END;
-GO
 
--- =============================================================================
--- 10. GATE PASS LINE ITEMS TABLE
--- =============================================================================
+-- 10. Gate Pass Line Items Table
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'gate_pass_items')
 BEGIN
     CREATE TABLE gate_pass_items (
@@ -310,21 +257,14 @@ BEGIN
     );
     CREATE INDEX idx_gp_id ON gate_pass_items(gate_pass_id);
 END;
-GO
 
--- =============================================================================
--- 11. DEFAULT SEED DATA (Admin User, Initial Rate Contract Items & Customer)
--- =============================================================================
-
--- Seed Admin User (Username: admin / Password: password or BCrypt hash)
+-- 11. Initial Data Seeding
 IF NOT EXISTS (SELECT * FROM users WHERE user_id = 'admin')
 BEGIN
     INSERT INTO users (user_id, password, full_name, role)
     VALUES ('admin', '$2a$10$7vY8.gH1p4vQ9V3z0eN7/eB5QJ8a7M1v4E7m8K9L0P1Q2R3S4T5U6', 'Sri Durga Administrator', 'ADMIN');
 END;
-GO
 
--- Seed Sample Customer
 IF NOT EXISTS (SELECT * FROM customer_master WHERE customer_name LIKE '%Ocean Sparkle%')
 BEGIN
     INSERT INTO customer_master (serial_number, customer_name, gstin, pan, state_code, phone, address)
@@ -338,82 +278,21 @@ BEGIN
         'Keezhavanjore, Thirumalairajan Pattinam, Karaikal - 609606.'
     );
 END;
-GO
 
--- Seed Default Rate Contract Items
 IF NOT EXISTS (SELECT * FROM item_master WHERE item_code = '70.3')
 BEGIN
     INSERT INTO item_master (serial_number, item_code, description, quantity, unit, rate, service_charge, amount)
     VALUES (1, '70.3', 'Supply of RCCB 4P, 63A, 100mA Sensitivity', 4, 'No', 4500.00, 0.00, 18000.00);
 END;
-GO
 
 IF NOT EXISTS (SELECT * FROM item_master WHERE item_code = '122')
 BEGIN
     INSERT INTO item_master (serial_number, item_code, description, quantity, unit, rate, service_charge, amount)
     VALUES (2, '122', 'S&I of 50mm, 3Mtr GI Earth pipe including chamber', 3, 'No', 6200.00, 0.00, 18600.00);
 END;
-GO
 
 IF NOT EXISTS (SELECT * FROM item_master WHERE item_code = '24.7')
 BEGIN
     INSERT INTO item_master (serial_number, item_code, description, quantity, unit, rate, service_charge, amount)
     VALUES (3, '24.7', 'Supply of 3P Power Contactor - 70A', 1, 'No', 8900.00, 0.00, 8900.00);
 END;
-GO
-
--- =============================================================================
--- 10. SALES LEDGER TABLE (GSTR-1 Sales Register & Passing Records)
--- =============================================================================
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'sales_ledger')
-BEGIN
-    CREATE TABLE sales_ledger (
-        id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        serial_number INT NULL,
-        invoice_no VARCHAR(100) NOT NULL,
-        invoice_date DATE NOT NULL,
-        billed_to_remarks NVARCHAR(MAX) NULL,
-        taxable_amount DECIMAL(18,2) DEFAULT 0.00,
-        igst DECIMAL(18,2) DEFAULT 0.00,
-        sgst DECIMAL(18,2) DEFAULT 0.00,
-        ugst DECIMAL(18,2) DEFAULT 0.00,
-        tax_amount DECIMAL(18,2) DEFAULT 0.00,
-        total_amount DECIMAL(18,2) DEFAULT 0.00,
-        it_tds DECIMAL(18,2) DEFAULT 0.00,
-        gst_tds DECIMAL(18,2) DEFAULT 0.00,
-        passed_amount DECIMAL(18,2) DEFAULT 0.00,
-        passed_date DATE NULL,
-        mode_of_payment VARCHAR(50) DEFAULT 'NEFT',
-        created_at DATETIME2 DEFAULT GETDATE(),
-        updated_at DATETIME2 DEFAULT GETDATE()
-    );
-    CREATE INDEX idx_sales_ledger_inv ON sales_ledger(invoice_no, invoice_date);
-END;
-GO
-
--- =============================================================================
--- 11. PURCHASE LEDGER TABLE (GSTR-2 Purchase & Dealer Expenses)
--- =============================================================================
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'purchase_ledger')
-BEGIN
-    CREATE TABLE purchase_ledger (
-        id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        serial_number INT NULL,
-        dealer_store_name NVARCHAR(MAX) NULL,
-        invoice_no VARCHAR(100) NOT NULL,
-        invoice_date DATE NOT NULL,
-        taxable_amount DECIMAL(18,2) DEFAULT 0.00,
-        tax_amount DECIMAL(18,2) DEFAULT 0.00,
-        total_amount DECIMAL(18,2) DEFAULT 0.00,
-        paid_amount DECIMAL(18,2) DEFAULT 0.00,
-        payment_date DATE NULL,
-        mode_of_payment VARCHAR(50) DEFAULT 'NEFT',
-        balance_amount DECIMAL(18,2) DEFAULT 0.00,
-        supplier_remarks NVARCHAR(MAX) NULL,
-        remarks NVARCHAR(MAX) NULL,
-        created_at DATETIME2 DEFAULT GETDATE(),
-        updated_at DATETIME2 DEFAULT GETDATE()
-    );
-    CREATE INDEX idx_purchase_ledger_inv ON purchase_ledger(invoice_no, invoice_date);
-END;
-GO

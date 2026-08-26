@@ -2,15 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { fetchJobCards, deleteJobCard } from '../services/api';
 import { JobCardPrintModal } from '../components/JobCardPrintModal';
 import { Toast } from '../components/Toast';
-import { ClipboardList, Search, RefreshCw, Printer, Edit3, Trash2, Plus, ChevronRight } from 'lucide-react';
+import { ClipboardList, Search, RefreshCw, Printer, Edit3, Trash2, Plus, ChevronRight, Filter, FilterX, Calendar, Hash, User, Wrench } from 'lucide-react';
 
 export const JobCardListPage = ({ onEditJobCard, onNewJobCard }) => {
   const [jobCards, setJobCards] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedJobCardForPrint, setSelectedJobCardForPrint] = useState(null);
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'success' });
+
+  // Filter States
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterJobNo, setFilterJobNo] = useState('');
+  const [filterCustomer, setFilterCustomer] = useState('');
+  const [filterEquipment, setFilterEquipment] = useState('');
+  const [filterMake, setFilterMake] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   const loadJobCards = async () => {
     try {
@@ -46,15 +55,68 @@ export const JobCardListPage = ({ onEditJobCard, onNewJobCard }) => {
     setPrintModalOpen(true);
   };
 
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setFilterJobNo('');
+    setFilterCustomer('');
+    setFilterEquipment('');
+    setFilterMake('');
+    setFromDate('');
+    setToDate('');
+  };
+
+  // Multi-criteria Filtering
   const filteredJobCards = jobCards.filter(c => {
+    // 1. General Live Search
     const q = searchQuery.toLowerCase().trim();
-    return !q ||
+    const matchesSearch = !q ||
       (c.jobNo && c.jobNo.toLowerCase().includes(q)) ||
       (c.customerName && c.customerName.toLowerCase().includes(q)) ||
       (c.equipment && c.equipment.toLowerCase().includes(q)) ||
       (c.slNo && c.slNo.toLowerCase().includes(q)) ||
       (c.make && c.make.toLowerCase().includes(q));
+
+    // 2. Job No Filter
+    const jobQ = filterJobNo.toLowerCase().trim();
+    const matchesJobNo = !jobQ || (c.jobNo && c.jobNo.toLowerCase().includes(jobQ));
+
+    // 3. Customer Filter
+    const custQ = filterCustomer.toLowerCase().trim();
+    const matchesCustomer = !custQ || (c.customerName && c.customerName.toLowerCase().includes(custQ));
+
+    // 4. Equipment Filter
+    const eqQ = filterEquipment.toLowerCase().trim();
+    const matchesEquipment = !eqQ || (c.equipment && c.equipment.toLowerCase().includes(eqQ));
+
+    // 5. Make Filter
+    const makeQ = filterMake.toLowerCase().trim();
+    const matchesMake = !makeQ || (c.make && c.make.toLowerCase().includes(makeQ));
+
+    // 6. Date Range Filter
+    let matchesDate = true;
+    if (c.jobDate) {
+      if (fromDate && c.jobDate < fromDate) {
+        matchesDate = false;
+      }
+      if (toDate && c.jobDate > toDate) {
+        matchesDate = false;
+      }
+    } else if (fromDate || toDate) {
+      matchesDate = false;
+    }
+
+    return matchesSearch && matchesJobNo && matchesCustomer && matchesEquipment && matchesMake && matchesDate;
   });
+
+  const activeFilterCount = [
+    searchQuery,
+    filterJobNo,
+    filterCustomer,
+    filterEquipment,
+    filterMake,
+    fromDate,
+    toDate
+  ].filter(Boolean).length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -76,38 +138,199 @@ export const JobCardListPage = ({ onEditJobCard, onNewJobCard }) => {
               Issued Job Cards History
             </h2>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-              View, search, edit, and print issued equipment job cards.
+              View, search, filter, edit, and print issued equipment job cards.
             </p>
           </div>
         </div>
 
-        {onNewJobCard && (
-          <button onClick={onNewJobCard} className="btn btn-primary" style={{ fontSize: '0.85rem' }}>
-            <Plus size={15} /> + New Job Card
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {/* FILTER BUTTON WITH ACTIVE BADGE */}
+          <button 
+            onClick={() => setShowFilters(prev => !prev)} 
+            className={`btn ${showFilters || activeFilterCount > 0 ? 'btn-primary' : 'btn-outline'}`}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem', 
+              padding: '0.55rem 1rem', 
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              background: showFilters ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' : undefined,
+              borderColor: activeFilterCount > 0 ? '#38bdf8' : undefined
+            }}
+            title="Toggle Filter Options"
+          >
+            <Filter size={16} />
+            <span>Filters</span>
+            {activeFilterCount > 0 && (
+              <span style={{ 
+                background: '#fbbf24', 
+                color: '#0f172a', 
+                borderRadius: '50%', 
+                width: '20px', 
+                height: '20px', 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                fontSize: '0.75rem', 
+                fontWeight: 900,
+                marginLeft: '0.2rem'
+              }}>
+                {activeFilterCount}
+              </span>
+            )}
           </button>
-        )}
+
+          {onNewJobCard && (
+            <button onClick={onNewJobCard} className="btn btn-primary" style={{ fontSize: '0.85rem' }}>
+              <Plus size={15} /> + New Job Card
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* EXPANDABLE FILTER PANEL */}
+      {showFilters && (
+        <div className="glass-panel animate-modal-entry" style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1.5px solid rgba(56, 189, 248, 0.35)', background: 'rgba(15, 23, 42, 0.95)' }}>
+          {/* Filter Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#38bdf8', fontWeight: 800, fontSize: '0.95rem' }}>
+              <Filter size={18} />
+              <span>Job Card Filters</span>
+              {activeFilterCount > 0 && (
+                <span style={{ fontSize: '0.75rem', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', padding: '2px 8px', borderRadius: '12px', border: '1px solid rgba(56, 189, 248, 0.4)' }}>
+                  {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} applied
+                </span>
+              )}
+            </div>
+
+            {activeFilterCount > 0 && (
+              <button 
+                onClick={handleResetFilters}
+                className="btn btn-outline"
+                style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.35)' }}
+                title="Clear all active filter fields"
+              >
+                <FilterX size={14} /> Clear All Filters
+              </button>
+            )}
+          </div>
+
+          {/* Filter Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.875rem' }}>
+            {/* 1. Global Live Search */}
+            <div>
+              <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>Search Keywords</label>
+              <div style={{ position: 'relative' }}>
+                <Search size={15} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
+                  placeholder="Search Sl.No, Equipment..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* 2. Job Number */}
+            <div>
+              <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem', color: '#fbbf24' }}>Job Card No</label>
+              <div style={{ position: 'relative' }}>
+                <Hash size={15} color="#fbbf24" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{ paddingLeft: '2.25rem', fontSize: '0.85rem', color: '#fbbf24', fontWeight: 600 }}
+                  placeholder="e.g. 101/26-27"
+                  value={filterJobNo}
+                  onChange={e => setFilterJobNo(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* 3. Customer Filter */}
+            <div>
+              <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>Customer Name</label>
+              <div style={{ position: 'relative' }}>
+                <User size={15} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
+                  placeholder="e.g. ONGC..."
+                  value={filterCustomer}
+                  onChange={e => setFilterCustomer(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* 4. Equipment Filter */}
+            <div>
+              <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>Equipment / Motor</label>
+              <div style={{ position: 'relative' }}>
+                <Wrench size={15} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
+                  placeholder="e.g. Induction Motor..."
+                  value={filterEquipment}
+                  onChange={e => setFilterEquipment(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* 5. From Date */}
+            <div>
+              <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>From Date</label>
+              <div style={{ position: 'relative' }}>
+                <Calendar size={15} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="date"
+                  className="form-input"
+                  style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
+                  value={fromDate}
+                  onChange={e => setFromDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* 6. To Date */}
+            <div>
+              <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>To Date</label>
+              <div style={{ position: 'relative' }}>
+                <Calendar size={15} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="date"
+                  className="form-input"
+                  style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
+                  value={toDate}
+                  onChange={e => setToDate(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Records Table */}
       <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
         
         <div style={{ padding: '1rem 1.5rem', background: 'rgba(15, 23, 42, 0.6)', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
-            <Search size={16} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
-            <input 
-              type="text" 
-              className="form-input" 
-              style={{ paddingLeft: '2.5rem', fontSize: '0.85rem' }} 
-              placeholder="Search by Job No, Customer, Equipment, Sl.No..." 
-              value={searchQuery} 
-              onChange={e => setSearchQuery(e.target.value)} 
-            />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+            <span style={{ fontSize: '0.9rem', color: '#f8fafc', fontWeight: 700 }}>
+              Showing <strong>{filteredJobCards.length}</strong> of <strong>{jobCards.length}</strong> Job Cards
+            </span>
+            {activeFilterCount > 0 && (
+              <span className="badge" style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+                Filtered
+              </span>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Total: <strong>{filteredJobCards.length}</strong> Job Cards
-            </span>
             <button onClick={loadJobCards} className="btn btn-outline" style={{ fontSize: '0.8rem' }}>
               <RefreshCw size={14} /> Refresh
             </button>
@@ -139,7 +362,7 @@ export const JobCardListPage = ({ onEditJobCard, onNewJobCard }) => {
               ) : filteredJobCards.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    No Job Cards found matching your query.
+                    No Job Cards found matching the filter criteria.
                   </td>
                 </tr>
               ) : (

@@ -1,8 +1,21 @@
-import React, { useState } from 'react';
-import { X, Printer, CheckCircle, FileText, Download } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Printer, FileText, CheckCircle, Eye } from 'lucide-react';
 
 export const WorkCompletionPrintModal = ({ isOpen, onClose, certificate }) => {
   const [activeDocType, setActiveDocType] = useState('both'); // 'wcc', 'defect', 'both'
+
+  // Listen for Escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen || !certificate) return null;
 
@@ -172,58 +185,113 @@ export const WorkCompletionPrintModal = ({ isOpen, onClose, certificate }) => {
   );
 
   return (
-    <div className="no-print-modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
-
-      <div className="glass-panel-print-wrap" style={{ width: '100%', maxWidth: '880px', maxHeight: '94vh', display: 'flex', flexDirection: 'column', background: '#0f172a', border: '1px solid rgba(99, 102, 241, 0.4)', borderRadius: '16px', overflow: 'hidden' }}>
-
-        {/* Modal Toolbar Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', background: 'rgba(31, 41, 55, 0.95)', borderBottom: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '0.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', color: '#34d399' }}>
-            <FileText size={20} />
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>
-              Certificate Preview & Print ({certificate.certificateNo}) - Mode: {certificate.equipmentDescription || 'Material'}
-            </h3>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            {/* View Filter Toggles */}
-            <div style={{ display: 'flex', background: 'rgba(15, 23, 42, 0.6)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-              <button
-                onClick={() => setActiveDocType('both')}
-                style={{ padding: '0.35rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, background: activeDocType === 'both' ? '#4f46e5' : 'transparent', color: activeDocType === 'both' ? '#fff' : 'var(--text-muted)', border: 'none', cursor: 'pointer' }}
-              >
-                Both Pages
-              </button>
-              <button
-                onClick={() => setActiveDocType('wcc')}
-                style={{ padding: '0.35rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, background: activeDocType === 'wcc' ? '#4f46e5' : 'transparent', color: activeDocType === 'wcc' ? '#fff' : 'var(--text-muted)', border: 'none', cursor: 'pointer' }}
-              >
-                Work Completion
-              </button>
-              <button
-                onClick={() => setActiveDocType('defect')}
-                style={{ padding: '0.35rem 0.65rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, background: activeDocType === 'defect' ? '#4f46e5' : 'transparent', color: activeDocType === 'defect' ? '#fff' : 'var(--text-muted)', border: 'none', cursor: 'pointer' }}
-              >
-                Defect Report
-              </button>
+    <div 
+      className="no-print-modal-overlay" 
+      style={{ 
+        position: 'fixed', 
+        inset: 0, 
+        zIndex: 999999, 
+        background: 'rgba(0, 0, 0, 0.85)', 
+        backdropFilter: 'blur(10px)', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        padding: '0.75rem', 
+        overflow: 'hidden' 
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div 
+        className="glass-panel-print-wrap" 
+        style={{ 
+          width: '100%', 
+          maxWidth: '920px', 
+          height: '95vh', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          background: '#0f172a', 
+          border: '1.5px solid rgba(99, 102, 241, 0.4)', 
+          borderRadius: '16px', 
+          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.65)',
+          overflow: 'hidden',
+          position: 'relative'
+        }}
+      >
+        {/* TOP HEADER: Clean Title Bar + Dedicated Corner Close (X) Button */}
+        <div 
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            padding: '0.75rem 1.25rem', 
+            background: 'rgba(30, 41, 59, 0.98)', 
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)', 
+            flexShrink: 0 
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(52, 211, 153, 0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FileText size={18} color="#34d399" />
             </div>
-
-            <button onClick={handlePrint} className="btn btn-primary" style={{ padding: '0.55rem 1.1rem' }}>
-              <Printer size={16} />
-              <span>Print / Save PDF</span>
-            </button>
-
-            <button onClick={onClose} className="btn btn-outline" style={{ padding: '0.5rem' }}>
-              <X size={18} />
-            </button>
+            <div>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc', margin: 0, lineHeight: 1.2 }}>
+                Certificate Preview & Print
+              </h3>
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                Doc No: <strong style={{ color: '#38bdf8' }}>{certificate.certificateNo}</strong> &bull; Type: <strong style={{ color: '#34d399' }}>{certificate.equipmentDescription || 'Material'}</strong>
+              </span>
+            </div>
           </div>
+
+          {/* DEDICATED TOP-RIGHT CORNER CLOSE BUTTON */}
+          <button 
+            onClick={onClose} 
+            className="btn btn-outline" 
+            style={{ 
+              width: '36px', 
+              height: '36px', 
+              borderRadius: '50%', 
+              padding: 0, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              background: 'rgba(255, 255, 255, 0.06)',
+              color: '#f8fafc',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            title="Close Preview (Esc)"
+            aria-label="Close Preview"
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        {/* Printable Template Area */}
-        <div style={{ padding: '1.5rem', overflowY: 'auto', background: '#e2e8f0', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-
-          <div id="work-cert-print-area" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-
+        {/* MIDDLE BODY: Scrollable Printable Template Area */}
+        <div 
+          style={{ 
+            flex: 1, 
+            padding: '1.5rem', 
+            overflowY: 'auto', 
+            background: '#334155', 
+            display: 'flex', 
+            justifyContent: 'center',
+            alignItems: 'flex-start'
+          }}
+        >
+          <div 
+            id="work-cert-print-area" 
+            style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '2rem', 
+              width: '100%', 
+              maxWidth: '820px' 
+            }}
+          >
             {/* DOCUMENT 1: JOINT INSPECTION / DEFECT REPORT */}
             {(activeDocType === 'both' || activeDocType === 'defect') && (
               <div
@@ -231,12 +299,13 @@ export const WorkCompletionPrintModal = ({ isOpen, onClose, certificate }) => {
                 style={{
                   background: '#ffffff',
                   color: '#000000',
-                  padding: '30px 35px',
+                  padding: '35px 40px',
                   fontFamily: 'Arial, sans-serif',
                   fontSize: '13px',
                   lineHeight: '1.6',
-                  boxShadow: '0 4px 15px rgba(0,0,0,0.15)',
-                  minHeight: '750px',
+                  boxShadow: '0 8px 30px rgba(0, 0, 0, 0.35)',
+                  minHeight: '780px',
+                  borderRadius: '2px',
                   display: 'flex',
                   flexDirection: 'column'
                 }}
@@ -303,12 +372,13 @@ export const WorkCompletionPrintModal = ({ isOpen, onClose, certificate }) => {
                 style={{
                   background: '#ffffff',
                   color: '#000000',
-                  padding: '30px 35px',
+                  padding: '35px 40px',
                   fontFamily: 'Arial, sans-serif',
                   fontSize: '13px',
                   lineHeight: '1.6',
-                  boxShadow: '0 4px 15px rgba(0,0,0,0.15)',
-                  minHeight: '750px',
+                  boxShadow: '0 8px 30px rgba(0, 0, 0, 0.35)',
+                  minHeight: '780px',
+                  borderRadius: '2px',
                   display: 'flex',
                   flexDirection: 'column'
                 }}
@@ -377,9 +447,113 @@ export const WorkCompletionPrintModal = ({ isOpen, onClose, certificate }) => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
 
+        {/* BOTTOM FIXED ACTION TOOLBAR: Both Pages / WCC / Defect + Print Button + Close Button */}
+        <div 
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            padding: '0.85rem 1.5rem', 
+            background: 'rgba(15, 23, 42, 0.98)', 
+            borderTop: '1px solid rgba(255, 255, 255, 0.12)', 
+            flexShrink: 0,
+            flexWrap: 'wrap',
+            gap: '0.75rem',
+            zIndex: 10
+          }}
+        >
+          {/* Left: View Filter Toggles (Both Pages, Work Completion, Defect Report) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              View:
+            </span>
+            <div style={{ display: 'flex', background: 'rgba(30, 41, 59, 0.8)', padding: '3px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+              <button
+                onClick={() => setActiveDocType('both')}
+                style={{ 
+                  padding: '0.45rem 0.85rem', 
+                  borderRadius: '7px', 
+                  fontSize: '0.8rem', 
+                  fontWeight: activeDocType === 'both' ? 700 : 500, 
+                  background: activeDocType === 'both' ? '#4f46e5' : 'transparent', 
+                  color: activeDocType === 'both' ? '#ffffff' : '#94a3b8', 
+                  border: 'none', 
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Both Pages
+              </button>
+              <button
+                onClick={() => setActiveDocType('wcc')}
+                style={{ 
+                  padding: '0.45rem 0.85rem', 
+                  borderRadius: '7px', 
+                  fontSize: '0.8rem', 
+                  fontWeight: activeDocType === 'wcc' ? 700 : 500, 
+                  background: activeDocType === 'wcc' ? '#4f46e5' : 'transparent', 
+                  color: activeDocType === 'wcc' ? '#ffffff' : '#94a3b8', 
+                  border: 'none', 
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Work Completion
+              </button>
+              <button
+                onClick={() => setActiveDocType('defect')}
+                style={{ 
+                  padding: '0.45rem 0.85rem', 
+                  borderRadius: '7px', 
+                  fontSize: '0.8rem', 
+                  fontWeight: activeDocType === 'defect' ? 700 : 500, 
+                  background: activeDocType === 'defect' ? '#4f46e5' : 'transparent', 
+                  color: activeDocType === 'defect' ? '#ffffff' : '#94a3b8', 
+                  border: 'none', 
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Defect Report
+              </button>
+            </div>
           </div>
 
+          {/* Right: Print / Save PDF and Close */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <button 
+              onClick={onClose} 
+              className="btn btn-outline" 
+              style={{ 
+                padding: '0.55rem 1rem', 
+                fontSize: '0.825rem',
+                color: '#cbd5e1',
+                borderColor: 'rgba(255, 255, 255, 0.2)' 
+              }}
+            >
+              Close
+            </button>
+
+            <button 
+              onClick={handlePrint} 
+              className="btn btn-primary" 
+              style={{ 
+                padding: '0.55rem 1.35rem', 
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                boxShadow: '0 4px 15px rgba(79, 70, 229, 0.4)'
+              }}
+            >
+              <Printer size={17} />
+              <span>Print / Save PDF</span>
+            </button>
+          </div>
         </div>
 
       </div>

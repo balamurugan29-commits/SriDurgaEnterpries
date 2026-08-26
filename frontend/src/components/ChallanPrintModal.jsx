@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, Printer, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Printer, CheckCircle, FileText } from 'lucide-react';
 
 // Utility to convert amount in numbers to Indian Rupee Words
 function numberToWordsINR(amount) {
@@ -34,7 +34,20 @@ function numberToWordsINR(amount) {
 }
 
 export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
-  const [copyType, setCopyType] = React.useState('ORIGINAL');
+  const [copyType, setCopyType] = useState('ORIGINAL'); // 'ORIGINAL', 'DUPLICATE', 'OFFICE COPY', 'ALL'
+
+  // Listen for Escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen || !challan) return null;
 
@@ -53,7 +66,7 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
         <!DOCTYPE html>
         <html>
           <head>
-            <title>Tax Invoice - ${challan.challanNumber || 'Sri Durga Enterprises'}</title>
+            <title>Tax Invoice - ${challan.challanNumber || challan.challanNo || 'Sri Durga Enterprises'}</title>
             <style>
               * {
                 margin: 0;
@@ -64,6 +77,8 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                 font-family: Arial, sans-serif;
                 background: #ffffff;
                 color: #000000;
+                padding: 0;
+                font-size: 12px;
               }
               #invoice-print-area {
                 width: 100% !important;
@@ -71,9 +86,10 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
               }
               .invoice-page {
                 border: 2px solid #000000 !important;
-                padding: 8mm !important;
-                width: 210mm !important;
-                height: 297mm !important;
+                padding: 0 !important;
+                width: 100% !important;
+                height: 285mm !important;
+                min-height: 285mm !important;
                 box-sizing: border-box !important;
                 background: #ffffff !important;
                 color: #000000 !important;
@@ -88,6 +104,10 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                 page-break-after: avoid !important;
                 break-after: avoid !important;
               }
+              @page {
+                size: A4 portrait;
+                margin: 6mm 8mm !important;
+              }
             </style>
           </head>
           <body>
@@ -96,7 +116,7 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
               window.onload = function() {
                 setTimeout(function() {
                   window.print();
-                }, 300);
+                }, 350);
               };
             </script>
           </body>
@@ -108,6 +128,7 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
     }
   };
 
+  const invoiceNo = challan.challanNumber || challan.challanNo || '-';
   const formattedDate = challan.challanDate
     ? new Date(challan.challanDate).toLocaleDateString('en-GB')
     : new Date().toLocaleDateString('en-GB');
@@ -151,81 +172,86 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
     i => i.itemCode && i.itemCode.trim() !== '' && i.itemCode.trim().toUpperCase() !== 'CUSTOM'
   );
 
-  // Pagination Chunking Logic matching screenshots
+  // Full A4 Page Utilization Chunking Logic:
+  // - 1 to 16 items fit COMPLETELY on a Single Page (Page 1) without premature second page.
+  // - If items > 16, Page 1 fills completely with up to 22 items before spilling to Page 2.
   const chunkItems = (itemList) => {
     const pages = [];
     let remaining = [...itemList];
 
-    // Conservative limits to ensure browser never breaks summary blocks
-    const SINGLE_PAGE_MAX = 18;
-    const PAGE_1_MAX = 22;
-    const PAGE_2_MAX = 20;
-    const INTERMEDIATE_MAX = 24;
+    const SINGLE_PAGE_MAX = 16;     // Single page fills up to 16 items + bottom summary
+    const FIRST_PAGE_MAX = 22;      // Page 1 of multi-page fills up to 22 items
+    const SUBSEQUENT_PAGE_MAX = 22; // Page 2+ fills up to 22 items
 
     if (remaining.length <= SINGLE_PAGE_MAX) {
       pages.push(remaining);
       return pages;
     }
 
-    // Page 1 gets exactly PAGE_1_MAX
-    pages.push(remaining.splice(0, PAGE_1_MAX));
+    // Page 1: Fill completely with up to FIRST_PAGE_MAX
+    pages.push(remaining.slice(0, FIRST_PAGE_MAX));
+    remaining = remaining.slice(FIRST_PAGE_MAX);
 
-    // Subsequent pages
+    // Subsequent Pages
     while (remaining.length > 0) {
-      if (remaining.length <= PAGE_2_MAX) {
-        pages.push(remaining);
-        break;
-      } else {
-        if (remaining.length <= INTERMEDIATE_MAX) {
-          pages.push(remaining.splice(0, PAGE_2_MAX));
-        } else {
-          pages.push(remaining.splice(0, INTERMEDIATE_MAX));
-        }
-      }
+      pages.push(remaining.slice(0, SUBSEQUENT_PAGE_MAX));
+      remaining = remaining.slice(SUBSEQUENT_PAGE_MAX);
     }
+
     return pages;
   };
 
   const pages = chunkItems(items);
 
-  // Helper to compute brought forward total for pageIdx
-  const getBroughtForwardAmount = (pageIdx) => {
-    return pages.slice(0, pageIdx).reduce(
-      (sum, p) => sum + p.reduce((s, i) => s + (Number(i.amount) || (Number(i.quantity || 0) * Number(i.rate || 0))), 0),
-      0
-    );
+  const getBroughtForwardAmount = (pageIndex) => {
+    if (pageIndex === 0) return 0;
+    let sum = 0;
+    for (let p = 0; p < pageIndex; p++) {
+      for (const item of pages[p]) {
+        sum += (Number(item.amount) || (Number(item.quantity || 0) * Number(item.rate || 0)));
+      }
+    }
+    return sum;
   };
 
-  // Helper to compute page total (brought forward + current page items)
-  const getPageTotalAmount = (pageIdx) => {
-    const currentSubtotal = pages[pageIdx].reduce(
+  const getPageTotalAmount = (pageIndex) => {
+    return pages[pageIndex].reduce(
       (sum, i) => sum + (Number(i.amount) || (Number(i.quantity || 0) * Number(i.rate || 0))),
       0
     );
-    return getBroughtForwardAmount(pageIdx) + currentSubtotal;
   };
 
-  // Helper to generate empty rows to stretch the table vertical lines
-  const getEmptyRows = (count) => {
-    const rows = [];
-    for (let i = 0; i < count; i++) {
-      rows.push(
-        <tr key={`empty-${i}`} style={{ height: '22px' }}>
-          <td style={{ padding: '4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>
-          {hasAnyItemCode && <td style={{ padding: '4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>}
-          <td style={{ padding: '4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>
-          <td style={{ padding: '4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>
-          <td style={{ padding: '4px', borderRight: '1px solid #000', borderBottom: 'none' }}>&nbsp;</td>
-          <td style={{ padding: '4px', borderBottom: 'none' }}>&nbsp;</td>
-        </tr>
-      );
-    }
-    return rows;
+  // Exact names: 'ORIGINAL', 'DUPLICATE', 'OFFICE COPY'
+  const getCopyLabel = (type) => {
+    if (type === 'ORIGINAL') return 'ORIGINAL';
+    if (type === 'DUPLICATE') return 'DUPLICATE';
+    if (type === 'OFFICE COPY') return 'OFFICE COPY';
+    return type;
   };
+
+  const copiesToRender = copyType === 'ALL'
+    ? ['ORIGINAL', 'DUPLICATE', 'OFFICE COPY']
+    : [getCopyLabel(copyType)];
 
   return (
-    <div className="no-print-modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
-
+    <div 
+      className="no-print-modal-overlay" 
+      style={{ 
+        position: 'fixed', 
+        inset: 0, 
+        zIndex: 999999, 
+        background: 'rgba(0, 0, 0, 0.85)', 
+        backdropFilter: 'blur(10px)', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        padding: '0.75rem', 
+        overflow: 'hidden' 
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       {/* Clean In-Page @media print CSS fallback */}
       <style>{`
         @media print {
@@ -248,9 +274,10 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
           }
           .invoice-page {
             border: 2px solid #000000 !important;
-            padding: 8mm !important;
-            width: 210mm !important;
-            height: 297mm !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: 285mm !important;
+            min-height: 285mm !important;
             box-sizing: border-box !important;
             background: #ffffff !important;
             color: #000000 !important;
@@ -268,440 +295,616 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
           }
           @page {
             size: A4 portrait;
-            margin: 0 !important; /* Hides default browser date/time and header/footer */
+            margin: 6mm 8mm !important;
           }
         }
       `}</style>
 
-      <div className="glass-panel-print-wrap" style={{ width: '100%', maxWidth: '850px', maxHeight: '92vh', display: 'flex', flexDirection: 'column', background: '#0f172a', border: '1px solid rgba(99, 102, 241, 0.4)', borderRadius: '16px', overflow: 'hidden' }}>
-
-        {/* Modal Toolbar */}
-        <div className="no-print-btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', background: 'rgba(31, 41, 55, 0.9)', borderBottom: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#10b981', fontWeight: 600 }}>
-            <CheckCircle size={18} />
-            <span style={{ color: 'white', fontSize: '1.1rem', fontWeight: 700 }}>Tax Invoice Preview</span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
-            {/* Copy Type Selection Dropdown */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.85rem', color: '#a5b4fc', fontWeight: 600 }}>Copy Type:</span>
-              <select
-                value={copyType}
-                onChange={(e) => setCopyType(e.target.value)}
-                style={{
-                  padding: '0.45rem 1.75rem 0.45rem 0.75rem',
-                  fontSize: '0.85rem',
-                  fontWeight: 750,
-                  background: 'rgba(15, 23, 42, 0.9)',
-                  color: '#34d399',
-                  border: '1.5px solid rgba(16, 185, 129, 0.4)',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  outline: 'none'
-                }}
-              >
-                <option value="ORIGINAL">Original</option>
-                <option value="DUPLICATE">Duplicate</option>
-                <option value="OFFICE COPY">Office Copy</option>
-              </select>
+      <div 
+        className="glass-panel-print-wrap" 
+        style={{ 
+          width: '100%', 
+          maxWidth: '920px', 
+          height: '95vh', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          background: '#0f172a', 
+          border: '1.5px solid rgba(99, 102, 241, 0.4)', 
+          borderRadius: '16px', 
+          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.65)',
+          overflow: 'hidden',
+          position: 'relative' 
+        }}
+      >
+        {/* TOP HEADER: Clean Title Bar + Dedicated Corner Close (X) Button */}
+        <div 
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            padding: '0.75rem 1.25rem', 
+            background: 'rgba(30, 41, 59, 0.98)', 
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)', 
+            flexShrink: 0 
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CheckCircle size={18} color="#34d399" />
             </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <button onClick={handlePrint} className="btn btn-primary" style={{ padding: '0.5rem 1.25rem' }}>
-                <Printer size={16} />
-                <span>Print Invoice / Save PDF</span>
-              </button>
-              <button onClick={onClose} className="btn btn-outline" style={{ padding: '0.5rem' }}>
-                <X size={18} />
-              </button>
+            <div>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc', margin: 0, lineHeight: 1.2 }}>
+                Tax Invoice Preview & Print ({pages.length} {pages.length > 1 ? 'Pages' : 'Page'})
+              </h3>
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                Invoice No: <strong style={{ color: '#38bdf8' }}>{invoiceNo}</strong> &bull; Total Items: <strong style={{ color: '#34d399' }}>{items.length}</strong>
+              </span>
             </div>
           </div>
+
+          {/* DEDICATED TOP-RIGHT CORNER CLOSE BUTTON */}
+          <button 
+            onClick={onClose} 
+            className="btn btn-outline" 
+            style={{ 
+              width: '36px', 
+              height: '36px', 
+              borderRadius: '50%', 
+              padding: 0, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              background: 'rgba(255, 255, 255, 0.06)',
+              color: '#f8fafc',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            title="Close Preview (Esc)"
+            aria-label="Close Preview"
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        {/* Printable PDF Template Box */}
-        <div style={{ padding: '1.5rem', overflowY: 'auto', background: '#0f172a' }}>
+        {/* MIDDLE BODY: Printable PDF Template Box */}
+        <div 
+          style={{ 
+            flex: 1, 
+            padding: '1.5rem', 
+            overflowY: 'auto', 
+            background: '#334155', 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'flex-start' 
+          }}
+        >
+          <div id="invoice-print-area" style={{ background: '#fff', width: '100%', maxWidth: '820px', boxShadow: '0 8px 30px rgba(0, 0, 0, 0.35)' }}>
 
-          <div id="invoice-print-area" style={{ background: '#fff', width: '100%' }}>
+            {copiesToRender.map((currentCopyName, copyIdx) => (
+              <React.Fragment key={copyIdx}>
+                {pages.map((pageItems, pageIdx) => {
+                  const isFirstPage = pageIdx === 0;
+                  const isLastPage = pageIdx === pages.length - 1;
+                  const bForward = getBroughtForwardAmount(pageIdx);
+                  const pTotal = getPageTotalAmount(pageIdx);
 
-            {pages.map((pageItems, pageIdx) => {
-              const bForward = getBroughtForwardAmount(pageIdx);
-              const pTotal = getPageTotalAmount(pageIdx);
+                  return (
+                    <div
+                      key={`${copyIdx}-${pageIdx}`}
+                      className="invoice-page"
+                      style={{
+                        border: '2px solid #000000',
+                        padding: '0',
+                        marginBottom: (copyIdx === copiesToRender.length - 1 && pageIdx === pages.length - 1) ? '0' : '25px',
+                        background: '#ffffff',
+                        color: '#000000',
+                        boxSizing: 'border-box',
+                        width: '100%',
+                        height: '285mm',
+                        minHeight: '285mm',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        overflow: 'hidden',
+                        fontSize: '12px',
+                        fontFamily: 'Arial, sans-serif'
+                      }}
+                    >
+                      {/* 1. HEADER SECTION (Page 1 has full 9 rows; Page 2+ has concise 2 rows as per user photo) */}
+                      <div style={{ flexShrink: 0 }}>
+                        {/* Company Header Box */}
+                        <div style={{ display: 'flex', borderBottom: '1px solid #000', position: 'relative' }}>
+                          {/* Left: Logo Box with Border */}
+                          <div style={{ width: '85px', minWidth: '85px', borderRight: '1px solid #000', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <img src="/logo.jpg" alt="Logo" style={{ width: '70px', height: '70px', objectFit: 'contain' }} />
+                          </div>
 
-              // Calculate spacing / empty rows needed for table height alignment
-              let targetRows = 24; // Default intermediate
-              if (pages.length === 1) {
-                targetRows = 18;
-              } else if (pageIdx === 0) {
-                targetRows = 22;
-              } else if (pageIdx === pages.length - 1) {
-                targetRows = 20;
-              }
-              const emptyRowsCount = Math.max(0, targetRows - pageItems.length);
+                          {/* Center: Title & Company Info */}
+                          <div style={{ flex: 1, padding: '4px 8px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '13px', fontWeight: 'bold', textDecoration: 'underline', letterSpacing: '1px', marginBottom: '2px' }}>
+                              TAX INVOICE
+                            </div>
+                            <h1 style={{ fontSize: '19px', fontWeight: '900', margin: '2px 0', letterSpacing: '3px', fontFamily: 'Arial, sans-serif' }}>
+                              SRI &nbsp; DURGA &nbsp; ENTERPRISES
+                            </h1>
+                            <p style={{ margin: '1px 0', fontSize: '12px', fontWeight: '600' }}>
+                              No. 10 V.G. Nagar, Kovilpathu, Karaikal – 609 602
+                            </p>
+                            {/* Page 1 includes Email & Cell; Page 2 keeps it concise as shown in reference photo */}
+                            {isFirstPage && (
+                              <p style={{ margin: '1px 0', fontSize: '12px', fontWeight: '600' }}>
+                                E-mail : sridurgaenterprises@yahoo.com &nbsp;&nbsp; Cell: 9842492946
+                              </p>
+                            )}
+                          </div>
 
-              return (
-                <div
-                  key={pageIdx}
-                  className="invoice-page"
-                  style={{
-                    border: '2px solid #000000',
-                    padding: '8mm',
-                    marginBottom: pageIdx === pages.length - 1 ? '0' : '20px',
-                    background: '#ffffff',
-                    color: '#000000',
-                    boxSizing: 'border-box',
-                    width: '210mm',
-                    height: '297mm',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    overflow: 'hidden'
-                  }}
-                >
-                  <div>
-                    {/* Header Row 1: TAX INVOICE centered, Copy Type aligned right */}
-                    <div style={{ display: 'flex', borderBottom: '1px solid #000', padding: '0.4rem 0.75rem', position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 'bold', textDecoration: 'underline', letterSpacing: '1.2px', textAlign: 'center' }}>
-                        TAX INVOICE
-                      </div>
-                      <div style={{ position: 'absolute', right: '0.75rem', fontWeight: 'bold', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        {copyType}
-                      </div>
-                    </div>
+                          {/* Top Right: Exact Copy Name (OFFICE COPY / ORIGINAL / DUPLICATE) */}
+                          <div style={{ position: 'absolute', right: '10px', top: '6px', fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            {currentCopyName}
+                          </div>
+                        </div>
 
-                    {/* Header Row 2: Logo box and Company Info details */}
-                    <div style={{ display: 'flex', borderBottom: '1px solid #000' }}>
-                      {/* Logo Square */}
-                      <div style={{ width: '85px', borderRight: '1px solid #000', padding: '0.3rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img src="/logo.jpg" alt="Logo" style={{ width: '70px', height: '70px', objectFit: 'contain' }} />
-                      </div>
-
-                      {/* Company Info */}
-                      <div style={{ flex: 1, padding: '0.4rem 0.75rem', textAlign: 'center' }}>
-                        <h1 style={{ fontSize: '18px', fontWeight: '900', margin: '1px 0', letterSpacing: '1.2px', fontFamily: 'Arial Black, sans-serif' }}>
-                          SRI DURGA ENTERPRISES
-                        </h1>
-                        <p style={{ margin: '1px 0', fontSize: '10px', fontWeight: '600' }}>
-                          No. 10 V.G. Nagar, Kovilpathu, Karaikal – 609 602
-                        </p>
-                        <p style={{ margin: '1px 0', fontSize: '10px', fontWeight: '600' }}>
-                          E-mail : sridurgaenterprises@yahoo.com Cell: 9842492946
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Invoice Meta Grid */}
-                    {pageIdx === 0 ? (
-                      /* Full Meta Grid on Page 1 */
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', borderBottom: '1px solid #000' }}>
-                        <tbody>
-                          <tr style={{ borderBottom: '1px solid #000' }}>
-                            <td style={{ width: '100px', padding: '3px 6px', fontWeight: 'bold' }}>Invoice No.</td>
-                            <td style={{ width: '230px', padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>{challan.challanNumber}</td>
-                            <td style={{ width: '90px', padding: '3px 6px', fontWeight: 'bold' }}>Date :</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{formattedDate}</td>
-                          </tr>
-                          <tr style={{ borderBottom: '1px solid #000' }}>
-                            <td style={{ padding: '3px 6px' }}>Contract No.</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>9010038288</td>
-                            <td style={{ padding: '3px 6px' }}>Page</td>
-                            <td style={{ padding: '3px 6px' }}>1 of {pages.length}</td>
-                          </tr>
-                          <tr style={{ borderBottom: '1px solid #000' }}>
-                            <td style={{ padding: '3px 6px' }}>C. Period</td>
-                            <td style={{ padding: '3px 6px', borderRight: '1px solid #000' }}>01.05.2024 to 30.04.2027</td>
-                            <td style={{ padding: '3px 6px' }}>Vendor Code</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{challan.vendorCode || '840305'}</td>
-                          </tr>
-                          <tr style={{ borderBottom: '1px solid #000' }}>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>P.O. No.</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '10px', wordBreak: 'break-all' }}>{challan.poNumber || '5060173862'}</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>GSTIN</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{challan.gstin || '34ABDFS4476N1ZN'}</td>
-                          </tr>
-                          <tr style={{ borderBottom: '1px solid #000' }}>
-                            <td style={{ padding: '3px 6px' }}>B.G. NO.</td>
-                            <td style={{ padding: '3px 6px', borderRight: '1px solid #000' }}>8110IPEBG240001 Validity Upto : 30.09.2027</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>PAN</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{challan.pan || 'ABDFS4476N'}</td>
-                          </tr>
-                          <tr style={{ borderBottom: '1px solid #000' }}>
-                            <td style={{ padding: '3px 6px' }}>EPF Code</td>
-                            <td style={{ padding: '3px 6px', borderRight: '1px solid #000' }}>{challan.epfCode || 'PC 1758'}</td>
-                            <td style={{ padding: '3px 6px' }}>State Code</td>
-                            <td style={{ padding: '3px 6px' }}>{challan.stateCode || 'Puducherry (34)'}</td>
-                          </tr>
-                          <tr style={{ borderBottom: '1px solid #000' }}>
-                            <td style={{ padding: '3px 6px' }}>ESI CODE</td>
-                            <td style={{ padding: '3px 6px', borderRight: '1px solid #000' }}>{challan.esiCode || '55000426770000602'}</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>Invoice Value</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>Rs. {grossAmount.toFixed(2)}</td>
-                          </tr>
-
-                          {/* Billed To Row */}
-                          <tr>
-                            <td style={{ padding: '4px 6px', fontWeight: 'bold', verticalAlign: 'top' }}>BILLED TO</td>
-                            <td style={{ padding: '4px 6px', borderRight: '1px solid #000', verticalAlign: 'top' }}>
-                              <div style={{ fontWeight: 'bold' }}>{challan.customerName || ''}</div>
-                              <div style={{ whiteSpace: 'pre-line' }}>{challan.customerAddress || ''}</div>
-                            </td>
-                            <td colSpan={2} style={{ padding: 0, verticalAlign: 'top' }}>
-                              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
-                                <tbody>
-                                  <tr style={{ borderBottom: '1px solid #000' }}>
-                                    <td style={{ width: '90px', padding: '3px 6px', fontWeight: 'bold' }}>PAN</td>
-                                    <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{challan.customerPan || 'AAACO1598A'}</td>
-                                  </tr>
-                                  <tr>
-                                    <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>State Code</td>
-                                    <td style={{ padding: '3px 6px' }}>{challan.customerStateCode || 'TAMILNADU (33)'}</td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                            </td>
-                          </tr>
-
-                          <tr style={{ borderTop: '1px solid #000' }}>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>GST</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>{challan.customerGstin || '33AAACO1598A1ZU'}</td>
-                            <td colSpan={2} style={{ padding: 0 }}></td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    ) : (
-                      /* Simplified Meta Grid on subsequent pages */
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', borderBottom: '1px solid #000' }}>
-                        <tbody>
-                          <tr style={{ borderBottom: '1px solid #000' }}>
-                            <td style={{ width: '100px', padding: '3px 6px', fontWeight: 'bold' }}>Invoice No.</td>
-                            <td style={{ width: '230px', padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>{challan.challanNumber}</td>
-                            <td style={{ width: '90px', padding: '3px 6px', fontWeight: 'bold' }}>Date :</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{formattedDate}</td>
-                          </tr>
-                          <tr>
-                            <td style={{ padding: '3px 6px' }}>Contract No.</td>
-                            <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>9010038288</td>
-                            <td style={{ padding: '3px 6px' }}>Page</td>
-                            <td style={{ padding: '3px 6px' }}>{pageIdx + 1} of {pages.length}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    )}
-
-                    {/* Items Table */}
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', borderBottom: '1px solid #000' }}>
-                      <thead>
-                        <tr style={{ borderBottom: '1px solid #000' }}>
-                          <th style={{ width: '45px', padding: '4px', textAlign: 'center', borderRight: '1px solid #000' }}>Sl.No.</th>
-                          {hasAnyItemCode && (
-                            <th style={{ width: '95px', padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #000' }}>Item Code</th>
-                          )}
-                          <th style={{ padding: '4px 8px', textAlign: 'center', borderRight: '1px solid #000' }}>Description</th>
-                          <th style={{ width: '75px', padding: '4px 8px', textAlign: 'right', borderRight: '1px solid #000' }}>Rate</th>
-                          <th style={{ width: '65px', padding: '4px 8px', textAlign: 'center', borderRight: '1px solid #000' }}>Qty</th>
-                          <th style={{ width: '95px', padding: '4px 8px', textAlign: 'right' }}>Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {/* Brought Forward row (if pageIdx > 0) */}
-                        {pageIdx > 0 && (
-                          <tr style={{ borderBottom: '1px solid #000', fontWeight: 'bold', fontStyle: 'italic' }}>
-                            <td style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>&nbsp;</td>
-                            {hasAnyItemCode && <td style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>&nbsp;</td>}
-                            <td style={{ padding: '5px 8px', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>
-                              Brought Forward (Page {pageIdx})
-                            </td>
-                            <td style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>&nbsp;</td>
-                            <td style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>&nbsp;</td>
-                            <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 'bold', borderBottom: '1px solid #000' }}>
-                              {bForward.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                            </td>
-                          </tr>
-                        )}
-
-                        {/* Equipment Header (Page 1 only) */}
-                        {pageIdx === 0 && challan.equipmentHeader && (
-                          <tr style={{ height: '22px' }}>
-                            <td style={{ borderRight: '1px solid #000', borderBottom: 'none' }}></td>
-                            {hasAnyItemCode && <td style={{ borderRight: '1px solid #000', borderBottom: 'none' }}></td>}
-                            <td style={{ padding: '5px 8px', fontWeight: 'bold', textDecoration: 'underline', borderRight: '1px solid #000', borderBottom: 'none' }}>
-                              {challan.equipmentHeader}
-                            </td>
-                            <td style={{ borderRight: '1px solid #000', borderBottom: 'none' }}></td>
-                            <td style={{ borderRight: '1px solid #000', borderBottom: 'none' }}></td>
-                            <td style={{ borderBottom: 'none' }}></td>
-                          </tr>
-                        )}
-
-                        {/* Item Rows */}
-                        {pageItems.map((item, idx) => {
-                          const absoluteIndex = pages.slice(0, pageIdx).reduce((sum, p) => sum + p.length, 0) + idx + 1;
-                          return (
-                            <tr key={idx} style={{ height: '22px' }}>
-                              <td style={{ padding: '5px 4px', textAlign: 'center', verticalAlign: 'top', borderRight: '1px solid #000', borderBottom: 'none' }}>
-                                {item.serialNumber || absoluteIndex}
-                              </td>
-                              {hasAnyItemCode && (
-                                <td style={{ padding: '5px 6px', textAlign: 'center', verticalAlign: 'top', fontWeight: 'bold', borderRight: '1px solid #000', borderBottom: 'none' }}>
-                                  {item.itemCode && item.itemCode !== 'CUSTOM' ? item.itemCode : ''}
-                                </td>
-                              )}
-                              <td style={{ padding: '5px 8px', verticalAlign: 'top', borderRight: '1px solid #000', borderBottom: 'none', whiteSpace: 'pre-line' }}>
-                                <div>{item.description}</div>
-                              </td>
-                              <td style={{ padding: '5px 8px', textAlign: 'right', verticalAlign: 'top', borderRight: '1px solid #000', borderBottom: 'none' }}>
-                                {Number(item.rate).toFixed(2)}
-                              </td>
-                              <td style={{ padding: '5px 8px', textAlign: 'center', verticalAlign: 'top', borderRight: '1px solid #000', borderBottom: 'none' }}>
-                                {item.quantity} {item.unit || 'No'}
-                              </td>
-                              <td style={{ padding: '5px 8px', textAlign: 'right', verticalAlign: 'top', fontWeight: 'bold', borderBottom: 'none' }}>
-                                {Number(item.amount || (item.quantity * item.rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                              </td>
-                            </tr>
-                          );
-                        })}
-
-                        {/* Spacer Rows to stretch borders vertically */}
-                        {getEmptyRows(emptyRowsCount)}
-
-                        {/* Page Total row (if not the last page) */}
-                        {pageIdx < pages.length - 1 && (
-                          <tr style={{ borderTop: '1px solid #000', fontWeight: 'bold', height: '24px' }}>
-                            <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>
-                            {hasAnyItemCode && <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>}
-                            <td style={{ padding: '6px 8px', borderRight: '1px solid #000', textAlign: 'center', fontWeight: 'bold', fontStyle: 'italic' }}>
-                              Page - {pageIdx + 1} Total
-                            </td>
-                            <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>
-                            <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>
-                            <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>
-                              {pTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Footer Section */}
-                  <div>
-                    {/* Conti Tag at bottom of non-last pages */}
-                    {pageIdx < pages.length - 1 && (
-                      <div style={{ textAlign: 'right', fontSize: '11px', fontWeight: 'bold', fontStyle: 'italic', padding: '4px 8px' }}>
-                        Conti...
-                      </div>
-                    )}
-
-                    {/* Subtotal, GST, Grand Total, and Signatures (Only on last page) */}
-                    {pageIdx === pages.length - 1 && (
-                      <div style={{ borderTop: 'none', marginTop: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                        {/* Metadata Grid Table */}
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', margin: 0, borderBottom: '1px solid #000' }}>
                           <tbody>
-                            <tr style={{ borderBottom: '1px solid #000' }}>
-                              <td colSpan={hasAnyItemCode ? 4 : 3} style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 'bold', fontStyle: 'italic', borderRight: '1px solid #000' }}>Sub-Total</td>
-                              <td style={{ width: '95px', textAlign: 'right', padding: '6px 8px', fontWeight: 'bold' }}>
-                                {subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            {/* Row 1: Invoice No & Date with Light Shading Background (Present on ALL Pages) */}
+                            <tr style={{ background: '#dce4dc', borderBottom: '1px solid #000' }}>
+                              <td style={{ width: '15%', padding: '4px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                Invoice No.
+                              </td>
+                              <td style={{ width: '45%', padding: '4px 6px', fontWeight: '900', fontSize: '12.5px', borderRight: '1px solid #000' }}>
+                                {invoiceNo}
+                              </td>
+                              <td style={{ width: '15%', padding: '4px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                Date :
+                              </td>
+                              <td style={{ width: '25%', padding: '4px 6px', fontWeight: '900', fontSize: '12.5px' }}>
+                                {formattedDate}
                               </td>
                             </tr>
 
-                            {/* Intra-State (34 Prefix) -> CGST & UGST / SGST */}
-                            {isIntraState ? (
+                            {/* Row 2: Contract No & Page (Present on ALL Pages) */}
+                            <tr style={{ borderBottom: isFirstPage ? '1px solid #000' : 'none' }}>
+                              <td style={{ padding: '4px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                Contract No.
+                              </td>
+                              <td style={{ padding: '4px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                {challan.contractNo || '9010038288'}
+                              </td>
+                              <td style={{ padding: '4px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                Page
+                              </td>
+                              <td style={{ padding: '4px 6px', fontWeight: 'bold', fontSize: '12px' }}>
+                                {pageIdx + 1} of {pages.length}
+                              </td>
+                            </tr>
+
+                            {/* Rows 3 to 9: Rendered ONLY on Page 1 (As per User Reference Image) */}
+                            {isFirstPage && (
                               <>
+                                {/* Row 3: C. Period & Vendor Code */}
                                 <tr style={{ borderBottom: '1px solid #000' }}>
-                                  <td colSpan={hasAnyItemCode ? 3 : 2} style={{ padding: '4px 8px', fontWeight: 'bold', borderRight: '1px solid #000' }}>
-                                    SAC Code : {challan.sacCode || '995464'}, GST : {gstPercent}%
+                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    C. Period
                                   </td>
-                                  <td style={{ textAlign: 'right', padding: '4px 8px', borderRight: '1px solid #000' }}>
-                                    CGST @ {halfGst}%
+                                  <td style={{ padding: '3px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    {challan.contractPeriod || '01.05.2024 to 30.04.2027'}
                                   </td>
-                                  <td style={{ textAlign: 'right', padding: '4px 8px' }}>
-                                    {cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    Vendor Code
+                                  </td>
+                                  <td style={{ padding: '3px 6px', fontSize: '12px' }}>
+                                    {challan.vendorCode || '840305'}
                                   </td>
                                 </tr>
 
+                                {/* Row 4: P.O. No. & GSTIN */}
                                 <tr style={{ borderBottom: '1px solid #000' }}>
-                                  <td colSpan={hasAnyItemCode ? 3 : 2} style={{ padding: '4px 8px', fontStyle: 'italic', borderRight: '1px solid #000' }}>
-                                    {amountInWords}
+                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    P.O. No.
                                   </td>
-                                  <td style={{ textAlign: 'right', padding: '4px 8px', borderRight: '1px solid #000' }}>
-                                    UGST / SGST @ {halfGst}%
+                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    {challan.poNumber || '5060173862'} {challan.poDate ? `Dt: ${new Date(challan.poDate).toLocaleDateString('en-GB')}` : ''}
                                   </td>
-                                  <td style={{ textAlign: 'right', padding: '4px 8px' }}>
-                                    {sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    GSTIN
                                   </td>
-                                </tr>
-                              </>
-                            ) : (
-                              /* Inter-State (Non-34 Prefix) -> IGST */
-                              <>
-                                <tr style={{ borderBottom: '1px solid #000' }}>
-                                  <td colSpan={hasAnyItemCode ? 3 : 2} style={{ padding: '4px 8px', fontWeight: 'bold', borderRight: '1px solid #000' }}>
-                                    SAC Code : {challan.sacCode || '995464'}, GST : {gstPercent}%
-                                  </td>
-                                  <td style={{ textAlign: 'right', padding: '4px 8px', borderRight: '1px solid #000' }}>
-                                    IGST @ {gstPercent}%
-                                  </td>
-                                  <td style={{ textAlign: 'right', padding: '4px 8px' }}>
-                                    {igst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', fontSize: '12px' }}>
+                                    {challan.gstin || '34ABDFS4476N1ZN'}
                                   </td>
                                 </tr>
 
+                                {/* Row 5: B.G. NO. & PAN */}
                                 <tr style={{ borderBottom: '1px solid #000' }}>
-                                  <td colSpan={hasAnyItemCode ? 3 : 2} style={{ padding: '4px 8px', fontStyle: 'italic', borderRight: '1px solid #000' }}>
-                                    {amountInWords}
+                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    B.G. NO.
                                   </td>
-                                  <td style={{ borderRight: '1px solid #000' }}></td>
-                                  <td></td>
+                                  <td style={{ padding: '3px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    {challan.bgNo || '8110IPEBG240001  Validity Upto : 30.09.2027'}
+                                  </td>
+                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    PAN
+                                  </td>
+                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', fontSize: '12px' }}>
+                                    {challan.pan || 'ABDFS4476N'}
+                                  </td>
+                                </tr>
+
+                                {/* Row 6: EPF Code & State Code */}
+                                <tr style={{ borderBottom: '1px solid #000' }}>
+                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    EPF Code
+                                  </td>
+                                  <td style={{ padding: '3px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    {challan.epfCode || 'PC 1758'}
+                                  </td>
+                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    State Code
+                                  </td>
+                                  <td style={{ padding: '3px 6px', fontSize: '12px' }}>
+                                    {challan.stateCode || 'Puducherry (34)'}
+                                  </td>
+                                </tr>
+
+                                {/* Row 7: ESI CODE & Invoice Value */}
+                                <tr style={{ borderBottom: '1px solid #000' }}>
+                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    ESI CODE
+                                  </td>
+                                  <td style={{ padding: '3px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    {challan.esiCode || '55000426770000602'}
+                                  </td>
+                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    Invoice Value
+                                  </td>
+                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', fontSize: '12px' }}>
+                                    Rs. {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </td>
+                                </tr>
+
+                                {/* Row 8: BILLED TO Section */}
+                                <tr style={{ borderBottom: '1px solid #000' }}>
+                                  <td style={{ padding: '4px 6px', fontWeight: 'bold', background: '#dce4dc', verticalAlign: 'top', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    BILLED TO
+                                  </td>
+                                  <td style={{ padding: '4px 6px', fontWeight: 'bold', lineHeight: '1.35', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    <div>{challan.customerName || '-'}</div>
+                                    {challan.customerAddress && <div style={{ fontWeight: 'normal', fontSize: '11px' }}>{challan.customerAddress}</div>}
+                                    {challan.customerPhone && <div style={{ fontWeight: 'normal', fontSize: '11px' }}>Phone: {challan.customerPhone}</div>}
+                                  </td>
+                                  <td style={{ padding: '4px 6px', fontWeight: 'bold', verticalAlign: 'top', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    PAN
+                                  </td>
+                                  <td style={{ padding: '4px 6px', fontWeight: 'bold', verticalAlign: 'top', fontSize: '12px' }}>
+                                    {challan.customerPan || '-'}
+                                  </td>
+                                </tr>
+
+                                {/* Row 9: Customer GST & Customer State Code */}
+                                <tr style={{ borderBottom: '1px solid #000' }}>
+                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', background: '#dce4dc', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    GST
+                                  </td>
+                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    {challan.customerGstin || '-'}
+                                  </td>
+                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    State Code
+                                  </td>
+                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', fontSize: '12px' }}>
+                                    {challan.customerStateCode || 'TAMILNADU (33)'}
+                                  </td>
                                 </tr>
                               </>
                             )}
-
-                            <tr style={{ borderBottom: '1px solid #000', fontWeight: 'bold' }}>
-                              <td colSpan={hasAnyItemCode ? 3 : 2} style={{ borderRight: '1px solid #000' }}></td>
-                              <td style={{ textAlign: 'right', padding: '6px 8px', borderRight: '1px solid #000' }}>
-                                GROSS AMOUNT
-                              </td>
-                              <td style={{ textAlign: 'right', padding: '6px 8px', fontSize: '11.5px', color: '#000' }}>
-                                Rs. {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                              </td>
-                            </tr>
                           </tbody>
                         </table>
 
-                        {/* Declaration & Signature Block */}
-                        <div style={{ display: 'flex', fontSize: '10.5px' }}>
-
-                          {/* Declaration */}
-                          <div style={{ flex: 1, padding: '5px 8px', borderRight: '1px solid #000' }}>
-                            <div style={{ fontWeight: 'bold', marginBottom: '2px', textDecoration: 'underline' }}>DECLARATION</div>
-                            <div style={{ fontSize: '9.5px', lineHeight: '1.3' }}>
-                              We hereby certifying that all the clause of the contract agreement including statutory clauses, Remittance of EPF payment have been complied.
-                            </div>
-                            <div style={{ marginTop: '8px', fontWeight: 'bold' }}>E & O.E</div>
+                        {/* Equipment / Job Header (If provided) */}
+                        {challan.equipmentHeader && isFirstPage && (
+                          <div style={{ borderBottom: '1px solid #000', padding: '0.35rem 0.75rem', background: '#f8fafc', fontWeight: 'bold', fontSize: '12px', textAlign: 'center' }}>
+                            {challan.equipmentHeader}
                           </div>
-
-                          {/* Signatory */}
-                          <div style={{ width: '250px', padding: '5px 8px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', textAlign: 'right' }}>
-                            <div style={{ fontWeight: 'bold', fontSize: '10.5px' }}>
-                              For SRI DURGA ENTERPRISES
-                            </div>
-
-                            <div style={{ marginTop: '40px', textAlign: 'right' }}>
-                              <div style={{ fontWeight: 'bold', fontSize: '10.5px' }}>MANAGING PARTNER</div>
-                            </div>
-                          </div>
-
-                        </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+
+                      {/* 2. MIDDLE TABLE SECTION: Full space with items filling the page before overflow */}
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                        <table style={{ width: '100%', height: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left', margin: 0, display: 'table' }}>
+                          <thead>
+                            <tr style={{ borderBottom: '1.5px solid #000', background: '#f1f5f9', fontWeight: 'bold', textAlign: 'center', height: '28px' }}>
+                              <th style={{ width: '42px', padding: '4px 2px', borderRight: '1px solid #000', fontSize: '12px' }}>Sl.No.</th>
+                              {hasAnyItemCode && <th style={{ width: '80px', padding: '4px 2px', borderRight: '1px solid #000', fontSize: '12px' }}>Item No.</th>}
+                              <th style={{ padding: '4px 6px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px' }}>Description</th>
+                              <th style={{ width: '90px', padding: '4px 4px', borderRight: '1px solid #000', textAlign: 'right', fontSize: '12px' }}>Rate</th>
+                              <th style={{ width: '55px', padding: '4px 2px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px' }}>Qty</th>
+                              <th style={{ width: '110px', padding: '4px 6px', textAlign: 'right', fontSize: '12px' }}>Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {/* Brought Forward row for page 2 onwards */}
+                            {pageIdx > 0 && (
+                              <tr style={{ fontWeight: 'bold', background: '#f8fafc', borderBottom: '1px solid #000', height: '26px' }}>
+                                <td style={{ borderRight: '1px solid #000' }}></td>
+                                {hasAnyItemCode && <td style={{ borderRight: '1px solid #000' }}></td>}
+                                <td style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #000', fontStyle: 'italic', fontWeight: 800, fontSize: '12px' }}>
+                                  Brought Forward from Page {pageIdx}
+                                </td>
+                                <td style={{ borderRight: '1px solid #000' }}></td>
+                                <td style={{ borderRight: '1px solid #000' }}></td>
+                                <td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 800, fontSize: '12px' }}>
+                                  {bForward.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                              </tr>
+                            )}
+
+                            {/* Actual Item Rows Filling The Available Space */}
+                            {pageItems.map((item, itemIdx) => {
+                              const calcAmount = Number(item.amount) || (Number(item.quantity || 0) * Number(item.rate || 0));
+                              const overallIndex = pageIdx === 0 ? itemIdx + 1 : (pages.slice(0, pageIdx).reduce((acc, p) => acc + p.length, 0) + itemIdx + 1);
+
+                              return (
+                                <tr key={itemIdx} style={{ verticalAlign: 'top', minHeight: '24px' }}>
+                                  <td style={{ textAlign: 'center', padding: '4px 2px', borderRight: '1px solid #000', fontSize: '12px' }}>{item.serialNumber || overallIndex}</td>
+                                  {hasAnyItemCode && (
+                                    <td style={{ textAlign: 'center', padding: '4px 2px', borderRight: '1px solid #000', fontWeight: '600', fontSize: '12px' }}>
+                                      {item.itemCode && item.itemCode !== 'CUSTOM' ? item.itemCode : '-'}
+                                    </td>
+                                  )}
+                                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000', whiteSpace: 'pre-line', fontSize: '12px', lineHeight: '1.35' }}>
+                                    {item.description}
+                                  </td>
+                                  <td style={{ textAlign: 'right', padding: '4px 4px', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    {Number(item.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </td>
+                                  <td style={{ textAlign: 'center', padding: '4px 2px', borderRight: '1px solid #000', fontWeight: '600', fontSize: '12px' }}>
+                                    {item.quantity} {item.unit && item.unit !== 'No' ? item.unit : ''}
+                                  </td>
+                                  <td style={{ textAlign: 'right', padding: '4px 6px', fontWeight: '600', fontSize: '12px' }}>
+                                    {calcAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+
+                            {/* Stretcher row to ensure vertical border lines connect seamlessly to bottom */}
+                            <tr style={{ height: '100%' }}>
+                              <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>
+                              {hasAnyItemCode && <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>}
+                              <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>
+                              <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>
+                              <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>
+                              <td>&nbsp;</td>
+                            </tr>
+
+                            {/* Carried Forward row for Page 1 / Intermediate Pages - Touches the bottom border */}
+                            {pageIdx < pages.length - 1 && (
+                              <tr style={{ fontWeight: 'bold', background: '#f8fafc', borderTop: '1.5px solid #000', height: '30px' }}>
+                                <td style={{ borderRight: '1px solid #000' }}></td>
+                                {hasAnyItemCode && <td style={{ borderRight: '1px solid #000' }}></td>}
+                                <td style={{ padding: '5px 8px', textAlign: 'center', borderRight: '1px solid #000', fontSize: '12px', fontStyle: 'italic' }}>
+                                  Carried Over to Page {pageIdx + 2}
+                                </td>
+                                <td style={{ borderRight: '1px solid #000' }}></td>
+                                <td style={{ borderRight: '1px solid #000' }}></td>
+                                <td style={{ padding: '5px 8px', textAlign: 'right', fontSize: '12px', fontWeight: 800 }}>
+                                  {(bForward + pTotal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* 3. BOTTOM SUMMARY SECTION: Rendered on Final Page */}
+                      {isLastPage && (
+                        <div style={{ flexShrink: 0, borderTop: '1.5px solid #000' }}>
+                          {/* Financial Total & GST Breakdown Box */}
+                          <div style={{ borderBottom: '1.5px solid #000', display: 'grid', gridTemplateColumns: '1.3fr 1fr', fontSize: '12px' }}>
+                            {/* Left: Bank Details */}
+                            <div style={{ padding: '4px 8px', borderRight: '1.5px solid #000', lineHeight: '1.4' }}>
+                              <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '2px', fontSize: '12px' }}>BANK DETAILS:</div>
+                              <div><strong>Bank Name</strong>: INDIAN OVERSEAS BANK</div>
+                              <div><strong>Branch</strong>: KOVILPATHU, KARAIKAL</div>
+                              <div><strong>A/c No.</strong>: 074302000000457</div>
+                              <div><strong>IFSC Code</strong>: IOBA0000743</div>
+                            </div>
+
+                            {/* Right: Tax Breakdown */}
+                            <div style={{ padding: '4px 8px', lineHeight: '1.4' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                                <span>Sub Total</span>
+                                <strong>₹ {subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                              </div>
+
+                              {isIntraState ? (
+                                <>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                                    <span>CGST ({halfGst}%)</span>
+                                    <span>₹ {cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                                    <span>SGST / UTGST ({halfGst}%)</span>
+                                    <span>₹ {sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                                  <span>IGST ({gstPercent}%)</span>
+                                  <span>₹ {igst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                              )}
+
+                              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #000', paddingTop: '2px', marginTop: '2px', fontWeight: 'bold', fontSize: '12.5px' }}>
+                                <span>Gross Total</span>
+                                <span>₹ {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Amount in Words */}
+                          <div style={{ borderBottom: '1.5px solid #000', padding: '4px 8px', fontSize: '12px', fontWeight: 'bold', background: '#f8fafc' }}>
+                            Amount Chargeable (in words) : {amountInWords}
+                          </div>
+
+                          {/* Footer Terms & Signatures */}
+                          <div style={{ display: 'flex', fontSize: '11px', minHeight: '85px' }}>
+                            {/* Declaration */}
+                            <div style={{ flex: 1, padding: '5px 8px', borderRight: '1.5px solid #000' }}>
+                              <div style={{ fontWeight: 'bold', marginBottom: '2px', textDecoration: 'underline' }}>DECLARATION</div>
+                              <div style={{ fontSize: '11px', lineHeight: '1.3' }}>
+                                We hereby certifying that all the clause of the contract agreement including statutory clauses, Remittance of EPF payment have been complied.
+                              </div>
+                              <div style={{ marginTop: '8px', fontWeight: 'bold' }}>E & O.E</div>
+                            </div>
+
+                            {/* Signatory */}
+                            <div style={{ width: '260px', padding: '5px 8px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', textAlign: 'right' }}>
+                              <div style={{ fontWeight: 'bold', fontSize: '12px' }}>
+                                For SRI DURGA ENTERPRISES
+                              </div>
+
+                              <div style={{ marginTop: '40px', textAlign: 'right' }}>
+                                <div style={{ fontWeight: 'bold', fontSize: '12px' }}>MANAGING PARTNER</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </React.Fragment>
+            ))}
 
           </div>
+        </div>
 
+        {/* BOTTOM FIXED ACTION TOOLBAR: Copy Type Interactive Toggle Buttons + Print Button + Close Button */}
+        <div 
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            padding: '0.85rem 1.5rem', 
+            background: 'rgba(15, 23, 42, 0.98)', 
+            borderTop: '1px solid rgba(255, 255, 255, 0.12)', 
+            flexShrink: 0,
+            flexWrap: 'wrap',
+            gap: '0.75rem',
+            zIndex: 10
+          }}
+        >
+          {/* Left: Copy Type Toggle Buttons (Original, Duplicate, Office Copy, All 3 Copies) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Copy:
+            </span>
+            <div style={{ display: 'flex', background: 'rgba(30, 41, 59, 0.8)', padding: '3px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+              <button
+                type="button"
+                onClick={() => setCopyType('ORIGINAL')}
+                style={{
+                  padding: '0.45rem 0.85rem',
+                  borderRadius: '7px',
+                  fontSize: '0.8rem',
+                  fontWeight: copyType === 'ORIGINAL' ? 700 : 500,
+                  background: copyType === 'ORIGINAL' ? '#4f46e5' : 'transparent',
+                  color: copyType === 'ORIGINAL' ? '#ffffff' : '#94a3b8',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Original
+              </button>
+              <button
+                type="button"
+                onClick={() => setCopyType('DUPLICATE')}
+                style={{
+                  padding: '0.45rem 0.85rem',
+                  borderRadius: '7px',
+                  fontSize: '0.8rem',
+                  fontWeight: copyType === 'DUPLICATE' ? 700 : 500,
+                  background: copyType === 'DUPLICATE' ? '#4f46e5' : 'transparent',
+                  color: copyType === 'DUPLICATE' ? '#ffffff' : '#94a3b8',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Duplicate
+              </button>
+              <button
+                type="button"
+                onClick={() => setCopyType('OFFICE COPY')}
+                style={{
+                  padding: '0.45rem 0.85rem',
+                  borderRadius: '7px',
+                  fontSize: '0.8rem',
+                  fontWeight: copyType === 'OFFICE COPY' ? 700 : 500,
+                  background: copyType === 'OFFICE COPY' ? '#4f46e5' : 'transparent',
+                  color: copyType === 'OFFICE COPY' ? '#ffffff' : '#94a3b8',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Office Copy
+              </button>
+              <button
+                type="button"
+                onClick={() => setCopyType('ALL')}
+                style={{
+                  padding: '0.45rem 0.85rem',
+                  borderRadius: '7px',
+                  fontSize: '0.8rem',
+                  fontWeight: copyType === 'ALL' ? 700 : 500,
+                  background: copyType === 'ALL' ? '#10b981' : 'transparent',
+                  color: copyType === 'ALL' ? '#ffffff' : '#94a3b8',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                All 3 Copies
+              </button>
+            </div>
+          </div>
+
+          {/* Right: Print Invoice / Save PDF and Close */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <button 
+              onClick={onClose} 
+              className="btn btn-outline" 
+              style={{ 
+                padding: '0.55rem 1rem', 
+                fontSize: '0.825rem',
+                color: '#cbd5e1',
+                borderColor: 'rgba(255, 255, 255, 0.2)' 
+              }}
+            >
+              Close
+            </button>
+
+            <button 
+              onClick={handlePrint} 
+              className="btn btn-primary" 
+              style={{ 
+                padding: '0.55rem 1.35rem', 
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                boxShadow: '0 4px 15px rgba(79, 70, 229, 0.4)'
+              }}
+            >
+              <Printer size={17} />
+              <span>Print Invoice / Save PDF</span>
+            </button>
+          </div>
         </div>
 
       </div>

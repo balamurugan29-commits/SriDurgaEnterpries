@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, Printer, CheckCircle, FileText } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { X, Printer, FileText } from 'lucide-react';
 
 const formatPrintList = (val) => {
   if (!val) return '';
@@ -7,6 +7,19 @@ const formatPrintList = (val) => {
 };
 
 export const JobCardPrintModal = ({ isOpen, onClose, jobCard }) => {
+  // Listen for Escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !jobCard) return null;
 
   const handlePrint = () => {
@@ -93,39 +106,121 @@ export const JobCardPrintModal = ({ isOpen, onClose, jobCard }) => {
     : new Date().toLocaleDateString('en-GB');
 
   return (
-    <div className="no-print-modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
-      
-      <div className="glass-panel-print-wrap" style={{ width: '100%', maxWidth: '860px', maxHeight: '94vh', display: 'flex', flexDirection: 'column', background: '#0f172a', border: '1px solid rgba(99, 102, 241, 0.4)', borderRadius: '16px', overflow: 'hidden' }}>
-        
-        {/* Toolbar Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', background: 'rgba(31, 41, 55, 0.95)', borderBottom: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', color: '#34d399' }}>
-            <FileText size={20} />
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'white', margin: 0 }}>
-              Job Card Preview & Print ({jobCard.jobNo})
-            </h3>
+    <div 
+      className="no-print-modal-overlay" 
+      style={{ 
+        position: 'fixed', 
+        inset: 0, 
+        zIndex: 999999, 
+        background: 'rgba(0,0,0,0.85)', 
+        backdropFilter: 'blur(10px)', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        padding: '0.75rem', 
+        overflow: 'hidden' 
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div 
+        className="glass-panel-print-wrap" 
+        style={{ 
+          width: '100%', 
+          maxWidth: '900px', 
+          height: '95vh', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          background: '#0f172a', 
+          border: '1.5px solid rgba(99, 102, 241, 0.4)', 
+          borderRadius: '16px', 
+          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.65)',
+          overflow: 'hidden',
+          position: 'relative'
+        }}
+      >
+        {/* TOP HEADER: Clean Title Bar + Dedicated Corner Close (X) Button */}
+        <div 
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            padding: '0.75rem 1.25rem', 
+            background: 'rgba(30, 41, 59, 0.98)', 
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)', 
+            flexShrink: 0 
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(99, 102, 241, 0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FileText size={18} color="#818cf8" />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc', margin: 0, lineHeight: 1.2 }}>
+                Job Card Preview & Print
+              </h3>
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                Job No: <strong style={{ color: '#38bdf8' }}>{jobCard.jobNo}</strong> &bull; Customer: <strong style={{ color: '#34d399' }}>{jobCard.customerName || '-'}</strong>
+              </span>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <button onClick={handlePrint} className="btn btn-primary" style={{ padding: '0.55rem 1.25rem' }}>
-              <Printer size={16} />
-              <span>Print Job Card / Save PDF</span>
-            </button>
-            <button onClick={onClose} className="btn btn-outline" style={{ padding: '0.5rem' }}>
-              <X size={18} />
-            </button>
-          </div>
+          {/* DEDICATED TOP-RIGHT CORNER CLOSE BUTTON */}
+          <button 
+            onClick={onClose} 
+            className="btn btn-outline" 
+            style={{ 
+              width: '36px', 
+              height: '36px', 
+              borderRadius: '50%', 
+              padding: 0, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              background: 'rgba(255, 255, 255, 0.06)',
+              color: '#f8fafc',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            title="Close Preview (Esc)"
+            aria-label="Close Preview"
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        {/* Printable Job Card Template (Exact 1:1 Layout from Official PDF) */}
-        <div style={{ padding: '1.5rem', overflowY: 'auto', background: '#ffffff', color: '#000000', fontFamily: 'Arial, sans-serif' }}>
-          
-          <div id="job-card-print-area" style={{ border: '2px solid #000', padding: '10px 16px', background: '#fff', fontSize: '12px', lineHeight: '1.4', color: '#000' }}>
-            
+        {/* MIDDLE BODY: Scrollable Printable Job Card Area */}
+        <div 
+          style={{ 
+            flex: 1, 
+            padding: '1.5rem', 
+            overflowY: 'auto', 
+            background: '#334155', 
+            display: 'flex', 
+            justifyContent: 'center',
+            alignItems: 'flex-start'
+          }}
+        >
+          <div 
+            id="job-card-print-area" 
+            style={{ 
+              border: '2px solid #000', 
+              padding: '12px 18px', 
+              background: '#fff', 
+              fontSize: '12px', 
+              lineHeight: '1.4', 
+              color: '#000',
+              width: '100%',
+              maxWidth: '820px',
+              boxShadow: '0 8px 30px rgba(0, 0, 0, 0.35)',
+              borderRadius: '2px'
+            }}
+          >
             {/* Top Header with Logo, Title & JOB CARD Inverted Box */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', paddingBottom: '6px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {/* Logo Icon */}
                 <div style={{ width: '42px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                   <img src="/logo.jpg" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </div>
@@ -135,180 +230,95 @@ export const JobCardPrintModal = ({ isOpen, onClose, jobCard }) => {
                 </h1>
               </div>
 
-              {/* Inverted Black Box: JOB CARD */}
               <div style={{ background: '#000', color: '#fff', padding: '6px 14px', fontWeight: '900', fontSize: '15px', letterSpacing: '1px', borderRadius: '2px' }}>
                 JOB CARD
               </div>
             </div>
 
-            {/* General Job Info Box */}
-            <div style={{ border: '1.5px solid #000', padding: '6px 10px', marginBottom: '8px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '4px 12px' }}>
-                <div><strong>Job No :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '110px', fontWeight: 'bold' }}>{jobCard.jobNo || ''}</span></div>
-                <div><strong>G.Pass :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '100px', fontWeight: 'bold' }}>{jobCard.gPass || ''}</span></div>
-                <div><strong>Date :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '100px', fontWeight: 'bold' }}>{formattedDate}</span></div>
+            {/* Sub-header: Address & Contact */}
+            <div style={{ textAlign: 'center', fontSize: '11px', color: '#000', marginBottom: '8px', borderBottom: '1.5px solid #000', paddingBottom: '4px' }}>
+              <div>#10, V.G. NAGAR, KOVILPATHU, KARAIKAL - 609 605.</div>
+              <div>PH : 04368 - 225786 &bull; CELL : 94432 87986, 93454 87986</div>
+            </div>
 
-                <div><strong>Customer :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '110px', fontWeight: 'bold' }}>{jobCard.customerName || ''}</span></div>
-                <div><strong>Site :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '100px', fontWeight: 'bold' }}>{jobCard.site || ''}</span></div>
-                <div><strong>Make :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '100px', fontWeight: 'bold' }}>{jobCard.make || ''}</span></div>
+            {/* Box 1: Customer Details & Job Identity */}
+            <div style={{ border: '1.5px solid #000', padding: '6px 10px', marginBottom: '6px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '4px 16px' }}>
+                <div><strong>M/s. :</strong> <span className="underline-val">{jobCard.customerName || '-'}</span></div>
+                <div><strong>JOB NO. :</strong> <span className="underline-val" style={{ fontSize: '13px' }}>{jobCard.jobNo}</span></div>
 
-                <div style={{ gridColumn: 'span 2' }}><strong>Equipment :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '220px', fontWeight: 'bold' }}>{jobCard.equipment || ''}</span></div>
-                <div><strong>Sl.No. :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '100px', fontWeight: 'bold' }}>{jobCard.slNo || ''}</span></div>
+                <div style={{ gridColumn: 'span 2' }}><strong>Address :</strong> <span className="underline-val">{jobCard.customerAddress || '-'}</span></div>
 
-                <div><strong>Delivered on :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '110px', fontWeight: 'bold' }}>{jobCard.deliveredOn || ''}</span></div>
-                <div style={{ gridColumn: 'span 2' }}><strong>Others :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '220px', fontWeight: 'bold' }}>{jobCard.others || ''}</span></div>
+                <div><strong>Location :</strong> <span className="underline-val">{jobCard.location || '-'}</span></div>
+                <div><strong>DATE :</strong> <span className="underline-val">{formattedDate}</span></div>
               </div>
             </div>
 
-            {/* Equipment Details Section */}
-            <div style={{ border: '1.5px solid #000', padding: '6px 10px', marginBottom: '8px' }}>
-              <div style={{ textDecoration: 'underline', fontWeight: '900', fontSize: '13px', marginBottom: '6px' }}>
-                Equipment Details
-              </div>
+            {/* Box 2: Equipment / Motor Specifications Grid */}
+            <div style={{ border: '1.5px solid #000', padding: '6px 10px', marginBottom: '6px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px 12px' }}>
+                <div><strong>H.P. / K.W. :</strong> <span className="underline-val">{jobCard.hpKw || '-'}</span></div>
+                <div><strong>R.P.M. :</strong> <span className="underline-val">{jobCard.rpm || '-'}</span></div>
+                <div><strong>VOLTS :</strong> <span className="underline-val">{jobCard.volts || '-'}</span></div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <div>
-                  <strong>1. Rating :</strong> &nbsp;
-                  <strong>HP :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '50px', textAlign: 'center', fontWeight: 'bold' }}>{jobCard.ratingHp || ''}</span> &nbsp;|&nbsp;
-                  <strong>KW :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '50px', textAlign: 'center', fontWeight: 'bold' }}>{jobCard.ratingKw || ''}</span> &nbsp;|&nbsp;
-                  <strong>KVA :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '50px', textAlign: 'center', fontWeight: 'bold' }}>{jobCard.ratingKva || ''}</span>
-                </div>
+                <div><strong>AMPS :</strong> <span className="underline-val">{jobCard.amps || '-'}</span></div>
+                <div><strong>FRAME :</strong> <span className="underline-val">{jobCard.frame || '-'}</span></div>
+                <div><strong>PHASE :</strong> <span className="underline-val">{jobCard.phase || '-'}</span></div>
 
-                <div><strong>2. Volt :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '150px', fontWeight: 'bold' }}>{jobCard.volt || ''}</span></div>
-
-                <div><strong>3. Current :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '150px', fontWeight: 'bold' }}>{jobCard.current || ''}</span></div>
-
-                <div>
-                  <strong>4. Frame Size :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '120px', fontWeight: 'bold' }}>{jobCard.frameSize || ''}</span> &nbsp;&nbsp;&nbsp;&nbsp;
-                  <strong>Type :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '120px', fontWeight: 'bold' }}>{jobCard.type || ''}</span>
-                </div>
-
-                <div>
-                  <strong>5. Bearing :</strong> &nbsp;
-                  <strong>DE :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '100px', fontWeight: 'bold' }}>{jobCard.bearingDe || ''}</span> &nbsp;&nbsp;&nbsp;&nbsp;
-                  <strong>NDE :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '100px', fontWeight: 'bold' }}>{jobCard.bearingNde || ''}</span>
-                </div>
-
-                <div>
-                  <strong>6. Cooling Fan :</strong> &nbsp;
-                  <strong>ID :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '100px', fontWeight: 'bold' }}>{jobCard.coolingFanId || ''}</span> &nbsp;&nbsp;&nbsp;&nbsp;
-                  <strong>OD :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '100px', fontWeight: 'bold' }}>{jobCard.coolingFanOd || ''}</span>
-                </div>
-
-                <div>
-                  <strong>7. Fan Cover :</strong> &nbsp;
-                  <strong>Circumference :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '70px', fontWeight: 'bold' }}>{jobCard.fanCoverCircumference || ''}</span> &nbsp;
-                  <strong>Height :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '70px', fontWeight: 'bold' }}>{jobCard.fanCoverHeight || ''}</span> &nbsp;
-                  <strong>Dia :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '70px', fontWeight: 'bold' }}>{jobCard.fanCoverDia || ''}</span>
-                </div>
-
-                <div><strong>8. Speed :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '150px', fontWeight: 'bold' }}>{jobCard.speed || ''}</span></div>
-
-                <div>
-                  <strong>9. Terminal Box :</strong> (if viewed from Drive end side) &nbsp;
-                  <strong><span style={{ textDecoration: jobCard.terminalBox === 'LEFT' ? 'underline' : 'none', fontWeight: '900' }}>LEFT</span> / <span style={{ textDecoration: jobCard.terminalBox === 'RIGHT' ? 'underline' : 'none', fontWeight: '900' }}>RIGHT</span></strong>
-                  <span style={{ marginLeft: '10px', fontWeight: 'bold', color: '#16a34a' }}>[{jobCard.terminalBox || 'N/A'}]</span>
-                </div>
-
-                <div><strong>10. Connection :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '150px', fontWeight: 'bold' }}>{jobCard.connection || ''}</span></div>
-
-                {/* 11. Winding Detail */}
-                <div style={{ marginTop: '2px' }}>
-                  <strong>11. Winding Detail :</strong>
-                  
-                  {jobCard.volt === '220' ? (
-                    <div style={{ display: 'flex', gap: '15px', marginTop: '4px', paddingLeft: '1rem' }}>
-                      {/* Running Coil Winding Details Column */}
-                      <div style={{ flex: 1, borderRight: '1px dashed #000', paddingRight: '15px' }}>
-                        <div style={{ fontWeight: 'bold', fontSize: '11px', textDecoration: 'underline', marginBottom: '3px' }}>A. Running Coil Winding Details</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <div><strong>Pitch :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{formatPrintList(jobCard.pitch)}</span></div>
-                          <div><strong>Turns :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{formatPrintList(jobCard.turns)}</span></div>
-                          <div><strong>Bobbin :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{formatPrintList(jobCard.bobbin)}</span></div>
-                          <div><strong>Core Length :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{jobCard.coreLength || ''}</span></div>
-                          <div><strong>SWG :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{jobCard.swg || ''}</span></div>
-                          <div><strong>Coil Wt (1 Set) :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{jobCard.coilWeight1Set || ''}</span></div>
-                          <div><strong>Total Weight :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{jobCard.coilWeightTotal || ''}</span></div>
-                          <div><strong>Set of Coil :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{jobCard.setOfCoil || ''}</span></div>
-                          <div><strong>No. of Slots :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{jobCard.noOfSlots || ''}</span></div>
-                          <div><strong>Total No. Coil :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{jobCard.totalNoCoil || ''}</span></div>
-                        </div>
-                      </div>
-
-                      {/* Starting Coil Winding Details Column */}
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 'bold', fontSize: '11px', textDecoration: 'underline', marginBottom: '3px' }}>B. Starting Coil Winding Details</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <div><strong>Pitch :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{formatPrintList(jobCard.scPitch)}</span></div>
-                          <div><strong>Turns :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{formatPrintList(jobCard.scTurns)}</span></div>
-                          <div><strong>Bobbin :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{formatPrintList(jobCard.scBobbin)}</span></div>
-                          <div><strong>Core Length :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{jobCard.scCoreLength || ''}</span></div>
-                          <div><strong>SWG :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{jobCard.scSwg || ''}</span></div>
-                          <div><strong>Coil Wt (1 Set) :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{jobCard.scCoilWeight1Set || ''}</span></div>
-                          <div><strong>Total Weight :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{jobCard.scCoilWeightTotal || ''}</span></div>
-                          <div><strong>Set of Coil :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{jobCard.scSetOfCoil || ''}</span></div>
-                          <div><strong>No. of Slots :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{jobCard.scNoOfSlots || ''}</span></div>
-                          <div><strong>Total No. Coil :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '80px', fontWeight: 'bold' }}>{jobCard.scTotalNoCoil || ''}</span></div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '2px' }}>
-                      <div><strong>Pitch :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '120px', fontWeight: 'bold' }}>{formatPrintList(jobCard.pitch)}</span></div>
-                      <div><strong>Turns :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '120px', fontWeight: 'bold' }}>{formatPrintList(jobCard.turns)}</span></div>
-                      <div><strong>Bobbin :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '120px', fontWeight: 'bold' }}>{formatPrintList(jobCard.bobbin)}</span></div>
-                      <div><strong>Core Length :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '120px', fontWeight: 'bold' }}>{jobCard.coreLength || ''}</span></div>
-                      <div><strong>SWG :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '120px', fontWeight: 'bold' }}>{jobCard.swg || ''}</span></div>
-                      <div>
-                        <strong>Coil Weight :</strong> &nbsp;
-                        <strong>1 Set :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '90px', fontWeight: 'bold' }}>{jobCard.coilWeight1Set || ''}</span> &nbsp;&nbsp;&nbsp;&nbsp;
-                        <strong>Total Weight :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '90px', fontWeight: 'bold' }}>{jobCard.coilWeightTotal || ''}</span>
-                      </div>
-                      <div>
-                        <strong>Set of Coil :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '70px', fontWeight: 'bold' }}>{jobCard.setOfCoil || ''}</span> &nbsp;&nbsp;&nbsp;&nbsp;
-                        <strong>No. of Slots :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '70px', fontWeight: 'bold' }}>{jobCard.noOfSlots || ''}</span> &nbsp;&nbsp;&nbsp;&nbsp;
-                        <strong>Total No. Coil :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '70px', fontWeight: 'bold' }}>{jobCard.totalNoCoil || ''}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 12. Job Carried */}
-                <div style={{ marginTop: '2px' }}>
-                  <strong>12. Job Carried :</strong>
-                  {jobCard.volt === '220' ? (
-                    <div style={{ paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '2px' }}>
-                      <div><strong>Running Coil :</strong> <span style={{ fontWeight: 'bold' }}>{jobCard.jobCarried || 'Nil'}</span></div>
-                      <div><strong>Starting Coil :</strong> <span style={{ fontWeight: 'bold' }}>{jobCard.scJobCarried || 'Nil'}</span></div>
-                    </div>
-                  ) : (
-                    <div style={{ borderBottom: '1px dotted #000', minHeight: '22px', fontWeight: 'bold', paddingLeft: '4px', whiteSpace: 'pre-line' }}>
-                      {jobCard.jobCarried || ''}
-                    </div>
-                  )}
-                </div>
-
-                {/* 13. Test Details */}
-                <div style={{ marginTop: '2px' }}>
-                  <strong>13. Test Details :</strong>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 14px', paddingLeft: '1.5rem', marginTop: '2px' }}>
-                    <div><strong>(i) W-W Resistance :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '90px', fontWeight: 'bold' }}>{jobCard.testWwResistance || ''}</span></div>
-                    <div><strong>(iii) No Load Current :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '90px', fontWeight: 'bold' }}>{jobCard.testNoLoadCurrent || ''}</span></div>
-                    <div><strong>(ii) W-B Resistance :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '90px', fontWeight: 'bold' }}>{jobCard.testWbResistance || ''}</span></div>
-                    <div><strong>(iv) RPM :</strong> <span style={{ borderBottom: '1px dotted #000', display: 'inline-block', minWidth: '90px', fontWeight: 'bold' }}>{jobCard.testRpm || ''}</span></div>
-                  </div>
-                </div>
-
+                <div><strong>MAKE :</strong> <span className="underline-val">{jobCard.make || '-'}</span></div>
+                <div><strong>TYPE :</strong> <span className="underline-val">{jobCard.type || '-'}</span></div>
+                <div><strong>SL. NO. :</strong> <span className="underline-val">{jobCard.slNo || '-'}</span></div>
               </div>
             </div>
 
-            {/* Remarks Section */}
-            <div style={{ border: '1.5px solid #000', padding: '6px 10px', marginBottom: '8px' }}>
-              <div style={{ textDecoration: 'underline', fontWeight: '900', fontSize: '13px', marginBottom: '4px' }}>
-                Remarks
+            {/* Box 3: Incoming Inspection / Physical Condition */}
+            <div style={{ border: '1.5px solid #000', padding: '6px 10px', marginBottom: '6px' }}>
+              <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>
+                Incoming Physical Condition:
               </div>
-              <div style={{ minHeight: '24px', fontWeight: 'bold', whiteSpace: 'pre-line' }}>
-                {jobCard.remarks || 'Nil'}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 16px' }}>
+                <div><strong>Body / Cover :</strong> <span>{formatPrintList(jobCard.bodyCondition) || 'Normal'}</span></div>
+                <div><strong>Terminal Block :</strong> <span>{formatPrintList(jobCard.terminalBlock) || 'Normal'}</span></div>
+                <div><strong>Fan & Cover :</strong> <span>{formatPrintList(jobCard.fanCondition) || 'Normal'}</span></div>
+                <div><strong>Shaft :</strong> <span>{formatPrintList(jobCard.shaftCondition) || 'Normal'}</span></div>
+              </div>
+            </div>
+
+            {/* Box 4: Repairs Carried Out */}
+            <div style={{ border: '1.5px solid #000', padding: '6px 10px', marginBottom: '6px' }}>
+              <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>
+                Repairs / Services Carried Out:
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 16px' }}>
+                <div><strong>Rewinding :</strong> <span>{formatPrintList(jobCard.rewindingType) || 'N/A'}</span></div>
+                <div><strong>Shaft Repair :</strong> <span>{formatPrintList(jobCard.shaftWork) || 'N/A'}</span></div>
+                <div><strong>Housing Repair :</strong> <span>{formatPrintList(jobCard.housingWork) || 'N/A'}</span></div>
+                <div><strong>Dynamic Balancing :</strong> <span>{jobCard.dynamicBalancing ? 'Done' : 'N/A'}</span></div>
+              </div>
+            </div>
+
+            {/* Box 5: Spares Replaced */}
+            <div style={{ border: '1.5px solid #000', padding: '6px 10px', marginBottom: '6px' }}>
+              <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>
+                Spares / Components Replaced:
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 16px' }}>
+                <div><strong>Bearings :</strong> <span>{jobCard.bearingReplaced || 'N/A'}</span></div>
+                <div><strong>Oil Seal / O-Ring :</strong> <span>{jobCard.oilSealReplaced || 'N/A'}</span></div>
+                <div><strong>Cooling Fan :</strong> <span>{jobCard.fanReplaced || 'N/A'}</span></div>
+                <div><strong>Other Spares :</strong> <span>{jobCard.otherSpares || 'N/A'}</span></div>
+              </div>
+            </div>
+
+            {/* Box 6: Electrical Test Report */}
+            <div style={{ border: '1.5px solid #000', padding: '6px 10px', marginBottom: '6px' }}>
+              <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>
+                Final Electrical Testing Report:
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '3px 12px' }}>
+                <div><strong>No Load Current :</strong> <span>{jobCard.noLoadAmps || '-'} A</span></div>
+                <div><strong>Insulation Resistance :</strong> <span>{jobCard.irValue || '-'} MΩ</span></div>
+                <div><strong>Winding Resistance :</strong> <span>{jobCard.windingResistance || '-'} Ω</span></div>
               </div>
             </div>
 
@@ -327,7 +337,56 @@ export const JobCardPrintModal = ({ isOpen, onClose, jobCard }) => {
             </div>
 
           </div>
+        </div>
 
+        {/* BOTTOM FIXED ACTION TOOLBAR: Print Button + Close Button */}
+        <div 
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            padding: '0.85rem 1.5rem', 
+            background: 'rgba(15, 23, 42, 0.98)', 
+            borderTop: '1px solid rgba(255, 255, 255, 0.12)', 
+            flexShrink: 0,
+            zIndex: 10
+          }}
+        >
+          <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+            A4 Portrait Layout &bull; Ready for High-Quality Print
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <button 
+              onClick={onClose} 
+              className="btn btn-outline" 
+              style={{ 
+                padding: '0.55rem 1rem', 
+                fontSize: '0.825rem',
+                color: '#cbd5e1',
+                borderColor: 'rgba(255, 255, 255, 0.2)' 
+              }}
+            >
+              Close
+            </button>
+
+            <button 
+              onClick={handlePrint} 
+              className="btn btn-primary" 
+              style={{ 
+                padding: '0.55rem 1.35rem', 
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                boxShadow: '0 4px 15px rgba(79, 70, 229, 0.4)'
+              }}
+            >
+              <Printer size={17} />
+              <span>Print Job Card / Save PDF</span>
+            </button>
+          </div>
         </div>
 
       </div>

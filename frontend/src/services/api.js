@@ -839,3 +839,190 @@ export const deleteGatePass = async (id) => {
     return { message: 'Gate Pass deleted successfully' };
   }
 };
+
+// ==========================================
+// Sales Ledger API & Persistent Storage
+// ==========================================
+export const fetchSalesLedgers = async () => {
+  try {
+    const res = await api.get('/sales-ledger');
+    return res.data || [];
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for fetchSalesLedgers');
+    const local = localStorage.getItem('sri_durga_sales_ledger');
+    return local ? JSON.parse(local) : [];
+  }
+};
+
+export const createSalesLedger = async (ledgerData) => {
+  try {
+    const res = await api.post('/sales-ledger', ledgerData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for createSalesLedger');
+    const local = localStorage.getItem('sri_durga_sales_ledger');
+    const list = local ? JSON.parse(local) : [];
+    const newEntry = {
+      ...ledgerData,
+      id: Date.now(),
+      serialNumber: list.length + 1,
+      createdAt: new Date().toISOString()
+    };
+    list.unshift(newEntry);
+    localStorage.setItem('sri_durga_sales_ledger', JSON.stringify(list));
+    return newEntry;
+  }
+};
+
+export const updateSalesLedger = async (id, ledgerData) => {
+  try {
+    const res = await api.put(`/sales-ledger/${id}`, ledgerData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for updateSalesLedger');
+    const local = localStorage.getItem('sri_durga_sales_ledger');
+    let list = local ? JSON.parse(local) : [];
+    const idx = list.findIndex(l => l.id === id);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...ledgerData, updatedAt: new Date().toISOString() };
+      localStorage.setItem('sri_durga_sales_ledger', JSON.stringify(list));
+      return list[idx];
+    }
+    throw new Error('Sales Ledger entry not found');
+  }
+};
+
+export const deleteSalesLedger = async (id) => {
+  try {
+    const res = await api.delete(`/sales-ledger/${id}`);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for deleteSalesLedger');
+    const local = localStorage.getItem('sri_durga_sales_ledger');
+    let list = local ? JSON.parse(local) : [];
+    list = list.filter(l => l.id !== id);
+    localStorage.setItem('sri_durga_sales_ledger', JSON.stringify(list));
+    return { message: 'Sales Ledger entry deleted' };
+  }
+};
+
+// ==========================================
+// Purchase Ledger API & Persistent Storage
+// ==========================================
+export const fetchPurchaseLedgers = async () => {
+  try {
+    const res = await api.get('/purchase-ledger');
+    return res.data || [];
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for fetchPurchaseLedgers');
+    const local = localStorage.getItem('sri_durga_purchase_ledger');
+    return local ? JSON.parse(local) : [];
+  }
+};
+
+export const createPurchaseLedger = async (ledgerData) => {
+  try {
+    const res = await api.post('/purchase-ledger', ledgerData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for createPurchaseLedger');
+    const local = localStorage.getItem('sri_durga_purchase_ledger');
+    const list = local ? JSON.parse(local) : [];
+    
+    // Duplicate check per dealer + invoiceNo (ignoring dashes)
+    const dealer = (ledgerData.dealerStoreName || '').trim().toUpperCase();
+    const inv = (ledgerData.invoiceNo || '').trim().toUpperCase();
+    if (dealer && inv && inv !== '-' && inv !== 'N/A' && list.some(l => 
+      (l.dealerStoreName || l.supplierRemarks || '').trim().toUpperCase() === dealer && 
+      (l.invoiceNo || '').trim().toUpperCase() === inv
+    )) {
+      throw new Error(`Duplicate entry: Invoice No. ${ledgerData.invoiceNo} already exists for ${ledgerData.dealerStoreName}!`);
+    }
+
+    const newEntry = {
+      ...ledgerData,
+      id: Date.now(),
+      serialNumber: list.length + 1,
+      createdAt: new Date().toISOString()
+    };
+    list.unshift(newEntry);
+    localStorage.setItem('sri_durga_purchase_ledger', JSON.stringify(list));
+    return newEntry;
+  }
+};
+
+export const bulkCreatePurchaseLedgers = async (entries) => {
+  try {
+    const res = await api.post('/purchase-ledger/bulk', entries);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend bulk endpoint unavailable, using client storage batch fallback');
+    const local = localStorage.getItem('sri_durga_purchase_ledger');
+    let list = local ? JSON.parse(local) : [];
+    const created = [];
+    const existingKeys = new Set(list.map(l => {
+      const d = (l.dealerStoreName || l.supplierRemarks || '').trim().toUpperCase();
+      const inv = (l.invoiceNo || '').trim().toUpperCase();
+      return (d && inv && inv !== '-' && inv !== 'N/A') ? `${d}___${inv}` : null;
+    }).filter(Boolean));
+
+    for (let i = 0; i < entries.length; i++) {
+      const item = entries[i];
+      const d = (item.dealerStoreName || item.supplierRemarks || '').trim().toUpperCase();
+      const inv = (item.invoiceNo || '').trim().toUpperCase();
+
+      if (d && inv && inv !== '-' && inv !== 'N/A') {
+        const key = `${d}___${inv}`;
+        if (existingKeys.has(key)) {
+          continue; // Skip duplicate for same dealer
+        }
+        existingKeys.add(key);
+      }
+
+      const newEntry = {
+        ...item,
+        id: Date.now() + i,
+        serialNumber: list.length + 1 + created.length,
+        createdAt: new Date().toISOString()
+      };
+      list.unshift(newEntry);
+      created.push(newEntry);
+    }
+    localStorage.setItem('sri_durga_purchase_ledger', JSON.stringify(list));
+    return created;
+  }
+};
+
+export const updatePurchaseLedger = async (id, ledgerData) => {
+  try {
+    const res = await api.put(`/purchase-ledger/${id}`, ledgerData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for updatePurchaseLedger');
+    const local = localStorage.getItem('sri_durga_purchase_ledger');
+    let list = local ? JSON.parse(local) : [];
+    const idx = list.findIndex(l => l.id === id);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...ledgerData, updatedAt: new Date().toISOString() };
+      localStorage.setItem('sri_durga_purchase_ledger', JSON.stringify(list));
+      return list[idx];
+    }
+    throw new Error('Purchase Ledger entry not found');
+  }
+};
+
+export const deletePurchaseLedger = async (id) => {
+  try {
+    const res = await api.delete(`/purchase-ledger/${id}`);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for deletePurchaseLedger');
+    const local = localStorage.getItem('sri_durga_purchase_ledger');
+    let list = local ? JSON.parse(local) : [];
+    list = list.filter(l => l.id !== id);
+    localStorage.setItem('sri_durga_purchase_ledger', JSON.stringify(list));
+    return { message: 'Purchase Ledger entry deleted' };
+  }
+};
+
+

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { fetchItems, fetchItemByCode, fetchNextChallanNumber, createChallan, updateChallan, fetchCustomers, createCustomer, updateCustomer, getIndianFySuffix, formatUnitWithQty, fetchCertificates } from '../services/api';
 import { printTaxInvoiceDirect } from '../utils/taxInvoicePrint';
+import { ChallanPrintModal } from '../components/ChallanPrintModal';
 import { Toast } from '../components/Toast';
-import { FileSpreadsheet, Plus, Trash2, Printer, Save, Zap, Edit3, X, RefreshCw, ShieldCheck, Building2, HelpCircle, CheckCircle2, XCircle, RotateCcw, ChevronDown } from 'lucide-react';
+import { FileSpreadsheet, Plus, Trash2, Printer, Save, Zap, Edit3, X, RefreshCw, ShieldCheck, Building2, HelpCircle, CheckCircle2, XCircle, RotateCcw, ChevronDown, Eye } from 'lucide-react';
 
 // Fast, responsive in-memory searchable Combobox for Item Code
 const ItemCodeCombobox = React.memo(({ value, masterItems, isFetched, onChange, onSelect }) => {
@@ -237,6 +238,10 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
   const [hasDraft, setHasDraft] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'success' });
   const isInitialMount = useRef(true);
+
+  // Print Preview Modal States
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [currentPrintChallan, setCurrentPrintChallan] = useState(null);
 
   // WCC Selection Modal States
   const [wccModalOpen, setWccModalOpen] = useState(false);
@@ -938,8 +943,9 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
       setHasDraft(false);
 
       if (shouldPrint) {
-        // Direct Chrome Print with exact matching format - Zero popup/modal!
-        printTaxInvoiceDirect(result || challanData);
+        // Open Preview & Print Modal instead of raw browser print
+        setCurrentPrintChallan(result || challanData);
+        setPrintModalOpen(true);
       }
       resetFormToNewBill();
     } catch (err) {
@@ -953,6 +959,54 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Instant Live Preview of Current Draft Form
+  const handlePreviewCurrentForm = () => {
+    const cleanChallanNo = challanNumber.trim() || parseChallanString(null);
+    const validItems = lineItems.filter(i => (i.itemCode && i.itemCode.trim()) || (i.description && i.description.trim()));
+    if (validItems.length === 0) {
+      setToast({ message: 'Please enter or select at least one item specification to preview.', type: 'error' });
+      return;
+    }
+    const challanData = {
+      id: editingId || undefined,
+      challanNumber: cleanChallanNo,
+      challanNo: cleanChallanNo,
+      challanDate,
+      customerName: customerName.trim() || 'Valued Customer',
+      customerAddress: customerAddress.trim(),
+      customerPhone: customerPhone.trim(),
+      vendorCode: vendorCode.trim(),
+      contractNo: contractNo.trim(),
+      contractPeriod: contractPeriod.trim(),
+      bgNo: bgNo.trim(),
+      poNumber: poNumber.trim(),
+      poDate: poDate || null,
+      epfCode: epfCode.trim(),
+      esiCode: esiCode.trim(),
+      gstin: gstin.trim(),
+      pan: pan.trim(),
+      stateCode: stateCode.trim(),
+      customerPan: customerPan.trim(),
+      customerGstin: customerGstin.trim(),
+      customerStateCode: customerStateCode.trim(),
+      sacCode: sacCode.trim(),
+      gstPercent: Number(gstPercent),
+      equipmentHeader: equipmentHeader.trim(),
+      totalAmount: grossTotalAmount,
+      items: validItems.map((i, idx) => ({
+        serialNumber: i.serialNumber || idx + 1,
+        itemCode: i.itemCode || 'CUSTOM',
+        description: i.description,
+        quantity: i.quantity,
+        unit: formatUnitWithQty(i.unit || 'No', i.quantity),
+        rate: i.rate,
+        amount: i.amount
+      }))
+    };
+    setCurrentPrintChallan(challanData);
+    setPrintModalOpen(true);
   };
 
   const displayChallanNumber = parseChallanString(challanNumber);
@@ -1529,13 +1583,23 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={handlePreviewCurrentForm}
+              className="btn btn-outline"
+              style={{ flex: 1, minWidth: '160px', padding: '0.85rem 1rem', fontSize: '0.9rem', fontWeight: 700, color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.4)' }}
+            >
+              <Eye size={18} />
+              <span>Preview Invoice</span>
+            </button>
+
             <button
               type="button"
               disabled={saving}
               onClick={() => handleSaveInvoice(false)}
               className="btn btn-primary"
-              style={{ flex: 1, padding: '0.85rem 1.25rem', fontSize: '0.95rem', fontWeight: 700 }}
+              style={{ flex: 1, minWidth: '160px', padding: '0.85rem 1rem', fontSize: '0.9rem', fontWeight: 700 }}
             >
               <Save size={18} />
               <span>{saving ? 'Saving...' : editingId ? 'Update Tax Invoice' : 'Save Tax Invoice'}</span>
@@ -1546,10 +1610,10 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
               disabled={saving}
               onClick={() => handleSaveInvoice(true)}
               className="btn btn-secondary"
-              style={{ flex: 1, padding: '0.85rem 1.25rem', fontSize: '0.95rem', fontWeight: 700 }}
+              style={{ flex: 1, minWidth: '180px', padding: '0.85rem 1.25rem', fontSize: '0.9rem', fontWeight: 800, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderColor: 'rgba(16, 185, 129, 0.4)' }}
             >
               <Printer size={18} />
-              <span>Save & Print Invoice</span>
+              <span>Save & Preview / Print</span>
             </button>
           </div>
         </div>
@@ -1782,6 +1846,13 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
           </option>
         ))}
       </datalist>
+
+      {/* Tax Invoice Print & Preview Modal */}
+      <ChallanPrintModal 
+        isOpen={printModalOpen}
+        onClose={() => setPrintModalOpen(false)}
+        challan={currentPrintChallan}
+      />
     </div>
   );
 };

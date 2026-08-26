@@ -2,15 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { fetchCertificates, deleteCertificate } from '../services/api';
 import { WorkCompletionPrintModal } from '../components/WorkCompletionPrintModal';
 import { Toast } from '../components/Toast';
-import { Award, Search, RefreshCw, Printer, Edit3, Trash2, Plus, ChevronRight, FileCheck, FileText } from 'lucide-react';
+import { Award, Search, RefreshCw, Printer, Edit3, Trash2, Plus, ChevronRight, Filter, FilterX, Calendar, Hash, MapPin, FileText } from 'lucide-react';
 
 export const WorkCompletionListPage = ({ onEditCertificate, onNewCertificate }) => {
   const [certificates, setCertificates] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedCertForPrint, setSelectedCertForPrint] = useState(null);
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'success' });
+
+  // Filter States
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCertNo, setFilterCertNo] = useState('');
+  const [filterLocation, setFilterLocation] = useState('');
+  const [filterRcRef, setFilterRcRef] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   const loadCertificates = async () => {
     try {
@@ -46,16 +54,63 @@ export const WorkCompletionListPage = ({ onEditCertificate, onNewCertificate }) 
     setPrintModalOpen(true);
   };
 
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setFilterCertNo('');
+    setFilterLocation('');
+    setFilterRcRef('');
+    setFromDate('');
+    setToDate('');
+  };
+
+  // Filter Logic
   const filteredCertificates = certificates.filter(c => {
+    // 1. General Search
     const q = searchQuery.toLowerCase().trim();
-    return !q ||
+    const matchesSearch = !q ||
       (c.certificateNo && c.certificateNo.toLowerCase().includes(q)) ||
       (c.rateContractRef && c.rateContractRef.toLowerCase().includes(q)) ||
       (c.equipmentDescription && c.equipmentDescription.toLowerCase().includes(q)) ||
       (c.location && c.location.toLowerCase().includes(q)) ||
       (c.items && c.items.some(i => i.rcItemNo && i.rcItemNo.toLowerCase().includes(q))) ||
       (c.items && c.items.some(i => i.description && i.description.toLowerCase().includes(q)));
+
+    // 2. Certificate No Filter
+    const certQ = filterCertNo.toLowerCase().trim();
+    const matchesCertNo = !certQ || (c.certificateNo && c.certificateNo.toLowerCase().includes(certQ));
+
+    // 3. Location Filter
+    const locQ = filterLocation.toLowerCase().trim();
+    const matchesLocation = !locQ || (c.location && c.location.toLowerCase().includes(locQ));
+
+    // 4. Rate Contract Ref Filter
+    const rcQ = filterRcRef.toLowerCase().trim();
+    const matchesRcRef = !rcQ || (c.rateContractRef && c.rateContractRef.toLowerCase().includes(rcQ));
+
+    // 5. Date Range Filter
+    let matchesDate = true;
+    if (c.certificateDate) {
+      if (fromDate && c.certificateDate < fromDate) {
+        matchesDate = false;
+      }
+      if (toDate && c.certificateDate > toDate) {
+        matchesDate = false;
+      }
+    } else if (fromDate || toDate) {
+      matchesDate = false;
+    }
+
+    return matchesSearch && matchesCertNo && matchesLocation && matchesRcRef && matchesDate;
   });
+
+  const activeFilterCount = [
+    searchQuery,
+    filterCertNo,
+    filterLocation,
+    filterRcRef,
+    fromDate,
+    toDate
+  ].filter(Boolean).length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -78,38 +133,199 @@ export const WorkCompletionListPage = ({ onEditCertificate, onNewCertificate }) 
               Issued Work Completion Certificates History
             </h2>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-              View, search, edit, and print generated Work Completion Certificates & Joint Inspection Reports.
+              View, search, filter, edit, and print generated Work Completion Certificates & Joint Inspection Reports.
             </p>
           </div>
         </div>
 
-        {onNewCertificate && (
-          <button onClick={onNewCertificate} className="btn btn-primary" style={{ fontSize: '0.85rem' }}>
-            <Plus size={15} /> + New Certificate
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {/* FILTER BUTTON WITH ACTIVE BADGE */}
+          <button 
+            onClick={() => setShowFilters(prev => !prev)} 
+            className={`btn ${showFilters || activeFilterCount > 0 ? 'btn-primary' : 'btn-outline'}`}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem', 
+              padding: '0.55rem 1rem', 
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              background: showFilters ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : undefined,
+              borderColor: activeFilterCount > 0 ? '#34d399' : undefined
+            }}
+            title="Toggle Filter Options"
+          >
+            <Filter size={16} />
+            <span>Filters</span>
+            {activeFilterCount > 0 && (
+              <span style={{ 
+                background: '#fbbf24', 
+                color: '#0f172a', 
+                borderRadius: '50%', 
+                width: '20px', 
+                height: '20px', 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                fontSize: '0.75rem', 
+                fontWeight: 900,
+                marginLeft: '0.2rem'
+              }}>
+                {activeFilterCount}
+              </span>
+            )}
           </button>
-        )}
+
+          {onNewCertificate && (
+            <button onClick={onNewCertificate} className="btn btn-primary" style={{ fontSize: '0.85rem' }}>
+              <Plus size={15} /> + New Certificate
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* EXPANDABLE FILTER PANEL */}
+      {showFilters && (
+        <div className="glass-panel animate-modal-entry" style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1.5px solid rgba(16, 185, 129, 0.35)', background: 'rgba(15, 23, 42, 0.95)' }}>
+          {/* Filter Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#34d399', fontWeight: 800, fontSize: '0.95rem' }}>
+              <Filter size={18} />
+              <span>Search & Filter Parameters</span>
+              {activeFilterCount > 0 && (
+                <span style={{ fontSize: '0.75rem', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', padding: '2px 8px', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.4)' }}>
+                  {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} applied
+                </span>
+              )}
+            </div>
+
+            {activeFilterCount > 0 && (
+              <button 
+                onClick={handleResetFilters}
+                className="btn btn-outline"
+                style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.35)' }}
+                title="Clear all active filter fields"
+              >
+                <FilterX size={14} /> Clear All Filters
+              </button>
+            )}
+          </div>
+
+          {/* Filter Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.875rem' }}>
+            {/* 1. Global Live Search */}
+            <div>
+              <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>Search Keywords</label>
+              <div style={{ position: 'relative' }}>
+                <Search size={15} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
+                  placeholder="Search Description, Items..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* 2. Certificate Number */}
+            <div>
+              <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem', color: '#34d399' }}>Certificate No</label>
+              <div style={{ position: 'relative' }}>
+                <Hash size={15} color="#34d399" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{ paddingLeft: '2.25rem', fontSize: '0.85rem', color: '#34d399', fontWeight: 600 }}
+                  placeholder="e.g. SDE/WCC/..."
+                  value={filterCertNo}
+                  onChange={e => setFilterCertNo(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* 3. Location Filter */}
+            <div>
+              <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>Location / Site</label>
+              <div style={{ position: 'relative' }}>
+                <MapPin size={15} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
+                  placeholder="e.g. RMD#GCS..."
+                  value={filterLocation}
+                  onChange={e => setFilterLocation(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* 4. Rate Contract Ref */}
+            <div>
+              <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>Rate Contract Ref</label>
+              <div style={{ position: 'relative' }}>
+                <FileText size={15} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
+                  placeholder="e.g. 9010038288..."
+                  value={filterRcRef}
+                  onChange={e => setFilterRcRef(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* 5. From Date */}
+            <div>
+              <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>From Date</label>
+              <div style={{ position: 'relative' }}>
+                <Calendar size={15} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="date"
+                  className="form-input"
+                  style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
+                  value={fromDate}
+                  onChange={e => setFromDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* 6. To Date */}
+            <div>
+              <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>To Date</label>
+              <div style={{ position: 'relative' }}>
+                <Calendar size={15} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="date"
+                  className="form-input"
+                  style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
+                  value={toDate}
+                  onChange={e => setToDate(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Records Table */}
       <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
         
         <div style={{ padding: '1rem 1.5rem', background: 'rgba(15, 23, 42, 0.6)', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ position: 'relative', flex: 1, maxWidth: '420px' }}>
-            <Search size={16} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
-            <input 
-              type="text" 
-              className="form-input" 
-              style={{ paddingLeft: '2.5rem', fontSize: '0.85rem' }} 
-              placeholder="Search Certificate No, RC Item No, Location, Description..." 
-              value={searchQuery} 
-              onChange={e => setSearchQuery(e.target.value)} 
-            />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+            <span style={{ fontSize: '0.9rem', color: '#f8fafc', fontWeight: 700 }}>
+              Showing <strong>{filteredCertificates.length}</strong> of <strong>{certificates.length}</strong> Certificates
+            </span>
+            {activeFilterCount > 0 && (
+              <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                Filtered
+              </span>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Total: <strong>{filteredCertificates.length}</strong> Certificates
-            </span>
             <button onClick={loadCertificates} className="btn btn-outline" style={{ fontSize: '0.8rem' }}>
               <RefreshCw size={14} /> Refresh
             </button>
@@ -140,7 +356,7 @@ export const WorkCompletionListPage = ({ onEditCertificate, onNewCertificate }) 
               ) : filteredCertificates.length === 0 ? (
                 <tr>
                   <td colSpan={7} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    No Work Completion Certificates found matching your search.
+                    No Work Completion Certificates found matching the filter criteria.
                   </td>
                 </tr>
               ) : (

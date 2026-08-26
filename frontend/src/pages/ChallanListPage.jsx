@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { fetchChallans, deleteChallan, calculateChallanTotalAmount } from '../services/api';
 import { printTaxInvoiceDirect } from '../utils/taxInvoicePrint';
+import { ChallanPrintModal } from '../components/ChallanPrintModal';
 import { MultiInvoiceExportModal } from '../components/MultiInvoiceExportModal';
 import { ExportDesignerModal } from '../components/ExportDesignerModal';
 import { Toast } from '../components/Toast';
-import { History, Search, Printer, Edit3, Trash2, RefreshCw, Download, Filter, FilterX, Calendar, Hash, FileText } from 'lucide-react';
+import { History, Search, Printer, Edit3, Trash2, RefreshCw, Download, Filter, FilterX, Calendar, Hash, FileText, User, CreditCard } from 'lucide-react';
 
 const CHALLAN_COLUMNS = [
   { key: 'challanNumber', label: 'INVOICE NO.' },
@@ -17,17 +18,22 @@ const CHALLAN_COLUMNS = [
 
 export const ChallanListPage = ({ onEditChallan }) => {
   const [challans, setChallans] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterInvoiceNo, setFilterInvoiceNo] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  const [selectedChallanIds, setSelectedChallanIds] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedChallanIds, setSelectedChallanIds] = useState([]);
   const [selectedChallan, setSelectedChallan] = useState(null);
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [batchExportModalOpen, setBatchExportModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'success' });
+
+  // Filter States
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterInvoiceNo, setFilterInvoiceNo] = useState('');
+  const [filterCustomer, setFilterCustomer] = useState('');
+  const [filterGstin, setFilterGstin] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   const loadChallans = async () => {
     try {
@@ -48,12 +54,13 @@ export const ChallanListPage = ({ onEditChallan }) => {
 
   // Multi-criteria Filtering
   const filteredChallans = challans.filter(c => {
-    // 1. Search Query
+    // 1. General Live Search
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch = !q ||
       (c.challanNumber && c.challanNumber.toLowerCase().includes(q)) ||
       (c.customerName && c.customerName.toLowerCase().includes(q)) ||
       (c.customerGstin && c.customerGstin.toLowerCase().includes(q)) ||
+      (c.customerPan && c.customerPan.toLowerCase().includes(q)) ||
       (c.items && c.items.some(i => i.itemCode && i.itemCode.toLowerCase().includes(q))) ||
       (c.items && c.items.some(i => i.description && i.description.toLowerCase().includes(q)));
 
@@ -61,7 +68,17 @@ export const ChallanListPage = ({ onEditChallan }) => {
     const invQ = filterInvoiceNo.toLowerCase().trim();
     const matchesInvoiceNo = !invQ || (c.challanNumber && c.challanNumber.toLowerCase().includes(invQ));
 
-    // 3. Date Range (From Date & To Date)
+    // 3. Customer Filter
+    const custQ = filterCustomer.toLowerCase().trim();
+    const matchesCustomer = !custQ || (c.customerName && c.customerName.toLowerCase().includes(custQ));
+
+    // 4. GSTIN / PAN Filter
+    const gstQ = filterGstin.toLowerCase().trim();
+    const matchesGstin = !gstQ || 
+      (c.customerGstin && c.customerGstin.toLowerCase().includes(gstQ)) ||
+      (c.customerPan && c.customerPan.toLowerCase().includes(gstQ));
+
+    // 5. Date Range (From Date & To Date)
     let matchesDate = true;
     if (c.challanDate) {
       if (fromDate && c.challanDate < fromDate) {
@@ -74,14 +91,23 @@ export const ChallanListPage = ({ onEditChallan }) => {
       matchesDate = false;
     }
 
-    return matchesSearch && matchesInvoiceNo && matchesDate;
+    return matchesSearch && matchesInvoiceNo && matchesCustomer && matchesGstin && matchesDate;
   });
 
-  const isFilterActive = searchQuery || filterInvoiceNo || fromDate || toDate;
+  const activeFilterCount = [
+    searchQuery,
+    filterInvoiceNo,
+    filterCustomer,
+    filterGstin,
+    fromDate,
+    toDate
+  ].filter(Boolean).length;
 
   const handleResetAllFilters = () => {
     setSearchQuery('');
     setFilterInvoiceNo('');
+    setFilterCustomer('');
+    setFilterGstin('');
     setFromDate('');
     setToDate('');
   };
@@ -151,18 +177,56 @@ export const ChallanListPage = ({ onEditChallan }) => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'success' })} />
 
-      {/* Advanced Filter & Search Toolbar */}
+      {/* Advanced Action Bar */}
       <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         
         {/* Top Row: Search & Actions */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fbbf24', fontWeight: 700, fontSize: '1.05rem' }}>
-            <Filter size={18} />
-            <span>Tax Invoice History Filters</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fbbf24', fontWeight: 800, fontSize: '1.2rem' }}>
+            <History size={22} />
+            <span>Tax Invoice History</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {/* FILTER BUTTON WITH ACTIVE BADGE */}
+            <button 
+              onClick={() => setShowFilters(prev => !prev)} 
+              className={`btn ${showFilters || activeFilterCount > 0 ? 'btn-primary' : 'btn-outline'}`}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem', 
+                padding: '0.55rem 1rem', 
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                background: showFilters ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : undefined,
+                color: showFilters ? '#ffffff' : undefined,
+                borderColor: activeFilterCount > 0 ? '#fbbf24' : undefined
+              }}
+              title="Toggle Filter Options"
+            >
+              <Filter size={16} />
+              <span>Filters</span>
+              {activeFilterCount > 0 && (
+                <span style={{ 
+                  background: '#10b981', 
+                  color: '#ffffff', 
+                  borderRadius: '50%', 
+                  width: '20px', 
+                  height: '20px', 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  fontSize: '0.75rem', 
+                  fontWeight: 900,
+                  marginLeft: '0.2rem'
+                }}>
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+
             {selectedChallanIds.length > 0 && (
               <button 
                 onClick={handleBulkDeleteSelected} 
@@ -197,85 +261,131 @@ export const ChallanListPage = ({ onEditChallan }) => {
           </div>
         </div>
 
-        {/* Filter Controls Row: Search + Invoice No + From Date + To Date */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.875rem', alignItems: 'flex-end' }}>
-          
-          {/* Filter 1: General Live Search */}
-          <div>
-            <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>Search Keywords</label>
-            <div style={{ position: 'relative' }}>
-              <Search size={16} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
-              <input
-                type="text"
-                className="form-input"
-                style={{ paddingLeft: '2.5rem', fontSize: '0.85rem' }}
-                placeholder="Search Customer, GSTIN, Items..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-              />
+        {/* EXPANDABLE FILTER PANEL */}
+        {showFilters && (
+          <div className="animate-modal-entry" style={{ padding: '1.25rem', background: 'rgba(15, 23, 42, 0.75)', border: '1px solid rgba(245, 158, 11, 0.35)', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Filter Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fbbf24', fontWeight: 800, fontSize: '0.95rem' }}>
+                <Filter size={16} />
+                <span>Search & Filter Parameters</span>
+                {activeFilterCount > 0 && (
+                  <span style={{ fontSize: '0.75rem', background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '2px 8px', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.4)' }}>
+                    {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} applied
+                  </span>
+                )}
+              </div>
+
+              {activeFilterCount > 0 && (
+                <button 
+                  onClick={handleResetAllFilters}
+                  className="btn btn-outline"
+                  style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.35)' }}
+                  title="Clear all active filter fields"
+                >
+                  <FilterX size={14} /> Clear All Filters
+                </button>
+              )}
+            </div>
+
+            {/* Filter Controls Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.875rem' }}>
+              {/* Filter 1: General Live Search */}
+              <div>
+                <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>Search Keywords</label>
+                <div style={{ position: 'relative' }}>
+                  <Search size={15} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="text"
+                    className="form-input"
+                    style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
+                    placeholder="Search Items, Scope..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Filter 2: Invoice Number Filter */}
+              <div>
+                <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem', color: '#fbbf24' }}>Invoice Number</label>
+                <div style={{ position: 'relative' }}>
+                  <Hash size={15} color="#fbbf24" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="text"
+                    className="form-input"
+                    style={{ paddingLeft: '2.25rem', fontSize: '0.85rem', color: '#fbbf24', fontWeight: 600 }}
+                    placeholder="e.g. 01/26-27"
+                    value={filterInvoiceNo}
+                    onChange={e => setFilterInvoiceNo(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Filter 3: Customer Name */}
+              <div>
+                <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>Customer Name</label>
+                <div style={{ position: 'relative' }}>
+                  <User size={15} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="text"
+                    className="form-input"
+                    style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
+                    placeholder="e.g. ONGC..."
+                    value={filterCustomer}
+                    onChange={e => setFilterCustomer(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Filter 4: Customer GSTIN / PAN */}
+              <div>
+                <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>Customer GSTIN / PAN</label>
+                <div style={{ position: 'relative' }}>
+                  <CreditCard size={15} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="text"
+                    className="form-input"
+                    style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
+                    placeholder="e.g. 33AAACO..."
+                    value={filterGstin}
+                    onChange={e => setFilterGstin(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Filter 5: From Date */}
+              <div>
+                <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>From Date</label>
+                <div style={{ position: 'relative' }}>
+                  <Calendar size={15} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="date"
+                    className="form-input"
+                    style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
+                    value={fromDate}
+                    onChange={e => setFromDate(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Filter 6: To Date */}
+              <div>
+                <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>To Date</label>
+                <div style={{ position: 'relative' }}>
+                  <Calendar size={15} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="date"
+                    className="form-input"
+                    style={{ paddingLeft: '2.25rem', fontSize: '0.85rem' }}
+                    value={toDate}
+                    onChange={e => setToDate(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* Filter 2: Invoice Number Filter */}
-          <div>
-            <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem', color: '#fbbf24' }}>Invoice Number</label>
-            <div style={{ position: 'relative' }}>
-              <Hash size={16} color="#fbbf24" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
-              <input
-                type="text"
-                className="form-input"
-                style={{ paddingLeft: '2.5rem', fontSize: '0.85rem', color: '#fbbf24', fontWeight: 600, borderColor: filterInvoiceNo ? 'rgba(245, 158, 11, 0.5)' : undefined }}
-                placeholder="e.g. 01/26-27"
-                value={filterInvoiceNo}
-                onChange={e => setFilterInvoiceNo(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Filter 3: From Date */}
-          <div>
-            <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>From Date</label>
-            <div style={{ position: 'relative' }}>
-              <Calendar size={16} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
-              <input
-                type="date"
-                className="form-input"
-                style={{ paddingLeft: '2.5rem', fontSize: '0.85rem' }}
-                value={fromDate}
-                onChange={e => setFromDate(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Filter 4: To Date */}
-          <div>
-            <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>To Date</label>
-            <div style={{ position: 'relative' }}>
-              <Calendar size={16} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
-              <input
-                type="date"
-                className="form-input"
-                style={{ paddingLeft: '2.5rem', fontSize: '0.85rem' }}
-                value={toDate}
-                onChange={e => setToDate(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Reset Filters Button */}
-          {isFilterActive && (
-            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-              <button 
-                onClick={handleResetAllFilters} 
-                className="btn btn-outline" 
-                style={{ width: '100%', padding: '0.625rem 0.85rem', fontSize: '0.8rem', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.4)', background: 'rgba(239, 68, 68, 0.1)' }}
-              >
-                <FilterX size={15} /> Clear Filters
-              </button>
-            </div>
-          )}
-
-        </div>
+        )}
 
       </div>
 
@@ -305,75 +415,101 @@ export const ChallanListPage = ({ onEditChallan }) => {
           <table className="custom-table">
             <thead>
               <tr>
-                {/* Select All Checkbox Header */}
-                <th style={{ width: '45px', textAlign: 'center', paddingLeft: '1rem' }}>
-                  <input
-                    type="checkbox"
-                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#f59e0b' }}
+                <th style={{ width: '45px', textAlign: 'center' }}>
+                  <input 
+                    type="checkbox" 
                     checked={isAllSelected}
                     onChange={handleSelectAllToggle}
-                    title="Select All Tax Invoices"
+                    style={{ cursor: 'pointer', transform: 'scale(1.15)' }}
+                    title="Select All Filtered Invoices"
                   />
                 </th>
-                <th style={{ width: '140px' }}>Invoice No</th>
-                <th style={{ width: '120px' }}>Date</th>
-                <th>Customer / Party Name</th>
-                <th style={{ width: '100px', textAlign: 'center' }}>Items</th>
-                <th style={{ width: '160px', textAlign: 'right' }}>Total Amount (₹)</th>
-                <th style={{ width: '180px', textAlign: 'center' }}>Actions</th>
+                <th style={{ width: '130px' }}>Invoice No</th>
+                <th style={{ width: '110px' }}>Date</th>
+                <th>Customer / Billed To</th>
+                <th style={{ width: '160px' }}>GSTIN / PAN</th>
+                <th style={{ width: '110px', textAlign: 'center' }}>Items</th>
+                <th style={{ width: '150px', textAlign: 'right' }}>Total Amount</th>
+                <th style={{ width: '160px', textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <td colSpan={8} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                     <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 0.5rem auto' }} />
-                    <p style={{ margin: 0 }}>Loading Tax Invoice records...</p>
+                    <p style={{ margin: 0 }}>Loading Tax Invoices...</p>
                   </td>
                 </tr>
               ) : filteredChallans.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    {isFilterActive ? 'No Tax Invoices match your filter criteria. Click "Clear Filters" to view all records.' : "No Tax Invoices created yet. Go to 'Tax Invoice' page to create one."}
+                  <td colSpan={8} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    No Tax Invoices found matching the filter criteria.
                   </td>
                 </tr>
               ) : (
                 filteredChallans.map((challan) => {
                   const isSelected = selectedChallanIds.includes(challan.id);
-                  const totalAmt = calculateChallanTotalAmount(challan);
+                  const invoiceTotal = calculateChallanTotalAmount(challan);
 
                   return (
-                    <tr key={challan.id} style={{ background: isSelected ? 'rgba(245, 158, 11, 0.12)' : undefined }}>
-                      {/* Row Checkbox */}
-                      <td style={{ textAlign: 'center', paddingLeft: '1rem' }}>
-                        <input
+                    <tr 
+                      key={challan.id}
+                      style={{ 
+                        background: isSelected ? 'rgba(99, 102, 241, 0.12)' : 'transparent',
+                        transition: 'background-color 0.15s ease'
+                      }}
+                    >
+                      {/* Checkbox */}
+                      <td style={{ textAlign: 'center' }}>
+                        <input 
                           type="checkbox"
-                          style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#f59e0b' }}
                           checked={isSelected}
                           onChange={() => handleSelectChallanToggle(challan.id)}
+                          style={{ cursor: 'pointer', transform: 'scale(1.15)' }}
                         />
                       </td>
 
+                      {/* Invoice Number */}
                       <td>
-                        <span className="badge badge-code" style={{ color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.3)', background: 'rgba(245, 158, 11, 0.15)' }}>
+                        <span className="badge badge-code" style={{ color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.4)', background: 'rgba(245, 158, 11, 0.15)', fontWeight: 800 }}>
                           {challan.challanNumber}
                         </span>
                       </td>
-                      <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+
+                      {/* Invoice Date */}
+                      <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                         {challan.challanDate}
                       </td>
-                      <td style={{ fontWeight: 600, color: 'white' }}>
-                        {challan.customerName}
-                      </td>
-                      <td style={{ textAlign: 'center', fontWeight: 600 }}>
-                        {challan.items ? challan.items.length : 0} items
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <span className="badge badge-amount" style={{ fontSize: '0.85rem', padding: '0.35rem 0.65rem' }}>
-                          ₹{totalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                        </span>
-                      </td>
+
+                      {/* Customer Info */}
                       <td>
+                        <div style={{ fontWeight: 600, color: 'white' }}>{challan.customerName}</div>
+                        {challan.equipmentHeader && (
+                          <div style={{ fontSize: '0.75rem', color: '#818cf8', marginTop: '2px' }}>
+                            {challan.equipmentHeader.slice(0, 45)}...
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Customer GSTIN / PAN */}
+                      <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        <div>GST: <span style={{ color: '#38bdf8' }}>{challan.customerGstin || '-'}</span></div>
+                        <div>PAN: <span>{challan.customerPan || '-'}</span></div>
+                      </td>
+
+                      {/* Line Items Count */}
+                      <td style={{ textAlign: 'center', fontWeight: 600 }}>
+                        <span style={{ color: '#34d399' }}>{challan.items ? challan.items.length : 0} items</span>
+                      </td>
+
+                      {/* Total Gross Amount */}
+                      <td style={{ textAlign: 'right', fontWeight: 800, color: '#34d399', fontSize: '0.95rem' }}>
+                        ₹{invoiceTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+
+                      {/* Action Buttons */}
+                      <td style={{ textAlign: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
                           <button 
                             onClick={() => onEditChallan && onEditChallan(challan)} 
@@ -385,10 +521,10 @@ export const ChallanListPage = ({ onEditChallan }) => {
                           </button>
                           
                           <button 
-                            onClick={() => printTaxInvoiceDirect(challan)} 
+                            onClick={() => handleOpenPrint(challan)} 
                             className="btn btn-primary" 
                             style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }} 
-                            title="Direct Print Tax Invoice"
+                            title="Print Preview Tax Invoice"
                           >
                             <Printer size={13} /> Print
                           </button>
@@ -417,6 +553,13 @@ export const ChallanListPage = ({ onEditChallan }) => {
         isOpen={batchExportModalOpen}
         onClose={() => setBatchExportModalOpen(false)}
         selectedChallans={selectedInvoicesForExport}
+      />
+
+      {/* Individual Tax Invoice Preview & Print Modal */}
+      <ChallanPrintModal
+        isOpen={printModalOpen}
+        onClose={() => setPrintModalOpen(false)}
+        challan={selectedChallan}
       />
 
       {/* Export Designer Modal (Excel Tabular Export) */}
