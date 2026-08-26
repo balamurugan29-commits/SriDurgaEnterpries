@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SettingsProvider, useSettings } from './context/SettingsContext';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
+import { AppSettingsModal } from './components/AppSettingsModal';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { MasterPage } from './pages/MasterPage';
@@ -17,7 +20,14 @@ import { GatePassListPage } from './pages/GatePassListPage';
 
 const MainApp = () => {
   const { isAuthenticated } = useAuth();
-  const [activePage, setActivePage] = useState('master');
+  const { layout } = useSettings();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Determine activePage from current URL path
+  const pathSegment = location.pathname.replace(/^\//, '') || 'master';
+  const activePage = pathSegment;
+
   const [editingChallan, setEditingChallan] = useState(null);
   const [editingJobCard, setEditingJobCard] = useState(null);
   const [editingCertificate, setEditingCertificate] = useState(null);
@@ -27,9 +37,14 @@ const MainApp = () => {
     return <LoginPage />;
   }
 
+  // Unified page switcher that updates the browser URL
+  const handleSetActivePage = (page) => {
+    navigate(`/${page}`);
+  };
+
   const handleEditChallanFromList = (challan) => {
     setEditingChallan(challan);
-    setActivePage('challan');
+    navigate('/challan');
   };
 
   const handleClearEditingChallan = () => {
@@ -38,7 +53,7 @@ const MainApp = () => {
 
   const handleEditJobCardFromList = (jobCard) => {
     setEditingJobCard(jobCard);
-    setActivePage('job-card');
+    navigate('/job-card');
   };
 
   const handleClearEditingJobCard = () => {
@@ -47,7 +62,7 @@ const MainApp = () => {
 
   const handleEditCertificateFromList = (cert) => {
     setEditingCertificate(cert);
-    setActivePage('work-completion');
+    navigate('/work-completion');
   };
 
   const handleClearEditingCertificate = () => {
@@ -56,114 +71,149 @@ const MainApp = () => {
 
   const handleEditGatePassFromList = (gatePass) => {
     setEditingGatePass(gatePass);
-    setActivePage('gate-pass');
+    navigate('/gate-pass');
   };
 
   const handleClearEditingGatePass = () => {
     setEditingGatePass(null);
   };
 
-  const renderContent = () => {
-    switch (activePage) {
-      case 'dashboard':
-        return <DashboardPage setActivePage={setActivePage} />;
-      case 'master':
-        return <MasterPage />;
-      case 'customer-master':
-        return <CustomerMasterPage />;
-      case 'work-completion':
-        return (
-          <WorkCompletionPage 
-            editingCertificate={editingCertificate}
-            onCancelEdit={handleClearEditingCertificate}
-          />
-        );
-      case 'work-completion-history':
-      case 'work-completion-list':
-        return (
-          <WorkCompletionListPage 
-            onEditCertificate={handleEditCertificateFromList}
-            onNewCertificate={() => {
-              handleClearEditingCertificate();
-              setActivePage('work-completion');
-            }}
-          />
-        );
-      case 'challan':
-        return (
-          <ChallanPage
-            initialChallan={editingChallan}
-            clearEditingChallan={handleClearEditingChallan}
-          />
-        );
-      case 'challan-list':
-      case 'challans-list':
-        return (
-          <ChallanListPage
-            onEditChallan={handleEditChallanFromList}
-          />
-        );
-      case 'job-card':
-        return (
-          <JobCardPage 
-            editingJobCard={editingJobCard} 
-            onCancelEdit={handleClearEditingJobCard} 
-          />
-        );
-      case 'job-card-history':
-      case 'job-card-list':
-        return (
-          <JobCardListPage 
-            onEditJobCard={handleEditJobCardFromList}
-            onNewJobCard={() => {
-              handleClearEditingJobCard();
-              setActivePage('job-card');
-            }}
-          />
-        );
-      case 'gate-pass':
-        return (
-          <GatePassPage 
-            editingGatePass={editingGatePass} 
-            onCancelEdit={() => {
-              handleClearEditingGatePass();
-              setActivePage('gate-pass-list');
-            }} 
-          />
-        );
-      case 'gate-pass-list':
-      case 'gate-pass-history':
-        return (
-          <GatePassListPage 
-            onEditGatePass={handleEditGatePassFromList}
-            onNewGatePass={() => {
-              handleClearEditingGatePass();
-              setActivePage('gate-pass');
-            }}
-          />
-        );
-      default:
-        return <MasterPage />;
-    }
-  };
-
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-dark)' }}>
-      <Navbar activePage={activePage} />
-      <div style={{ display: 'flex', flex: 1 }}>
-        <Sidebar activePage={activePage} setActivePage={setActivePage} />
-        <main style={{ flex: 1, padding: '1.5rem 2rem', overflowY: 'auto', maxHeight: 'calc(100vh - 65px)' }}>
-          {renderContent()}
+      <Navbar activePage={activePage} setActivePage={handleSetActivePage} />
+      <div style={{ display: 'flex', flex: 1, position: 'relative' }}>
+        <Sidebar activePage={activePage} setActivePage={handleSetActivePage} />
+        <main 
+          className="app-main-content"
+          style={{ 
+            flex: 1, 
+            padding: '1.5rem 2rem', 
+            overflowY: 'auto', 
+            maxHeight: layout === 'top' ? 'calc(100vh - 110px)' : 'calc(100vh - 65px)',
+            width: '100%',
+            position: 'relative',
+            zIndex: 1
+          }}
+        >
+          <Routes>
+            <Route path="/" element={<MasterPage />} />
+            <Route path="/dashboard" element={<DashboardPage setActivePage={handleSetActivePage} />} />
+            <Route path="/master" element={<MasterPage />} />
+            <Route path="/customer-master" element={<CustomerMasterPage />} />
+            <Route 
+              path="/work-completion" 
+              element={
+                <WorkCompletionPage 
+                  editingCertificate={editingCertificate}
+                  onCancelEdit={handleClearEditingCertificate}
+                />
+              } 
+            />
+            <Route 
+              path="/work-completion-history" 
+              element={
+                <WorkCompletionListPage 
+                  onEditCertificate={handleEditCertificateFromList}
+                  onNewCertificate={() => {
+                    handleClearEditingCertificate();
+                    navigate('/work-completion');
+                  }}
+                />
+              } 
+            />
+            <Route 
+              path="/work-completion-list" 
+              element={<Navigate to="/work-completion-history" replace />} 
+            />
+            <Route 
+              path="/challan" 
+              element={
+                <ChallanPage
+                  initialChallan={editingChallan}
+                  clearEditingChallan={handleClearEditingChallan}
+                />
+              } 
+            />
+            <Route 
+              path="/challan-list" 
+              element={<ChallanListPage onEditChallan={handleEditChallanFromList} />} 
+            />
+            <Route 
+              path="/challans-list" 
+              element={<Navigate to="/challan-list" replace />} 
+            />
+            <Route 
+              path="/job-card" 
+              element={
+                <JobCardPage 
+                  editingJobCard={editingJobCard} 
+                  onCancelEdit={handleClearEditingJobCard} 
+                />
+              } 
+            />
+            <Route 
+              path="/job-card-history" 
+              element={
+                <JobCardListPage 
+                  onEditJobCard={handleEditJobCardFromList}
+                  onNewJobCard={() => {
+                    handleClearEditingJobCard();
+                    navigate('/job-card');
+                  }}
+                />
+              } 
+            />
+            <Route 
+              path="/job-card-list" 
+              element={<Navigate to="/job-card-history" replace />} 
+            />
+            <Route 
+              path="/gate-pass" 
+              element={
+                <GatePassPage 
+                  editingGatePass={editingGatePass} 
+                  onCancelEdit={() => {
+                    handleClearEditingGatePass();
+                    navigate('/gate-pass-list');
+                  }} 
+                />
+              } 
+            />
+            <Route 
+              path="/gate-pass-list" 
+              element={
+                <GatePassListPage 
+                  onEditGatePass={handleEditGatePassFromList}
+                  onNewGatePass={() => {
+                    handleClearEditingGatePass();
+                    navigate('/gate-pass');
+                  }}
+                />
+              } 
+            />
+            <Route 
+              path="/gate-pass-history" 
+              element={<Navigate to="/gate-pass-list" replace />} 
+            />
+            <Route path="*" element={<Navigate to="/master" replace />} />
+          </Routes>
         </main>
       </div>
+
+      {/* Global App Settings Modal */}
+      <AppSettingsModal />
     </div>
   );
 };
 
 export default function App() {
   return (
-    <AuthProvider>
-      <MainApp />
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <SettingsProvider>
+          <MainApp />
+        </SettingsProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

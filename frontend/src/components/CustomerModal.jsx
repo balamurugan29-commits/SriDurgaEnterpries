@@ -46,13 +46,13 @@ export const CustomerModal = ({ isOpen, onClose, onSave, customer }) => {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-      <div className="glass-panel" style={{ width: '100%', maxWidth: '600px', background: '#0f172a', border: '1px solid rgba(99, 102, 241, 0.4)', borderRadius: '16px', overflow: 'hidden' }}>
+      <div className="glass-panel" style={{ width: '100%', maxWidth: '600px', background: 'var(--bg-card-solid)', border: '1px solid var(--border-color-accent)', borderRadius: '16px', overflow: 'hidden' }}>
         
         {/* Modal Header */}
-        <div style={{ padding: '1.25rem 1.5rem', background: 'rgba(30, 41, 59, 0.8)', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ padding: '1.25rem 1.5rem', background: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', color: '#34d399' }}>
             <Building2 size={20} />
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'white', margin: 0 }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
               {customer ? 'Edit Customer Details' : 'Add New Customer'}
             </h3>
           </div>

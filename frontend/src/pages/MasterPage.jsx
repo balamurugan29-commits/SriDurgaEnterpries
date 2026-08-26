@@ -445,7 +445,7 @@ export const MasterPage = () => {
               <BreadcrumbChevron size={12} />
               <span style={{ color: '#818cf8', fontWeight: 700 }}>Item Master Inventory Catalog</span>
             </div>
-            <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'white', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               Item Master Catalog Management
             </h2>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>

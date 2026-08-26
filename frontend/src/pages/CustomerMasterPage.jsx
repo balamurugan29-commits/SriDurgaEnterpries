@@ -154,13 +154,13 @@ export const CustomerMasterPage = () => {
         <div style={{ padding: '1rem 1.5rem', background: 'rgba(15, 23, 42, 0.6)', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
             <Building2 size={20} color="#34d399" />
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'white', margin: 0 }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
               Registered Customer Directory
             </h3>
           </div>
 
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            Total Customers: <strong>{customers.length}</strong>
+            Total Registered: <strong>{customers.length}</strong>
           </span>
         </div>
 
@@ -197,7 +197,7 @@ export const CustomerMasterPage = () => {
                     <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)' }}>
                       {idx + 1}
                     </td>
-                    <td style={{ fontWeight: 700, color: 'white' }}>
+                    <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>
                       {cust.customerName}
                     </td>
                     <td>

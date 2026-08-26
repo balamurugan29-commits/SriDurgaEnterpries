@@ -1,8 +1,200 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { fetchItems, fetchItemByCode, fetchNextChallanNumber, createChallan, updateChallan, fetchCustomers, createCustomer, updateCustomer, getIndianFySuffix, formatUnitWithQty, fetchCertificates } from '../services/api';
 import { ChallanPrintModal } from '../components/ChallanPrintModal';
 import { Toast } from '../components/Toast';
-import { FileSpreadsheet, Plus, Trash2, Printer, Save, Zap, Edit3, X, RefreshCw, ShieldCheck, Building2, HelpCircle, CheckCircle2, XCircle, RotateCcw } from 'lucide-react';
+import { FileSpreadsheet, Plus, Trash2, Printer, Save, Zap, Edit3, X, RefreshCw, ShieldCheck, Building2, HelpCircle, CheckCircle2, XCircle, RotateCcw, ChevronDown } from 'lucide-react';
+
+// Fast, responsive in-memory searchable Combobox for Item Code
+const ItemCodeCombobox = React.memo(({ value, masterItems, isFetched, onChange, onSelect }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState(value || '');
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    setQuery(value || '');
+  }, [value]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const filteredItems = useMemo(() => {
+    if (!masterItems || masterItems.length === 0) return [];
+    const q = (query || '').trim().toLowerCase();
+    if (!q) return masterItems.slice(0, 30);
+    return masterItems.filter(m => 
+      (m.itemCode && m.itemCode.toLowerCase().includes(q)) ||
+      (m.description && m.description.toLowerCase().includes(q))
+    ).slice(0, 30);
+  }, [masterItems, query]);
+
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setQuery(val);
+    onChange(val);
+  };
+
+  const handleItemSelect = (m) => {
+    setQuery(m.itemCode);
+    onSelect(m);
+    setIsOpen(false);
+  };
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', width: '100%', minWidth: '160px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+        <input
+          type="text"
+          className="form-input"
+          style={{
+            padding: '0.5rem 1.75rem 0.5rem 0.65rem',
+            fontSize: '0.85rem',
+            fontWeight: 700,
+            color: isFetched ? '#34d399' : '#818cf8',
+            width: '100%'
+          }}
+          placeholder="Select / Type Code"
+          value={query}
+          onChange={handleInputChange}
+          onFocus={() => setIsOpen(true)}
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={() => setIsOpen(!isOpen)}
+          style={{
+            position: 'absolute',
+            right: '4px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--text-muted)',
+            cursor: 'pointer',
+            padding: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '4px'
+          }}
+          title="Open Item Code Directory"
+        >
+          <ChevronDown size={14} />
+        </button>
+      </div>
+
+      {isOpen && filteredItems.length > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            marginTop: '4px',
+            background: 'var(--bg-card-solid)',
+            border: '1px solid var(--border-color-accent)',
+            borderRadius: '10px',
+            boxShadow: '0 12px 30px rgba(0,0,0,0.5)',
+            maxHeight: '220px',
+            overflowY: 'auto',
+            zIndex: 9999,
+            padding: '4px'
+          }}
+        >
+          {filteredItems.map(m => (
+            <div
+              key={m.id || m.itemCode}
+              onClick={() => handleItemSelect(m)}
+              style={{
+                padding: '0.45rem 0.6rem',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '0.5rem',
+                borderBottom: '1px solid var(--border-color)',
+                transition: 'background 0.15s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.18)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', textAlign: 'left' }}>
+                <span style={{ fontWeight: 700, color: '#818cf8', fontSize: '0.8rem' }}>
+                  {m.itemCode}
+                </span>
+                <span style={{ fontSize: '0.675rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>
+                  {m.description}
+                </span>
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34d399', display: 'block' }}>
+                  ₹{Number(m.rate || 0).toFixed(2)}
+                </span>
+                <span style={{ fontSize: '0.625rem', color: 'var(--text-subtle)' }}>
+                  {m.unit || 'No'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
+// Auto-Expanding Textarea that adjusts height dynamically as per content length
+const AutoResizeTextarea = ({ value, onChange, placeholder, minRows = 2 }) => {
+  const textareaRef = useRef(null);
+
+  const adjustHeight = () => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = 'auto';
+      const scrollH = el.scrollHeight;
+      el.style.height = `${Math.max(scrollH, minRows * 24)}px`;
+    }
+  };
+
+  useEffect(() => {
+    adjustHeight();
+  }, [value]);
+
+  return (
+    <textarea
+      ref={textareaRef}
+      className="form-input"
+      rows={minRows}
+      style={{
+        padding: '0.5rem 0.65rem',
+        fontSize: '0.85rem',
+        lineHeight: 1.45,
+        resize: 'none',
+        overflow: 'hidden',
+        width: '100%',
+        minHeight: `${minRows * 24}px`,
+        transition: 'height 0.1s ease',
+        boxSizing: 'border-box'
+      }}
+      placeholder={placeholder}
+      value={value || ''}
+      onChange={(e) => {
+        onChange(e);
+        adjustHeight();
+      }}
+    />
+  );
+};
 
 const DRAFT_STORAGE_KEY = 'sri_durga_tax_invoice_draft';
 
@@ -458,52 +650,63 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
     }
   };
 
-  // SELECT or DESELECT ITEM CODE Workflow (Auto-Fetches Unit from Item Master!)
+  // Apply Master Item details to a specific row
+  const applyMasterItemToRow = (index, foundMasterItem) => {
+    const updated = [...lineItems];
+    const baseRate = Number(foundMasterItem.rate) || 0;
+    const sc = Number(foundMasterItem.serviceCharge) || 0;
+    const qty = updated[index].quantity || 1;
+    const itemUnit = foundMasterItem.unit || 'No';
+
+    if (sc > 0) {
+      setServiceChargeModal({
+        isOpen: true,
+        rowIndex: index,
+        itemCode: foundMasterItem.itemCode,
+        description: foundMasterItem.description,
+        unit: itemUnit,
+        baseRate: baseRate,
+        serviceCharge: sc,
+        qty: qty
+      });
+    } else {
+      updated[index].serialNumber = index + 1;
+      updated[index].itemCode = foundMasterItem.itemCode;
+      updated[index].description = foundMasterItem.description;
+      updated[index].unit = itemUnit;
+      updated[index].rate = baseRate;
+      updated[index].amount = qty * baseRate;
+      updated[index].fetched = true;
+      setLineItems(updated);
+      setToast({ message: `Fetched '${foundMasterItem.itemCode}' from Item Master (Unit: ${itemUnit}, Rate: ₹${baseRate.toFixed(2)})`, type: 'success' });
+    }
+  };
+
+  // Direct typing in Item Code input (Instant 0ms response)
   const handleItemCodeChange = (index, inputCode) => {
     const updated = [...lineItems];
     const code = (inputCode || '').trim().toUpperCase();
-    updated[index].itemCode = code;
+    updated[index].itemCode = inputCode;
 
     if (!code) {
       updated[index].fetched = false;
       setLineItems(updated);
-      setToast({ message: 'Item Code deselected. You can type custom description.', type: 'info' });
       return;
     }
 
-    const foundMasterItem = masterItems.find(i => i.itemCode.toUpperCase() === code);
-
+    // Fast in-memory check if code exactly matches
+    const foundMasterItem = masterItems.find(i => i.itemCode && i.itemCode.toUpperCase() === code);
     if (foundMasterItem) {
-      const baseRate = Number(foundMasterItem.rate) || 0;
-      const sc = Number(foundMasterItem.serviceCharge) || 0;
-      const qty = updated[index].quantity || 1;
-      const itemUnit = foundMasterItem.unit || 'No';
-
-      if (sc > 0) {
-        setServiceChargeModal({
-          isOpen: true,
-          rowIndex: index,
-          itemCode: foundMasterItem.itemCode,
-          description: foundMasterItem.description,
-          unit: itemUnit,
-          baseRate: baseRate,
-          serviceCharge: sc,
-          qty: qty
-        });
-      } else {
-        updated[index].serialNumber = index + 1;
-        updated[index].description = foundMasterItem.description;
-        updated[index].unit = itemUnit;
-        updated[index].rate = baseRate;
-        updated[index].amount = qty * baseRate;
-        updated[index].fetched = true;
-        setLineItems(updated);
-        setToast({ message: `Fetched '${code}' from Item Master (Unit: ${itemUnit}, Rate: ₹${baseRate.toFixed(2)})`, type: 'success' });
-      }
+      applyMasterItemToRow(index, foundMasterItem);
     } else {
       updated[index].fetched = false;
       setLineItems(updated);
     }
+  };
+
+  // Dropdown Selection handler
+  const handleSelectMasterItem = (index, selectedMaster) => {
+    applyMasterItemToRow(index, selectedMaster);
   };
 
   // User Choice Handler for Service Charge Pop-up
@@ -1165,37 +1368,33 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
                 return (
                   <tr key={idx}>
                     {/* Serial Number */}
-                    <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)' }}>
+                    <td style={{ textAlign: 'center', fontWeight: 700, color: 'var(--text-muted)', verticalAlign: 'top', paddingTop: '0.9rem' }}>
                       {idx + 1}
                     </td>
 
-                    {/* Item Code Dropdown / Type-In */}
-                    <td>
-                      <input
-                        type="text"
-                        list="master-items-datalist"
-                        className="form-input"
-                        style={{ padding: '0.5rem 0.65rem', fontSize: '0.85rem', fontWeight: 700, color: item.fetched ? '#34d399' : '#818cf8' }}
-                        placeholder="Select / Type Code"
+                    {/* Item Code Dropdown / Type-In (Fast Combobox) */}
+                    <td style={{ position: 'relative', minWidth: '180px', verticalAlign: 'top' }}>
+                      <ItemCodeCombobox
                         value={item.itemCode}
-                        onChange={e => handleItemCodeChange(idx, e.target.value)}
+                        masterItems={masterItems}
+                        isFetched={item.fetched}
+                        onChange={(newCode) => handleItemCodeChange(idx, newCode)}
+                        onSelect={(selectedMaster) => handleSelectMasterItem(idx, selectedMaster)}
                       />
                     </td>
 
-                    {/* Description (Supports Multiline Text & Unlimited Specifications) */}
-                    <td>
-                      <textarea
-                        className="form-input"
-                        rows={2}
-                        style={{ padding: '0.5rem 0.65rem', fontSize: '0.85rem', lineHeight: 1.4, resize: 'vertical' }}
-                        placeholder="Item description & technical specifications..."
+                    {/* Description (Auto-Expands Dynamically as per Content Height) */}
+                    <td style={{ verticalAlign: 'top', minWidth: '280px' }}>
+                      <AutoResizeTextarea
                         value={item.description}
                         onChange={e => handleItemFieldChange(idx, 'description', e.target.value)}
+                        placeholder="Item description & technical specifications..."
+                        minRows={2}
                       />
                     </td>
 
                     {/* Quantity (Bolder, Bigger & Type-Only No Spinners) */}
-                    <td style={{ textAlign: 'right' }}>
+                    <td style={{ textAlign: 'right', verticalAlign: 'top' }}>
                       <input
                         type="number"
                         min="0.01"
@@ -1203,11 +1402,11 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
                         className="form-input line-item-input-large"
                         style={{ 
                           textAlign: 'right', 
-                          padding: '0.6rem 0.75rem', 
-                          fontSize: '1.1rem', 
+                          padding: '0.55rem 0.75rem', 
+                          fontSize: '1rem', 
                           fontWeight: 800, 
-                          color: '#ffffff',
-                          background: 'rgba(15, 23, 42, 0.8)',
+                          color: 'var(--text-main)',
+                          background: 'var(--input-bg)',
                           border: '1.5px solid rgba(99, 102, 241, 0.4)'
                         }}
                         value={item.quantity === 0 ? '' : item.quantity}
@@ -1216,14 +1415,14 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
                     </td>
 
                     {/* Unit Display (Auto-Fetched from Item Master & Auto-Pluralized with QTY, No Dropdown) */}
-                    <td style={{ textAlign: 'center' }}>
+                    <td style={{ textAlign: 'center', verticalAlign: 'top' }}>
                       <div 
                         style={{ 
                           padding: '0.55rem 0.75rem', 
-                          fontSize: '0.95rem', 
+                          fontSize: '0.9rem', 
                           fontWeight: 800, 
                           textAlign: 'center',
-                          color: '#34d399',
+                          color: '#10b981',
                           background: 'rgba(16, 185, 129, 0.12)',
                           border: '1px solid rgba(16, 185, 129, 0.35)',
                           borderRadius: '8px',
@@ -1237,7 +1436,7 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
                     </td>
 
                     {/* Rate (Bolder, Bigger & Type-Only No Spinners) */}
-                    <td style={{ textAlign: 'right' }}>
+                    <td style={{ textAlign: 'right', verticalAlign: 'top' }}>
                       <input
                         type="number"
                         min="0"
@@ -1245,11 +1444,11 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
                         className="form-input line-item-input-large"
                         style={{ 
                           textAlign: 'right', 
-                          padding: '0.6rem 0.75rem', 
-                          fontSize: '1.1rem', 
+                          padding: '0.55rem 0.75rem', 
+                          fontSize: '1rem', 
                           fontWeight: 800, 
-                          color: '#34d399',
-                          background: 'rgba(15, 23, 42, 0.8)',
+                          color: '#10b981',
+                          background: 'var(--input-bg)',
                           border: '1.5px solid rgba(16, 185, 129, 0.4)'
                         }}
                         value={item.rate === 0 ? '' : item.rate}
@@ -1258,17 +1457,17 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
                     </td>
 
                     {/* Amount (Auto Amount = QTY * Rate) */}
-                    <td style={{ textAlign: 'right', fontWeight: 800, color: 'white', fontSize: '1.05rem' }}>
+                    <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--text-main)', fontSize: '1.05rem', verticalAlign: 'top', paddingTop: '0.85rem', whiteSpace: 'nowrap' }}>
                       ₹{Number(item.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
 
                     {/* Delete Line Button */}
-                    <td style={{ textAlign: 'center' }}>
+                    <td style={{ textAlign: 'center', verticalAlign: 'top', paddingTop: '0.65rem' }}>
                       <button 
                         type="button"
                         onClick={() => handleRemoveLine(idx)}
                         className="btn btn-danger"
-                        style={{ padding: '0.4rem', borderRadius: '6px' }}
+                        style={{ padding: '0.45rem', borderRadius: '6px' }}
                         title="Remove row"
                       >
                         <Trash2 size={14} />

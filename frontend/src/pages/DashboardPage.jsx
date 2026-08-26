@@ -37,7 +37,7 @@ export const DashboardPage = ({ setActivePage }) => {
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.5rem' }}>
             <ShieldCheck size={12} /> System Status: Operational & Auto-Fetch Enabled
           </div>
-          <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'white', marginBottom: '0.25rem' }}>
+          <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.25rem' }}>
             Sri Durga Management Overview
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
@@ -66,7 +66,7 @@ export const DashboardPage = ({ setActivePage }) => {
             <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-subtle)', letterSpacing: '0.05em' }}>
               Master Items Count
             </span>
-            <h3 style={{ fontSize: '2.2rem', fontWeight: 800, color: 'white', marginTop: '0.25rem' }}>
+            <h3 style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '0.25rem' }}>
               {loading ? '...' : items.length}
             </h3>
             <span style={{ fontSize: '0.75rem', color: '#818cf8' }}>Maintained in Master Page</span>
@@ -111,7 +111,7 @@ export const DashboardPage = ({ setActivePage }) => {
       </div>
 
       {/* Quick Action Feature Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
         
         {/* Master Page Feature Box */}
         <div className="glass-panel" style={{ padding: '1.5rem', cursor: 'pointer' }} onClick={() => setActivePage('master')}>
@@ -121,7 +121,7 @@ export const DashboardPage = ({ setActivePage }) => {
             </div>
             <ArrowUpRight size={20} color="var(--text-subtle)" />
           </div>
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'white', marginBottom: '0.35rem' }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.35rem' }}>
             1. Master Page
           </h3>
           <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
@@ -137,7 +137,7 @@ export const DashboardPage = ({ setActivePage }) => {
             </div>
             <ArrowUpRight size={20} color="var(--text-subtle)" />
           </div>
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'white', marginBottom: '0.35rem' }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.35rem' }}>
             2. Tax Invoice (Auto-Fetch)
           </h3>
           <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
@@ -153,7 +153,7 @@ export const DashboardPage = ({ setActivePage }) => {
             </div>
             <ArrowUpRight size={20} color="var(--text-subtle)" />
           </div>
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'white', marginBottom: '0.35rem' }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.35rem' }}>
             3. Out Gate Pass
           </h3>
           <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>

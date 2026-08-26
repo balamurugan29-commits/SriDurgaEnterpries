@@ -75,7 +75,7 @@ export const ItemModal = ({ isOpen, onClose, onSave, editItem, nextSno }) => {
       <div className="glass-panel" style={{ width: '100%', maxWidth: '640px', padding: '1.75rem', border: '1px solid rgba(99, 102, 241, 0.3)', boxShadow: '0 20px 40px rgba(0,0,0,0.6)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.875rem' }}>
           <div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'white' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>
               {editItem ? 'Edit Master Item' : 'Add New Item to Master Page'}
             </h2>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
