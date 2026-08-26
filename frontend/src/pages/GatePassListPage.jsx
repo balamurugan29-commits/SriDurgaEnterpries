@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchGatePasses, deleteGatePass } from '../services/api';
 import { GatePassPrintModal } from '../components/GatePassPrintModal';
 import { Toast } from '../components/Toast';
-import { Search, Plus, Calendar, User, Clipboard, Printer, Edit3, Trash2, ShieldAlert } from 'lucide-react';
+import { Search, Plus, Calendar, User, Clipboard, Printer, Edit3, Trash2, ShieldAlert, Eye } from 'lucide-react';
 
 export const GatePassListPage = ({ onEditGatePass, onNewGatePass }) => {
   const [gatePasses, setGatePasses] = useState([]);
@@ -155,6 +155,15 @@ export const GatePassListPage = ({ onEditGatePass, onNewGatePass }) => {
                       </td>
                       <td style={{ padding: '0.9rem 1.25rem', textAlign: 'center' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <button 
+                            onClick={() => triggerPrintPreview(gp)} 
+                            className="btn btn-outline" 
+                            style={{ padding: '0.45rem', borderColor: 'rgba(16, 185, 129, 0.3)' }}
+                            title="View Details"
+                          >
+                            <Eye size={15} color="#34d399" />
+                          </button>
+
                           <button 
                             onClick={() => triggerPrintPreview(gp)} 
                             className="btn btn-outline" 
