@@ -231,7 +231,7 @@ export const SalesLedgerPage = () => {
           isFromChallan: true,
           challanId: c.id,
           invoiceNo: invNo,
-          invoiceDate: c.challanDate || new Date().toISOString().split('T')[0],
+          invoiceDate: saved.invoiceDate || c.challanDate || new Date().toISOString().split('T')[0],
           billedTo: c.customerName ? `${c.customerName}${c.customerGstin ? ` (GST: ${c.customerGstin})` : ''}` : (saved.billedTo || ''),
           taxableAmount: saved.taxableAmount !== undefined ? Number(saved.taxableAmount) : subTotal,
           igst: saved.igst !== undefined ? Number(saved.igst) : igst,
@@ -472,14 +472,30 @@ export const SalesLedgerPage = () => {
     };
 
     try {
-      // Check if updating an existing record or creating new
+      // 1. If it originated from a Delivery Challan, also update the Delivery Challan record if challanId exists
+      if (editingItem && editingItem.challanId) {
+        try {
+          const challanList = await fetchChallans();
+          const targetChallan = (challanList || []).find(c => c.id === editingItem.challanId);
+          if (targetChallan) {
+            await updateChallan(targetChallan.id, {
+              ...targetChallan,
+              challanDate: formData.invoiceDate
+            });
+          }
+        } catch (challanErr) {
+          console.warn('Could not update delivery challan date directly:', challanErr);
+        }
+      }
+
+      // 2. Check if updating an existing sales_ledger database record or creating new
       if (editingItem && typeof editingItem.id === 'number') {
         await updateSalesLedger(editingItem.id, payload);
       } else {
-        // Find if this invoiceNo was previously saved
+        // Find if this invoiceNo was previously saved in sales_ledger
         const existingSaved = await fetchSalesLedgers();
         const found = (existingSaved || []).find(l => (l.invoiceNo || '').trim().toUpperCase() === payload.invoiceNo.toUpperCase());
-        if (found && found.id) {
+        if (found && found.id && typeof found.id === 'number') {
           await updateSalesLedger(found.id, payload);
         } else {
           await createSalesLedger(payload);
@@ -487,7 +503,7 @@ export const SalesLedgerPage = () => {
       }
       setToast({ message: `Sales Ledger for Invoice ${payload.invoiceNo} saved successfully!`, type: 'success' });
       setIsModalOpen(false);
-      loadAllSalesLedgerData();
+      await loadAllSalesLedgerData();
     } catch (err) {
       setToast({ message: 'Failed to save Sales Ledger: ' + err.message, type: 'error' });
     }
