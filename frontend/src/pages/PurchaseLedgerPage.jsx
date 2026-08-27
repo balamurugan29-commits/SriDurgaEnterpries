@@ -306,7 +306,7 @@ export const PurchaseLedgerPage = () => {
       passedAmount: paid, // fallback
       paymentDate: formData.paymentDate || null,
       passedDate: formData.paymentDate || null, // fallback
-      modeOfPayment: formData.modeOfPayment || 'NEFT',
+      modeOfPayment: formData.modeOfPayment || (paid > 0 ? 'NEFT' : ''),
       balanceAmount: balance
     };
 

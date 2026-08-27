@@ -462,7 +462,7 @@ export const SalesLedgerPage = () => {
       gstTds: parseFloat(formData.gstTds) || 0,
       passedAmount: parseFloat(formData.passedAmount) || 0,
       passedDate: formData.passedDate || null,
-      modeOfPayment: formData.modeOfPayment || 'NEFT',
+      modeOfPayment: formData.modeOfPayment || (parseFloat(formData.passedAmount) > 0 ? 'NEFT' : ''),
       remarks: (formData.remarks || '').trim()
     };
 
