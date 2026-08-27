@@ -582,11 +582,10 @@ export const PurchaseLedgerPage = () => {
       paidAmount: 0
     });
 
-    // Exact formula: (Opening Balance as of From Date + Purchases in Period) - Payments in Period
-    const effectiveOpening = (filterDealer || fromDate) ? openingBalance : 0;
-    agg.balanceAmount = Math.max(0, (effectiveOpening + agg.totalAmount) - agg.paidAmount);
+    // Exact formula: Total Purchase Amount - Total Paid Amount
+    agg.balanceAmount = Math.max(0, agg.totalAmount - agg.paidAmount);
     return agg;
-  }, [filteredPurchases, openingBalance, filterDealer, fromDate]);
+  }, [filteredPurchases]);
 
   // Handler to set/save Opening Balance for current dealer
   const handleSaveOpeningBalance = (newAmount) => {

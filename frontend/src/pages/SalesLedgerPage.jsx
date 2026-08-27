@@ -808,10 +808,10 @@ export const SalesLedgerPage = () => {
       passedAmount: 0
     });
 
-    const effectiveOpening = (filterCustomer || fromDate) ? openingBalance : 0;
-    agg.balanceAmount = Math.max(0, (effectiveOpening + agg.totalAmount) - agg.passedAmount);
+    // Exact formula: Total Invoiced Amount - Total Passed Amount
+    agg.balanceAmount = Math.max(0, agg.totalAmount - agg.passedAmount);
     return agg;
-  }, [filteredLedgers, openingBalance, filterCustomer, fromDate]);
+  }, [filteredLedgers]);
 
   // Handler to set/save Opening Balance for current customer
   const handleSaveOpeningBalance = (newAmount) => {
