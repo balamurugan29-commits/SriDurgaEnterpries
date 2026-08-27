@@ -2471,79 +2471,34 @@ export const SalesLedgerPage = () => {
               overflow: 'hidden'
             }}
           >
-            {/* Modal Top Bar */}
+            {/* Modal Top Bar - Clean Title & Close Only */}
             <div 
               className="no-print"
               style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'space-between', 
-                flexWrap: 'wrap',
-                gap: '0.75rem',
-                padding: '0.85rem 1.5rem', 
+                padding: '1rem 1.5rem', 
                 background: 'rgba(30, 41, 59, 0.95)', 
-                borderBottom: '1px solid rgba(255, 255, 255, 0.1)' 
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                flexShrink: 0
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
                 <FileText size={20} color="#c084fc" />
-                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#f8fafc', margin: 0 }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#f8fafc', margin: 0 }}>
                   Customer Ledger Statement (PDF Preview)
                 </h3>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                {/* Editable Opening Balance Tool in Topbar */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: '#e2e8f0', background: 'rgba(22, 163, 74, 0.15)', border: '1px solid rgba(22, 163, 74, 0.4)', padding: '0.25rem 0.65rem', borderRadius: '8px' }}>
-                  <span style={{ fontWeight: 700, color: '#4ade80' }}>Opening Bal (₹):</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    defaultValue={openingBalance}
-                    key={`opening-${filterCustomer}-${openingBalance}`}
-                    onBlur={(e) => handleSaveOpeningBalance(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { handleSaveOpeningBalance(e.target.value); e.target.blur(); } }}
-                    title="Edit Opening Balance for this Customer / Period"
-                    style={{
-                      width: '105px',
-                      background: 'rgba(0,0,0,0.4)',
-                      border: '1px solid rgba(255,255,255,0.2)',
-                      borderRadius: '4px',
-                      color: '#ffffff',
-                      padding: '2px 6px',
-                      fontSize: '0.78rem',
-                      fontWeight: 800,
-                      textAlign: 'right'
-                    }}
-                  />
-                </div>
-
-                <button 
-                  onClick={() => window.print()} 
-                  className="btn btn-primary"
-                  style={{ 
-                    padding: '0.45rem 1.15rem', 
-                    fontSize: '0.825rem', 
-                    fontWeight: 800, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '0.45rem',
-                    background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)',
-                    border: 'none'
-                  }}
-                >
-                  <PrintIcon size={15} />
-                  <span>Print / Save as PDF</span>
-                </button>
-
-                <button 
-                  onClick={() => setIsPdfModalOpen(false)} 
-                  className="btn btn-outline" 
-                  style={{ width: '32px', height: '32px', borderRadius: '50%', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <X size={16} />
-                </button>
-              </div>
+              <button 
+                onClick={() => setIsPdfModalOpen(false)} 
+                className="btn btn-outline" 
+                style={{ width: '32px', height: '32px', borderRadius: '50%', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                title="Close Preview"
+              >
+                <X size={16} />
+              </button>
             </div>
 
             {/* Statement Printable Paper (White Background like Bank/Tally Ledger) */}
@@ -2745,45 +2700,75 @@ export const SalesLedgerPage = () => {
               </div>
             </div>
 
-            {/* Modal Bottom Actions */}
+            {/* Modal Bottom Actions (Opening Balance & Print Buttons) */}
             <div 
               className="no-print"
               style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'space-between', 
+                flexWrap: 'wrap',
+                gap: '0.75rem',
                 padding: '0.85rem 1.5rem', 
                 background: 'rgba(30, 41, 59, 0.95)', 
-                borderTop: '1px solid rgba(255, 255, 255, 0.1)' 
+                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                flexShrink: 0
               }}
             >
-              <button
-                type="button"
-                onClick={() => setIsPdfModalOpen(false)}
-                className="btn btn-outline"
-                style={{ padding: '0.5rem 1.25rem' }}
-              >
-                Close
-              </button>
+              {/* Editable Opening Balance Tool at Bottom Left */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.825rem', color: '#e2e8f0', background: 'rgba(22, 163, 74, 0.15)', border: '1px solid rgba(22, 163, 74, 0.4)', padding: '0.35rem 0.75rem', borderRadius: '8px' }}>
+                <span style={{ fontWeight: 700, color: '#4ade80' }}>Opening Bal (₹):</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  defaultValue={openingBalance}
+                  key={`opening-${filterCustomer}-${openingBalance}`}
+                  onBlur={(e) => handleSaveOpeningBalance(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { handleSaveOpeningBalance(e.target.value); e.target.blur(); } }}
+                  title="Edit Opening Balance for this Customer / Period"
+                  style={{
+                    width: '120px',
+                    background: 'rgba(0,0,0,0.5)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '4px',
+                    color: '#ffffff',
+                    padding: '4px 8px',
+                    fontSize: '0.825rem',
+                    fontWeight: 800,
+                    textAlign: 'right'
+                  }}
+                />
+              </div>
 
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="btn btn-primary"
-                style={{ 
-                  padding: '0.5rem 1.5rem', 
-                  fontWeight: 800, 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '0.5rem', 
-                  background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)', 
-                  border: 'none',
-                  boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)'
-                }}
-              >
-                <PrintIcon size={16} />
-                <span>Print / Save as PDF</span>
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsPdfModalOpen(false)}
+                  className="btn btn-outline"
+                  style={{ padding: '0.5rem 1.25rem' }}
+                >
+                  Close
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="btn btn-primary"
+                  style={{ 
+                    padding: '0.5rem 1.5rem', 
+                    fontWeight: 800, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.5rem', 
+                    background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)', 
+                    border: 'none',
+                    boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)'
+                  }}
+                >
+                  <PrintIcon size={16} />
+                  <span>Print / Save as PDF</span>
+                </button>
+              </div>
             </div>
 
           </div>
