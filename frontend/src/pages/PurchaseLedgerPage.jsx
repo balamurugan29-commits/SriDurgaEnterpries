@@ -2489,12 +2489,12 @@ export const PurchaseLedgerPage = () => {
             if (e.target === e.currentTarget) setIsPdfModalOpen(false);
           }}
         >
-          {/* Strict Isolated @media print CSS for Perfect PDF Output */}
+          {/* Strict Isolated @media print CSS for Perfect Multi-Page A4 PDF Output */}
           <style>{`
             @media print {
               @page {
                 size: A4 portrait;
-                margin: 10mm;
+                margin: 12mm 10mm;
               }
               html, body {
                 background: #ffffff !important;
@@ -2503,17 +2503,45 @@ export const PurchaseLedgerPage = () => {
                 padding: 0 !important;
                 overflow: visible !important;
                 height: auto !important;
+                min-height: 100% !important;
               }
               body * {
                 visibility: hidden !important;
               }
-              #purchase-statement-print-sheet, #purchase-statement-print-sheet * {
+              .no-print-modal-overlay, 
+              .no-print-modal-overlay * {
                 visibility: visible !important;
               }
+              .no-print-modal-overlay {
+                position: static !important;
+                background: transparent !important;
+                backdrop-filter: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                overflow: visible !important;
+                height: auto !important;
+                min-height: auto !important;
+                display: block !important;
+              }
+              .no-print-modal-overlay > div {
+                max-width: 100% !important;
+                max-height: none !important;
+                height: auto !important;
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+                display: block !important;
+              }
+              .no-print-modal-overlay > div > div {
+                background: transparent !important;
+                overflow: visible !important;
+                height: auto !important;
+                padding: 0 !important;
+                display: block !important;
+              }
               #purchase-statement-print-sheet {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
+                position: static !important;
                 width: 100% !important;
                 margin: 0 !important;
                 padding: 0 !important;
@@ -2522,18 +2550,28 @@ export const PurchaseLedgerPage = () => {
                 box-shadow: none !important;
                 border: none !important;
                 display: block !important;
+                overflow: visible !important;
+                min-height: auto !important;
+                height: auto !important;
+              }
+              table {
+                page-break-inside: auto !important;
+                width: 100% !important;
+                border-collapse: collapse !important;
+              }
+              tr {
+                page-break-inside: avoid !important;
+                page-break-after: auto !important;
+              }
+              thead {
+                display: table-header-group !important;
+              }
+              tfoot {
+                display: table-footer-group !important;
               }
               .no-print, .no-print * {
                 display: none !important;
                 visibility: hidden !important;
-              }
-              .no-print-modal-overlay {
-                position: static !important;
-                background: transparent !important;
-                backdrop-filter: none !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                display: block !important;
               }
             }
           `}</style>
@@ -2552,7 +2590,7 @@ export const PurchaseLedgerPage = () => {
               overflow: 'hidden'
             }}
           >
-            {/* Modal Top Bar - Clean Title & Close Only */}
+            {/* Modal Top Bar - Clean Title, Print Button & Close */}
             <div 
               className="no-print"
               style={{ 
@@ -2572,14 +2610,37 @@ export const PurchaseLedgerPage = () => {
                 </h3>
               </div>
 
-              <button 
-                onClick={() => setIsPdfModalOpen(false)} 
-                className="btn btn-outline" 
-                style={{ width: '32px', height: '32px', borderRadius: '50%', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                title="Close Preview"
-              >
-                <X size={16} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="btn btn-primary"
+                  style={{
+                    padding: '0.45rem 1rem',
+                    fontSize: '0.825rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    background: 'linear-gradient(135deg, #c084fc 0%, #9333ea 100%)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#ffffff'
+                  }}
+                  title="Print Multi-Page Statement on A4"
+                >
+                  <Printer size={16} />
+                  <span>Print Statement (A4)</span>
+                </button>
+                <button 
+                  onClick={() => setIsPdfModalOpen(false)} 
+                  className="btn btn-outline" 
+                  style={{ width: '32px', height: '32px', borderRadius: '50%', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  title="Close Preview"
+                >
+                  <X size={16} />
+                </button>
+              </div>
             </div>
 
             {/* Statement Printable Paper (White Background like Bank/Tally Ledger) */}
@@ -2688,7 +2749,8 @@ export const PurchaseLedgerPage = () => {
                     let totalOpeningSum = 0;
                     let totalPurchasesSum = 0;
                     let totalPaidSum = 0;
-                    let totalNetBalanceSum = 0;
+                    let totalPendingDue = 0;
+                    let totalExtraAmount = 0;
 
                     const consolidatedSuppliers = Object.values(partyMap).map(d => {
                       const upper = d.dealerName.toUpperCase();
@@ -2705,7 +2767,11 @@ export const PurchaseLedgerPage = () => {
                       totalOpeningSum += opBal;
                       totalPurchasesSum += d.totalAmount;
                       totalPaidSum += d.paidAmount;
-                      if (netBal > 0) totalNetBalanceSum += netBal;
+                      if (netBal > 0) {
+                        totalPendingDue += netBal;
+                      } else if (netBal < 0) {
+                        totalExtraAmount += Math.abs(netBal);
+                      }
 
                       return {
                         ...d,
@@ -2746,24 +2812,47 @@ export const PurchaseLedgerPage = () => {
                                 fontWeight: 800, 
                                 color: sup.netBalance > 0 ? '#dc2626' : (sup.netBalance < 0 ? '#1e40af' : '#16a34a') 
                               }}>
-                                {sup.netBalance.toFixed(2)}
+                                {sup.netBalance > 0 ? (
+                                  sup.netBalance.toFixed(2)
+                                ) : sup.netBalance < 0 ? (
+                                  <span>
+                                    -{Math.abs(sup.netBalance).toFixed(2)}{' '}
+                                    <small style={{ fontSize: '0.7rem', fontWeight: 800, color: '#1e40af', background: '#dbeafe', padding: '1px 3px', borderRadius: '3px' }}>
+                                      Extra
+                                    </small>
+                                  </span>
+                                ) : (
+                                  '0.00'
+                                )}
                               </td>
                             </tr>
                           ))}
 
-                          {/* Grand Totals Summary Row */}
+                          {/* Grand Totals & Extra / Advance Breakdown Summary */}
                           {exportIncludeTotals && (
-                            <tr style={{ borderTop: '2px solid #000000', borderBottom: '2px solid #000000', fontWeight: 900, fontSize: '0.925rem' }}>
-                              <td colSpan={2} style={{ padding: '8px 6px', fontWeight: 900, textTransform: 'uppercase' }}>
-                                GRAND TOTAL :
-                              </td>
-                              <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalOpeningSum.toFixed(2)}</td>
-                              <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalPurchasesSum.toFixed(2)}</td>
-                              <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalPaidSum.toFixed(2)}</td>
-                              <td style={{ textAlign: 'right', padding: '8px 6px', color: totalNetBalanceSum > 0 ? '#dc2626' : '#16a34a' }}>
-                                {totalNetBalanceSum.toFixed(2)}
-                              </td>
-                            </tr>
+                            <>
+                              <tr style={{ borderTop: '2px solid #000000', borderBottom: '1px solid #000000', fontWeight: 900, fontSize: '0.925rem' }}>
+                                <td colSpan={2} style={{ padding: '8px 6px', fontWeight: 900, textTransform: 'uppercase' }}>
+                                  GRAND TOTAL :
+                                </td>
+                                <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalOpeningSum.toFixed(2)}</td>
+                                <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalPurchasesSum.toFixed(2)}</td>
+                                <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalPaidSum.toFixed(2)}</td>
+                                <td style={{ textAlign: 'right', padding: '8px 6px', color: totalPendingDue > 0 ? '#dc2626' : '#16a34a' }}>
+                                  {totalPendingDue.toFixed(2)}
+                                </td>
+                              </tr>
+
+                              {/* Extra / Advance Payment Total Row */}
+                              <tr style={{ borderBottom: '1px solid #000000', fontWeight: 800, fontSize: '0.88rem', background: 'rgba(30, 64, 175, 0.04)' }}>
+                                <td colSpan={5} style={{ padding: '6px 6px', textAlign: 'right', color: '#1e40af', fontWeight: 800, textTransform: 'uppercase' }}>
+                                  EXTRA / ADVANCE AMOUNT PAID (முன்தொகை / அதிகப்பணம்) :
+                                </td>
+                                <td style={{ textAlign: 'right', padding: '6px 6px', color: '#1e40af', fontWeight: 900 }}>
+                                  {totalExtraAmount > 0 ? `₹${totalExtraAmount.toFixed(2)}` : '0.00'}
+                                </td>
+                              </tr>
+                            </>
                           )}
                         </tbody>
                       </table>
