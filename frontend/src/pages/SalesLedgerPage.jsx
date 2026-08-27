@@ -160,6 +160,10 @@ export const SalesLedgerPage = () => {
   const [toDate, setToDate] = useState('');
   const [periodPreset, setPeriodPreset] = useState('ALL');
 
+  // Statement PDF Preferences & Filter States
+  const [statementType, setStatementType] = useState('SUMMARY'); // 'SUMMARY' or 'INDIVIDUAL_PAGES'
+  const [statementBalanceFilter, setStatementBalanceFilter] = useState('ALL_NON_ZERO'); // 'ALL_NON_ZERO', 'DUES_ONLY', 'ADVANCE_ONLY', 'ALL'
+
   // Pagination States (Page Split & Page Size Selector)
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50); // 25, 50, 100, 250, 'ALL'
@@ -1081,6 +1085,19 @@ export const SalesLedgerPage = () => {
             }
             th, td {
               font-size: 11px;
+            }
+            .individual-party-page {
+              page-break-after: always !important;
+              break-after: page !important;
+              min-height: 98vh;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              padding: 0 0 20px 0;
+            }
+            .individual-party-page:last-child {
+              page-break-after: auto !important;
+              break-after: auto !important;
             }
           </style>
         </head>
@@ -2481,6 +2498,81 @@ export const SalesLedgerPage = () => {
                 </div>
               </div>
 
+              {/* PDF Statement Format & Filter Preference Box */}
+              <div style={{ background: 'rgba(192, 132, 252, 0.08)', padding: '0.875rem 1rem', borderRadius: '10px', border: '1px solid rgba(192, 132, 252, 0.3)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#c084fc', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <FileText size={14} />
+                    PDF Statement Format & Status Filter
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                    Choose statement view & which customer dues to include
+                  </span>
+                </div>
+
+                {/* Statement Layout Selector */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#e2e8f0', minWidth: '60px' }}>Layout:</span>
+                  <button
+                    type="button"
+                    onClick={() => setStatementType('SUMMARY')}
+                    className={`btn ${statementType === 'SUMMARY' ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ padding: '0.35rem 0.85rem', fontSize: '0.78rem', borderRadius: '6px', fontWeight: 700, background: statementType === 'SUMMARY' ? 'linear-gradient(135deg, #c084fc 0%, #9333ea 100%)' : 'transparent', color: statementType === 'SUMMARY' ? '#ffffff' : '#cbd5e1' }}
+                  >
+                    📊 Consolidated Summary Table (1 Row / Customer)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatementType('INDIVIDUAL_PAGES')}
+                    className={`btn ${statementType === 'INDIVIDUAL_PAGES' ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ padding: '0.35rem 0.85rem', fontSize: '0.78rem', borderRadius: '6px', fontWeight: 700, background: statementType === 'INDIVIDUAL_PAGES' ? 'linear-gradient(135deg, #c084fc 0%, #9333ea 100%)' : 'transparent', color: statementType === 'INDIVIDUAL_PAGES' ? '#ffffff' : '#cbd5e1' }}
+                  >
+                    📑 1 Customer Per Page (Individual Statements)
+                  </button>
+                </div>
+
+                {/* Status Filter Selector */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#e2e8f0', minWidth: '60px' }}>Parties:</span>
+                  <button
+                    type="button"
+                    onClick={() => setStatementBalanceFilter('ALL_NON_ZERO')}
+                    className={`btn ${statementBalanceFilter === 'ALL_NON_ZERO' ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', fontWeight: 700 }}
+                    title="Include only customers with Pending Dues or Extra/Advance (Exclude ₹0.00)"
+                  >
+                    ⚡ Active Customers Only (Skip ₹0 Cleared)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatementBalanceFilter('DUES_ONLY')}
+                    className={`btn ${statementBalanceFilter === 'DUES_ONLY' ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', fontWeight: 700, color: statementBalanceFilter === 'DUES_ONLY' ? '#ffffff' : '#f87171', borderColor: statementBalanceFilter === 'DUES_ONLY' ? '#dc2626' : 'rgba(239, 68, 68, 0.4)' }}
+                    title="Include only customers where Balance Due > 0"
+                  >
+                    ⚠️ Pending Dues Only
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatementBalanceFilter('ADVANCE_ONLY')}
+                    className={`btn ${statementBalanceFilter === 'ADVANCE_ONLY' ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', fontWeight: 700, color: statementBalanceFilter === 'ADVANCE_ONLY' ? '#ffffff' : '#60a5fa', borderColor: statementBalanceFilter === 'ADVANCE_ONLY' ? '#2563eb' : 'rgba(59, 130, 246, 0.4)' }}
+                    title="Include only customers where Extra/Advance Paid < 0"
+                  >
+                    💳 Extra / Advance Only
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatementBalanceFilter('ALL')}
+                    className={`btn ${statementBalanceFilter === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ padding: '0.3rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', fontWeight: 700 }}
+                    title="Include All Customers (including ₹0.00 cleared)"
+                  >
+                    🌐 All Customers
+                  </button>
+                </div>
+              </div>
+
             </div>
 
             {/* Modal Footer */}
@@ -2698,6 +2790,97 @@ export const SalesLedgerPage = () => {
               </button>
             </div>
 
+            {/* Statement Format & Filter Control Bar (no-print) */}
+            <div 
+              className="no-print"
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                flexWrap: 'wrap', 
+                gap: '0.75rem', 
+                padding: '0.75rem 1.5rem', 
+                background: 'rgba(15, 23, 42, 0.95)', 
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)' 
+              }}
+            >
+              {/* Layout Mode Selector */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#c084fc', textTransform: 'uppercase' }}>Format:</span>
+                <button
+                  type="button"
+                  onClick={() => setStatementType('SUMMARY')}
+                  className={`btn ${statementType === 'SUMMARY' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ 
+                    padding: '0.35rem 0.85rem', 
+                    fontSize: '0.78rem', 
+                    borderRadius: '6px', 
+                    fontWeight: 700,
+                    background: statementType === 'SUMMARY' ? 'linear-gradient(135deg, #c084fc 0%, #9333ea 100%)' : 'transparent',
+                    color: statementType === 'SUMMARY' ? '#ffffff' : '#cbd5e1'
+                  }}
+                >
+                  📊 Consolidated Summary Table
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatementType('INDIVIDUAL_PAGES')}
+                  className={`btn ${statementType === 'INDIVIDUAL_PAGES' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ 
+                    padding: '0.35rem 0.85rem', 
+                    fontSize: '0.78rem', 
+                    borderRadius: '6px', 
+                    fontWeight: 700,
+                    background: statementType === 'INDIVIDUAL_PAGES' ? 'linear-gradient(135deg, #c084fc 0%, #9333ea 100%)' : 'transparent',
+                    color: statementType === 'INDIVIDUAL_PAGES' ? '#ffffff' : '#cbd5e1'
+                  }}
+                >
+                  📑 1 Customer Per Page (Individual Statements)
+                </button>
+              </div>
+
+              {/* Filter by Balance Status */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#c084fc', textTransform: 'uppercase' }}>Filter:</span>
+                <button
+                  type="button"
+                  onClick={() => setStatementBalanceFilter('ALL_NON_ZERO')}
+                  className={`btn ${statementBalanceFilter === 'ALL_NON_ZERO' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ padding: '0.3rem 0.7rem', fontSize: '0.75rem', borderRadius: '6px', fontWeight: 700 }}
+                  title="Show only customers with Pending Dues or Extra/Advance (Exclude ₹0.00)"
+                >
+                  ⚡ Active (Skip ₹0)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatementBalanceFilter('DUES_ONLY')}
+                  className={`btn ${statementBalanceFilter === 'DUES_ONLY' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ padding: '0.3rem 0.7rem', fontSize: '0.75rem', borderRadius: '6px', fontWeight: 700, color: statementBalanceFilter === 'DUES_ONLY' ? '#ffffff' : '#f87171', borderColor: statementBalanceFilter === 'DUES_ONLY' ? '#dc2626' : 'rgba(239, 68, 68, 0.4)' }}
+                  title="Show only customers with Pending Dues (> 0)"
+                >
+                  ⚠️ Pending Dues Only
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatementBalanceFilter('ADVANCE_ONLY')}
+                  className={`btn ${statementBalanceFilter === 'ADVANCE_ONLY' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ padding: '0.3rem 0.7rem', fontSize: '0.75rem', borderRadius: '6px', fontWeight: 700, color: statementBalanceFilter === 'ADVANCE_ONLY' ? '#ffffff' : '#60a5fa', borderColor: statementBalanceFilter === 'ADVANCE_ONLY' ? '#2563eb' : 'rgba(59, 130, 246, 0.4)' }}
+                  title="Show only customers with Extra / Advance Paid (< 0)"
+                >
+                  💳 Extra / Advance Only
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatementBalanceFilter('ALL')}
+                  className={`btn ${statementBalanceFilter === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ padding: '0.3rem 0.7rem', fontSize: '0.75rem', borderRadius: '6px', fontWeight: 700 }}
+                  title="Show all customers including ₹0.00"
+                >
+                  🌐 All Customers
+                </button>
+              </div>
+            </div>
+
             {/* Statement Printable Paper (White Background like Bank/Tally Ledger) */}
             <div style={{ padding: '1.25rem', overflowY: 'auto', background: '#334155' }}>
               <div 
@@ -2706,36 +2889,19 @@ export const SalesLedgerPage = () => {
                   background: '#ffffff', 
                   color: '#000000', 
                   fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif', 
-                  padding: '2.5rem 2rem', 
+                  padding: '2rem 1.75rem', 
                   borderRadius: '4px',
                   boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
                   minHeight: '600px'
                 }}
               >
-                {/* 1. Statement Header */}
-                <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
-                  <h1 style={{ color: '#000000', fontSize: '1.5rem', fontWeight: 900, letterSpacing: '0.05em', margin: '0 0 0.35rem 0', textTransform: 'uppercase' }}>
-                    SRI DURGA ENTERPRISES, KARAIKAL.
-                  </h1>
-                  <div style={{ color: '#000000', fontSize: '1.05rem', fontWeight: 800, marginBottom: '0.5rem' }}>
-                    Customer Sales Ledger for: <span style={{ textDecoration: 'underline' }}>{filterCustomer && filterCustomer.trim() ? resolvedCustomerName.toUpperCase() : 'ALL CUSTOMERS'}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#000000', fontSize: '0.9rem', fontWeight: 800, padding: '0 1rem' }}>
-                    <span>From: &nbsp; {fromDate ? new Date(fromDate).toLocaleDateString('en-GB') : getActiveFinancialYearStartDate()} &nbsp; To: &nbsp; {toDate ? new Date(toDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}</span>
-                    <span>Page No &nbsp; 1</span>
-                  </div>
-                </div>
-
-                {/* 2. Top Double Black Border Line */}
-                <div style={{ borderTop: '2px solid #000000', borderBottom: '1px solid #000000', height: '3px', marginBottom: '0.5rem' }}></div>
-
-                {/* 3. Dynamic Statement Table: Consolidated Summary for ALL Customers OR Detailed FIFO for Single Customer */}
+                {/* Dynamic Statement Table: Consolidated Summary for ALL Customers, Individual 1-Page Statements, or Detailed FIFO */}
                 {(() => {
                   const activeStatementCols = SALES_EXPORT_COLUMNS.filter(col => exportSelectedCols[col.key]);
                   const cutoffDate = fromDate || getActiveFinancialYearStartIso();
                   const isAllCustomersMode = !filterCustomer || !filterCustomer.trim();
 
-                  // Bills prior to cutoffDate (e.g. up to 31/03/2026) roll into Opening Balance on 01/04/2026
+                  // Bills prior to cutoffDate roll into Opening Balance
                   const rawEntries = exportScope === 'ALL' ? ledgerEntries : filteredLedgers;
                   const statementEntries = rawEntries.filter(item => {
                     const itemDate = item.invoiceDate || item.passedDate;
@@ -2755,7 +2921,7 @@ export const SalesLedgerPage = () => {
                   };
 
                   // =========================================================================
-                  // MODE A: ALL CUSTOMERS CONSOLIDATED SUMMARY (1 ROW PER CUSTOMER)
+                  // MODE A & B: ALL CUSTOMERS (CONSOLIDATED OR INDIVIDUAL 1 PARTY PER PAGE)
                   // =========================================================================
                   if (isAllCustomersMode) {
                     const partyMap = {};
@@ -2770,7 +2936,8 @@ export const SalesLedgerPage = () => {
                           passedAmount: 0,
                           taxableAmount: 0,
                           taxAmount: 0,
-                          billCount: 0
+                          billCount: 0,
+                          entries: []
                         };
                       }
                       const taxable = Number(item.taxableAmount) || 0;
@@ -2783,6 +2950,7 @@ export const SalesLedgerPage = () => {
                       partyMap[cUpper].totalAmount += total;
                       partyMap[cUpper].passedAmount += passed;
                       if (total > 0) partyMap[cUpper].billCount += 1;
+                      partyMap[cUpper].entries.push(item);
                     });
 
                     // Include any customers with saved opening balances that had no bills in this period
@@ -2796,7 +2964,8 @@ export const SalesLedgerPage = () => {
                           passedAmount: 0,
                           taxableAmount: 0,
                           taxAmount: 0,
-                          billCount: 0
+                          billCount: 0,
+                          entries: []
                         };
                       }
                     });
@@ -2807,7 +2976,7 @@ export const SalesLedgerPage = () => {
                     let totalPendingDue = 0;
                     let totalExtraAmount = 0;
 
-                    const consolidatedCustomers = Object.values(partyMap).map(c => {
+                    const allConsolidatedCustomers = Object.values(partyMap).map(c => {
                       const upper = c.customerName.toUpperCase();
                       let opBal = 0;
                       for (const [k, val] of Object.entries(customerOpenings)) {
@@ -2828,89 +2997,316 @@ export const SalesLedgerPage = () => {
                         totalExtraAmount += Math.abs(netBal);
                       }
 
+                      // Chronological running balance for this customer's individual statement
+                      const sortedCustEntries = [...c.entries].sort((a, b) => {
+                        const dateA = a.invoiceDate || a.passedDate || '';
+                        const dateB = b.invoiceDate || b.passedDate || '';
+                        if (dateA && dateB && dateA !== dateB) return dateA.localeCompare(dateB);
+                        return (a.id || 0) - (b.id || 0);
+                      });
+
+                      let running = opBal;
+                      const entriesWithBal = sortedCustEntries.map(e => {
+                        const t = Number(e.totalAmount) || 0;
+                        const p = Number(e.passedAmount) || 0;
+                        running = (running + t) - p;
+                        return { ...e, runningBalance: running };
+                      });
+
                       return {
                         ...c,
                         openingBalance: opBal,
-                        netBalance: netBal
+                        netBalance: netBal,
+                        entries: entriesWithBal
                       };
                     }).sort((a, b) => a.customerName.localeCompare(b.customerName));
 
-                    return (
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}>
-                        <thead>
-                          <tr style={{ borderBottom: '1.5px solid #000000', color: '#000000', fontWeight: 800 }}>
-                            <th style={{ textAlign: 'center', padding: '8px 4px', width: '50px' }}>Sl. No.</th>
-                            <th style={{ textAlign: 'left', padding: '8px 6px' }}>Customer / Client Name</th>
-                            <th style={{ textAlign: 'right', padding: '8px 6px' }}>Opening Balance</th>
-                            <th style={{ textAlign: 'right', padding: '8px 6px' }}>Total Sales</th>
-                            <th style={{ textAlign: 'right', padding: '8px 6px' }}>Passed Amount</th>
-                            <th style={{ textAlign: 'right', padding: '8px 6px' }}>Balance Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {consolidatedCustomers.map((cust, idx) => (
-                            <tr key={idx} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                              <td style={{ textAlign: 'center', padding: '6px 4px', fontWeight: 700 }}>{idx + 1}</td>
-                              <td style={{ padding: '6px 6px', fontWeight: 700, color: '#111827' }}>{cust.customerName}</td>
-                              <td style={{ textAlign: 'right', padding: '6px 6px', color: cust.openingBalance > 0 ? '#16a34a' : '#9ca3af' }}>
-                                {cust.openingBalance !== 0 ? cust.openingBalance.toFixed(2) : '-'}
-                              </td>
-                              <td style={{ textAlign: 'right', padding: '6px 6px', fontWeight: 700 }}>
-                                {cust.totalAmount > 0 ? cust.totalAmount.toFixed(2) : '-'}
-                              </td>
-                              <td style={{ textAlign: 'right', padding: '6px 6px', color: cust.passedAmount > 0 ? '#1e40af' : '#9ca3af', fontWeight: cust.passedAmount > 0 ? 700 : 400 }}>
-                                {cust.passedAmount > 0 ? cust.passedAmount.toFixed(2) : '-'}
-                              </td>
-                              <td style={{ 
-                                textAlign: 'right', 
-                                padding: '6px 6px', 
-                                fontWeight: 800, 
-                                color: cust.netBalance > 0 ? '#dc2626' : (cust.netBalance < 0 ? '#1e40af' : '#16a34a') 
+                    // Filter based on statementBalanceFilter:
+                    const consolidatedCustomers = allConsolidatedCustomers.filter(cust => {
+                      if (statementBalanceFilter === 'DUES_ONLY') return cust.netBalance > 0.009;
+                      if (statementBalanceFilter === 'ADVANCE_ONLY') return cust.netBalance < -0.009;
+                      if (statementBalanceFilter === 'ALL_NON_ZERO') return Math.abs(cust.netBalance) > 0.009;
+                      return true; // 'ALL'
+                    });
+
+                    // ---------------------------------------------------------------------
+                    // FORMAT 1: INDIVIDUAL 1 CUSTOMER PER A4 PAGE (PAGE-BREAK PER CUSTOMER)
+                    // ---------------------------------------------------------------------
+                    if (statementType === 'INDIVIDUAL_PAGES') {
+                      if (consolidatedCustomers.length === 0) {
+                        return (
+                          <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
+                            <h3 style={{ margin: '0 0 0.5rem 0', color: '#334155' }}>No Customers Matching Selected Filter</h3>
+                            <p style={{ fontSize: '0.85rem' }}>Try switching to "All Customers" or selecting another filter option above.</p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                          {consolidatedCustomers.map((cust, pIdx) => (
+                            <div 
+                              key={cust.customerName} 
+                              className="individual-party-page"
+                              style={{ 
+                                pageBreakAfter: pIdx === consolidatedCustomers.length - 1 ? 'auto' : 'always', 
+                                breakAfter: pIdx === consolidatedCustomers.length - 1 ? 'auto' : 'page',
+                                borderBottom: pIdx === consolidatedCustomers.length - 1 ? 'none' : '2px dashed #cbd5e1',
+                                paddingBottom: '2rem'
+                              }}
+                            >
+                              {/* 1. Page Header */}
+                              <div style={{ textAlign: 'center', marginBottom: '1rem', borderBottom: '2px solid #000000', paddingBottom: '0.6rem' }}>
+                                <h1 style={{ color: '#000000', fontSize: '1.4rem', fontWeight: 900, letterSpacing: '0.05em', margin: '0 0 0.25rem 0', textTransform: 'uppercase' }}>
+                                  SRI DURGA ENTERPRISES, KARAIKAL.
+                                </h1>
+                                <div style={{ fontSize: '0.825rem', color: '#334155', fontWeight: 600 }}>
+                                  No. 14, Main Road, Karaikal - 609602 | GSTIN: 34AAVFS0000A1Z5
+                                </div>
+                                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#000000', marginTop: '0.4rem', textTransform: 'uppercase' }}>
+                                  CUSTOMER STATEMENT OF ACCOUNT
+                                </div>
+                              </div>
+
+                              {/* 2. Customer & Statement Meta Info Box */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', margin: '0.75rem 0', padding: '0.75rem 1rem', border: '1.5px solid #000000', borderRadius: '4px', background: '#f8fafc' }}>
+                                <div>
+                                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Billed To / Customer:</div>
+                                  <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#000000', marginTop: '2px' }}>{cust.customerName}</div>
+                                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>Customer Sl. No: #{pIdx + 1} of {consolidatedCustomers.length}</div>
+                                </div>
+                                <div style={{ textAlign: 'right', fontSize: '0.85rem' }}>
+                                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Statement Period:</div>
+                                  <div style={{ fontWeight: 800, color: '#000000', marginTop: '2px' }}>
+                                    {fromDate ? new Date(fromDate).toLocaleDateString('en-GB') : getActiveFinancialYearStartDate()} To {toDate ? new Date(toDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 3. Customer's Full Transaction Table */}
+                              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.825rem', margin: '0.75rem 0', fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}>
+                                <thead>
+                                  <tr style={{ borderTop: '1.5px solid #000000', borderBottom: '1.5px solid #000000', background: '#f1f5f9', fontWeight: 800 }}>
+                                    <th style={{ padding: '6px 4px', textAlign: 'center', width: '40px' }}>Sl.</th>
+                                    <th style={{ padding: '6px 6px', textAlign: 'center', width: '90px' }}>Date</th>
+                                    <th style={{ padding: '6px 6px', textAlign: 'left' }}>Invoice No / Ref</th>
+                                    <th style={{ padding: '6px 6px', textAlign: 'right' }}>Taxable (₹)</th>
+                                    <th style={{ padding: '6px 6px', textAlign: 'right' }}>Tax (₹)</th>
+                                    <th style={{ padding: '6px 6px', textAlign: 'right' }}>Total Bill (₹)</th>
+                                    <th style={{ padding: '6px 6px', textAlign: 'right' }}>Received (₹)</th>
+                                    <th style={{ padding: '6px 6px', textAlign: 'right' }}>Running Balance (₹)</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {/* Opening Balance Row */}
+                                  <tr style={{ borderBottom: '1px solid #e2e8f0', background: 'rgba(22, 163, 74, 0.04)', fontWeight: 700 }}>
+                                    <td style={{ textAlign: 'center', padding: '5px' }}>-</td>
+                                    <td style={{ textAlign: 'center', padding: '5px' }}>{fromDate ? new Date(fromDate).toLocaleDateString('en-GB') : getActiveFinancialYearStartDate()}</td>
+                                    <td style={{ padding: '5px 6px', color: '#16a34a', fontWeight: 800 }}>OPENING BALANCE</td>
+                                    <td style={{ textAlign: 'right', padding: '5px' }}>-</td>
+                                    <td style={{ textAlign: 'right', padding: '5px' }}>-</td>
+                                    <td style={{ textAlign: 'right', padding: '5px' }}>-</td>
+                                    <td style={{ textAlign: 'right', padding: '5px' }}>-</td>
+                                    <td style={{ textAlign: 'right', padding: '5px', fontWeight: 800, color: '#16a34a' }}>
+                                      {cust.openingBalance.toFixed(2)}
+                                    </td>
+                                  </tr>
+
+                                  {/* Transaction Bills & Receipts */}
+                                  {cust.entries.length > 0 ? (
+                                    cust.entries.map((b, bIdx) => (
+                                      <tr key={bIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                        <td style={{ textAlign: 'center', padding: '5px' }}>{bIdx + 1}</td>
+                                        <td style={{ textAlign: 'center', padding: '5px' }}>{formatStDate(b.invoiceDate || b.passedDate)}</td>
+                                        <td style={{ padding: '5px 6px', fontWeight: 600 }}>{b.invoiceNo || '-'}</td>
+                                        <td style={{ textAlign: 'right', padding: '5px' }}>{b.taxableAmount ? Number(b.taxableAmount).toFixed(2) : '-'}</td>
+                                        <td style={{ textAlign: 'right', padding: '5px' }}>{b.taxAmount ? Number(b.taxAmount).toFixed(2) : '-'}</td>
+                                        <td style={{ textAlign: 'right', padding: '5px', fontWeight: 700 }}>{b.totalAmount ? Number(b.totalAmount).toFixed(2) : '-'}</td>
+                                        <td style={{ textAlign: 'right', padding: '5px', color: '#1e40af', fontWeight: 700 }}>{b.passedAmount ? Number(b.passedAmount).toFixed(2) : '-'}</td>
+                                        <td style={{ 
+                                          textAlign: 'right', 
+                                          padding: '5px', 
+                                          fontWeight: 800, 
+                                          color: b.runningBalance > 0 ? '#dc2626' : (b.runningBalance < 0 ? '#1e40af' : '#16a34a') 
+                                        }}>
+                                          {b.runningBalance.toFixed(2)}
+                                        </td>
+                                      </tr>
+                                    ))
+                                  ) : (
+                                    <tr>
+                                      <td colSpan={8} style={{ textAlign: 'center', padding: '1rem', color: '#94a3b8' }}>
+                                        No transaction invoices in this selected date range
+                                      </td>
+                                    </tr>
+                                  )}
+
+                                  {/* Customer Totals Row */}
+                                  <tr style={{ borderTop: '2px solid #000000', borderBottom: '2px solid #000000', fontWeight: 900, background: '#f8fafc' }}>
+                                    <td colSpan={3} style={{ padding: '7px 6px', textAlign: 'left', textTransform: 'uppercase' }}>CUSTOMER TOTALS :</td>
+                                    <td style={{ textAlign: 'right', padding: '7px 5px' }}>{cust.taxableAmount.toFixed(2)}</td>
+                                    <td style={{ textAlign: 'right', padding: '7px 5px' }}>{cust.taxAmount.toFixed(2)}</td>
+                                    <td style={{ textAlign: 'right', padding: '7px 5px' }}>{cust.totalAmount.toFixed(2)}</td>
+                                    <td style={{ textAlign: 'right', padding: '7px 5px', color: '#1e40af' }}>{cust.passedAmount.toFixed(2)}</td>
+                                    <td style={{ 
+                                      textAlign: 'right', 
+                                      padding: '7px 5px', 
+                                      color: cust.netBalance > 0 ? '#dc2626' : (cust.netBalance < 0 ? '#1e40af' : '#16a34a') 
+                                    }}>
+                                      {cust.netBalance.toFixed(2)}
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+
+                              {/* 4. Formal Dues / Advance Status Notice Box */}
+                              <div style={{ 
+                                margin: '1rem 0', 
+                                padding: '0.85rem 1.25rem', 
+                                border: cust.netBalance > 0 ? '1.5px solid #dc2626' : (cust.netBalance < 0 ? '1.5px solid #1e40af' : '1.5px solid #16a34a'),
+                                borderRadius: '6px',
+                                background: cust.netBalance > 0 ? '#fef2f2' : (cust.netBalance < 0 ? '#eff6ff' : '#f0fdf4'),
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between'
                               }}>
-                                {cust.netBalance > 0 ? (
-                                  cust.netBalance.toFixed(2)
-                                ) : cust.netBalance < 0 ? (
-                                  <span>
-                                    -{Math.abs(cust.netBalance).toFixed(2)}{' '}
-                                    <small style={{ fontSize: '0.7rem', fontWeight: 800, color: '#1e40af', background: '#dbeafe', padding: '1px 3px', borderRadius: '3px' }}>
-                                      Extra
-                                    </small>
-                                  </span>
-                                ) : (
-                                  '0.00'
-                                )}
-                              </td>
-                            </tr>
+                                <div>
+                                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>
+                                    Statement Closing Status
+                                  </div>
+                                  <div style={{ fontSize: '0.95rem', fontWeight: 800, color: cust.netBalance > 0 ? '#991b1b' : (cust.netBalance < 0 ? '#1e40af' : '#166534'), marginTop: '2px' }}>
+                                    {cust.netBalance > 0 
+                                      ? `Outstanding Balance Pending to be Received (வாடிக்கையாளர் தரவேண்டிய நிலுவைத் தொகை)`
+                                      : cust.netBalance < 0 
+                                        ? `Advance / Extra Amount Paid by Customer (முன்தொகை / அதிகப்பணம்)`
+                                        : `Account Fully Settled & Cleared (கணக்கு முழுமையாக முடிக்கப்பட்டது)`}
+                                  </div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                  <div style={{ fontSize: '1.35rem', fontWeight: 900, color: cust.netBalance > 0 ? '#dc2626' : (cust.netBalance < 0 ? '#1e40af' : '#16a34a') }}>
+                                    ₹{Math.abs(cust.netBalance).toFixed(2)}
+                                  </div>
+                                  {cust.netBalance < 0 && (
+                                    <span style={{ fontSize: '0.72rem', fontWeight: 800, background: '#dbeafe', color: '#1e40af', padding: '1px 6px', borderRadius: '4px' }}>
+                                      EXTRA / ADVANCE
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* 5. Formal Authorisation Signatures */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem', paddingTop: '1rem', fontSize: '0.85rem', fontWeight: 800 }}>
+                                <div>Prepared & Verified By</div>
+                                <div style={{ textAlign: 'center' }}>
+                                  <div>For SRI DURGA ENTERPRISES</div>
+                                  <div style={{ height: '35px' }}></div>
+                                  <div>Authorised Signatory</div>
+                                </div>
+                              </div>
+                            </div>
                           ))}
+                        </div>
+                      );
+                    }
 
-                          {/* Grand Totals & Extra / Advance Breakdown Summary */}
-                          {exportIncludeTotals && (
-                            <>
-                              <tr style={{ borderTop: '2px solid #000000', borderBottom: '1px solid #000000', fontWeight: 900, fontSize: '0.925rem' }}>
-                                <td colSpan={2} style={{ padding: '8px 6px', fontWeight: 900, textTransform: 'uppercase' }}>
-                                  GRAND TOTAL :
+                    // ---------------------------------------------------------------------
+                    // FORMAT 2: CONSOLIDATED MASTER SUMMARY TABLE (1 ROW PER CUSTOMER)
+                    // ---------------------------------------------------------------------
+                    return (
+                      <div>
+                        {/* Statement Header */}
+                        <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
+                          <h1 style={{ color: '#000000', fontSize: '1.5rem', fontWeight: 900, letterSpacing: '0.05em', margin: '0 0 0.35rem 0', textTransform: 'uppercase' }}>
+                            SRI DURGA ENTERPRISES, KARAIKAL.
+                          </h1>
+                          <div style={{ color: '#000000', fontSize: '1.05rem', fontWeight: 800, marginBottom: '0.5rem' }}>
+                            Customer Sales Ledger for: <span style={{ textDecoration: 'underline' }}>ALL CUSTOMERS</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#000000', fontSize: '0.9rem', fontWeight: 800, padding: '0 1rem' }}>
+                            <span>From: &nbsp; {fromDate ? new Date(fromDate).toLocaleDateString('en-GB') : getActiveFinancialYearStartDate()} &nbsp; To: &nbsp; {toDate ? new Date(toDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}</span>
+                            <span>Showing {consolidatedCustomers.length} Customers</span>
+                          </div>
+                        </div>
+
+                        {/* Top Double Black Border Line */}
+                        <div style={{ borderTop: '2px solid #000000', borderBottom: '1px solid #000000', height: '3px', marginBottom: '0.5rem' }}></div>
+
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}>
+                          <thead>
+                            <tr style={{ borderBottom: '1.5px solid #000000', color: '#000000', fontWeight: 800 }}>
+                              <th style={{ textAlign: 'center', padding: '8px 4px', width: '50px' }}>Sl. No.</th>
+                              <th style={{ textAlign: 'left', padding: '8px 6px' }}>Customer / Client Name</th>
+                              <th style={{ textAlign: 'right', padding: '8px 6px' }}>Opening Balance</th>
+                              <th style={{ textAlign: 'right', padding: '8px 6px' }}>Total Sales</th>
+                              <th style={{ textAlign: 'right', padding: '8px 6px' }}>Passed Amount</th>
+                              <th style={{ textAlign: 'right', padding: '8px 6px' }}>Balance Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {consolidatedCustomers.map((cust, idx) => (
+                              <tr key={idx} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                                <td style={{ textAlign: 'center', padding: '6px 4px', fontWeight: 700 }}>{idx + 1}</td>
+                                <td style={{ padding: '6px 6px', fontWeight: 700, color: '#111827' }}>{cust.customerName}</td>
+                                <td style={{ textAlign: 'right', padding: '6px 6px', color: cust.openingBalance > 0 ? '#16a34a' : '#9ca3af' }}>
+                                  {cust.openingBalance !== 0 ? cust.openingBalance.toFixed(2) : '-'}
                                 </td>
-                                <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalOpeningSum.toFixed(2)}</td>
-                                <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalSalesSum.toFixed(2)}</td>
-                                <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalPassedSum.toFixed(2)}</td>
-                                <td style={{ textAlign: 'right', padding: '8px 6px', color: totalPendingDue > 0 ? '#dc2626' : '#16a34a' }}>
-                                  {totalPendingDue.toFixed(2)}
+                                <td style={{ textAlign: 'right', padding: '6px 6px', fontWeight: 700 }}>
+                                  {cust.totalAmount > 0 ? cust.totalAmount.toFixed(2) : '-'}
+                                </td>
+                                <td style={{ textAlign: 'right', padding: '6px 6px', color: cust.passedAmount > 0 ? '#1e40af' : '#9ca3af', fontWeight: cust.passedAmount > 0 ? 700 : 400 }}>
+                                  {cust.passedAmount > 0 ? cust.passedAmount.toFixed(2) : '-'}
+                                </td>
+                                <td style={{ 
+                                  textAlign: 'right', 
+                                  padding: '6px 6px', 
+                                  fontWeight: 800, 
+                                  color: cust.netBalance > 0 ? '#dc2626' : (cust.netBalance < 0 ? '#1e40af' : '#16a34a') 
+                                }}>
+                                  {cust.netBalance > 0 ? (
+                                    cust.netBalance.toFixed(2)
+                                  ) : cust.netBalance < 0 ? (
+                                    <span>
+                                      -{Math.abs(cust.netBalance).toFixed(2)}{' '}
+                                      <small style={{ fontSize: '0.7rem', fontWeight: 800, color: '#1e40af', background: '#dbeafe', padding: '1px 3px', borderRadius: '3px' }}>
+                                        Extra
+                                      </small>
+                                    </span>
+                                  ) : (
+                                    '0.00'
+                                  )}
                                 </td>
                               </tr>
+                            ))}
 
-                              {/* Extra / Advance Payment Total Row */}
-                              <tr style={{ borderBottom: '1px solid #000000', fontWeight: 800, fontSize: '0.88rem', background: 'rgba(30, 64, 175, 0.04)' }}>
-                                <td colSpan={5} style={{ padding: '6px 6px', textAlign: 'right', color: '#1e40af', fontWeight: 800, textTransform: 'uppercase' }}>
-                                  EXTRA / ADVANCE AMOUNT RECEIVED :
-                                </td>
-                                <td style={{ textAlign: 'right', padding: '6px 6px', color: '#1e40af', fontWeight: 900 }}>
-                                  {totalExtraAmount > 0 ? `₹${totalExtraAmount.toFixed(2)}` : '0.00'}
-                                </td>
-                              </tr>
-                            </>
-                          )}
-                        </tbody>
-                      </table>
+                            {/* Grand Totals & Extra / Advance Breakdown Summary */}
+                            {exportIncludeTotals && (
+                              <>
+                                <tr style={{ borderTop: '2px solid #000000', borderBottom: '1px solid #000000', fontWeight: 900, fontSize: '0.925rem' }}>
+                                  <td colSpan={2} style={{ padding: '8px 6px', fontWeight: 900, textTransform: 'uppercase' }}>
+                                    GRAND TOTAL :
+                                  </td>
+                                  <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalOpeningSum.toFixed(2)}</td>
+                                  <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalSalesSum.toFixed(2)}</td>
+                                  <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalPassedSum.toFixed(2)}</td>
+                                  <td style={{ textAlign: 'right', padding: '8px 6px', color: totalPendingDue > 0 ? '#dc2626' : '#16a34a' }}>
+                                    {totalPendingDue.toFixed(2)}
+                                  </td>
+                                </tr>
+
+                                {/* Extra / Advance Payment Total Row */}
+                                <tr style={{ borderBottom: '1px solid #000000', fontWeight: 800, fontSize: '0.88rem', background: 'rgba(30, 64, 175, 0.04)' }}>
+                                  <td colSpan={5} style={{ padding: '6px 6px', textAlign: 'right', color: '#1e40af', fontWeight: 800, textTransform: 'uppercase' }}>
+                                    EXTRA / ADVANCE AMOUNT RECEIVED :
+                                  </td>
+                                  <td style={{ textAlign: 'right', padding: '6px 6px', color: '#1e40af', fontWeight: 900 }}>
+                                    {totalExtraAmount > 0 ? `₹${totalExtraAmount.toFixed(2)}` : '0.00'}
+                                  </td>
+                                </tr>
+                              </>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
                     );
                   }
 
