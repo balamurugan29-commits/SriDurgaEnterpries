@@ -2667,27 +2667,76 @@ export const SalesLedgerPage = () => {
 
                         {/* Grand Totals Summary Row */}
                         {exportIncludeTotals && (
-                          <tr style={{ borderTop: '2px solid #000000', borderBottom: '1px solid #000000', fontWeight: 900, fontSize: '0.925rem' }}>
-                            {activeStatementCols.map((col, cIdx) => {
-                              if (cIdx === 0) {
-                                return (
-                                  <td key={col.key} style={{ padding: '8px 4px', fontWeight: 900, textTransform: 'uppercase' }}>
-                                    TOTAL :
-                                  </td>
+                          <>
+                            <tr style={{ borderTop: '2px solid #000000', borderBottom: '1px solid #000000', fontWeight: 900, fontSize: '0.925rem' }}>
+                              {activeStatementCols.map((col, cIdx) => {
+                                if (cIdx === 0) {
+                                  return (
+                                    <td key={col.key} style={{ padding: '8px 4px', fontWeight: 900, textTransform: 'uppercase' }}>
+                                      TOTAL :
+                                    </td>
+                                  );
+                                }
+                                if (col.key === 'taxableAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumTaxable.toFixed(2)}</td>;
+                                if (col.key === 'igst') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumIgst.toFixed(2)}</td>;
+                                if (col.key === 'sgst') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumSgst.toFixed(2)}</td>;
+                                if (col.key === 'ugst') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumUgst.toFixed(2)}</td>;
+                                if (col.key === 'taxAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumTax.toFixed(2)}</td>;
+                                if (col.key === 'totalAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{(openingBalance + sumTotal).toFixed(2)}</td>;
+                                if (col.key === 'itTds') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumItTds.toFixed(2)}</td>;
+                                if (col.key === 'gstTds') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumGstTds.toFixed(2)}</td>;
+                                if (col.key === 'passedAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumPassed.toFixed(2)}</td>;
+                                return <td key={col.key} style={{ padding: '8px 4px' }}></td>;
+                              })}
+                            </tr>
+
+                            {/* Subfooter Closing Balance Row (Counterpart to Opening Balance) */}
+                            <tr style={{ borderBottom: '2px solid #000000', fontWeight: 800 }}>
+                              {activeStatementCols.map((col, cIdx) => {
+                                if (col.key === 'slNo') {
+                                  return <td key={col.key} style={{ textAlign: 'center', padding: '6px 4px', color: '#9ca3af' }}>-</td>;
+                                }
+                                if (col.key === 'invoiceDate') {
+                                  return (
+                                    <td key={col.key} style={{ textAlign: 'center', padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>
+                                      {toDate ? new Date(toDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}
+                                    </td>
+                                  );
+                                }
+                                // Column to hold the "Closing Balance" label
+                                const isLabelCol = (
+                                  col.key === 'billedTo' || 
+                                  (!activeStatementCols.some(c => c.key === 'billedTo') && col.key === 'invoiceNo') ||
+                                  (!activeStatementCols.some(c => ['billedTo', 'invoiceNo'].includes(c.key)) && cIdx === 1)
                                 );
-                              }
-                              if (col.key === 'taxableAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumTaxable.toFixed(2)}</td>;
-                              if (col.key === 'igst') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumIgst.toFixed(2)}</td>;
-                              if (col.key === 'sgst') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumSgst.toFixed(2)}</td>;
-                              if (col.key === 'ugst') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumUgst.toFixed(2)}</td>;
-                              if (col.key === 'taxAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumTax.toFixed(2)}</td>;
-                              if (col.key === 'totalAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{(openingBalance + sumTotal).toFixed(2)}</td>;
-                              if (col.key === 'itTds') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumItTds.toFixed(2)}</td>;
-                              if (col.key === 'gstTds') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumGstTds.toFixed(2)}</td>;
-                              if (col.key === 'passedAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumPassed.toFixed(2)}</td>;
-                              return <td key={col.key} style={{ padding: '8px 4px' }}></td>;
-                            })}
-                          </tr>
+
+                                if (isLabelCol) {
+                                  return (
+                                    <td key={col.key} style={{ padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>
+                                      Closing Balance
+                                    </td>
+                                  );
+                                }
+
+                                // Amount Column to hold the closing balance amount
+                                const isAmtCol = (
+                                  col.key === 'totalAmount' ||
+                                  (!activeStatementCols.some(c => c.key === 'totalAmount') && col.key === 'taxableAmount')
+                                );
+
+                                if (isAmtCol) {
+                                  const closingBal = Math.max(0, (openingBalance + sumTotal) - sumPassed);
+                                  return (
+                                    <td key={col.key} style={{ textAlign: 'right', padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>
+                                      {closingBal.toFixed(2)}
+                                    </td>
+                                  );
+                                }
+
+                                return <td key={col.key} style={{ textAlign: 'center', padding: '6px 4px', color: '#9ca3af' }}>-</td>;
+                              })}
+                            </tr>
+                          </>
                         )}
                       </tbody>
                     </table>
