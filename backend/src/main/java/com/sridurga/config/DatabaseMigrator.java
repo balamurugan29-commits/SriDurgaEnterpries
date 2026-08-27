@@ -43,5 +43,72 @@ public class DatabaseMigrator {
         } catch (Exception e) {
             System.out.println("Column alter notice (challan_items description): " + e.getMessage());
         }
+
+        // Auto-create sales_ledger table if not exists
+        try {
+            jdbcTemplate.execute(
+                "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'sales_ledger') " +
+                "BEGIN " +
+                "    CREATE TABLE sales_ledger ( " +
+                "        id BIGINT IDENTITY(1,1) PRIMARY KEY, " +
+                "        serial_number INT NULL, " +
+                "        invoice_no VARCHAR(100) NOT NULL, " +
+                "        invoice_date DATE NOT NULL, " +
+                "        billed_to_remarks NVARCHAR(MAX) NULL, " +
+                "        taxable_amount DECIMAL(18,2) DEFAULT 0.00, " +
+                "        igst DECIMAL(18,2) DEFAULT 0.00, " +
+                "        sgst DECIMAL(18,2) DEFAULT 0.00, " +
+                "        ugst DECIMAL(18,2) DEFAULT 0.00, " +
+                "        tax_amount DECIMAL(18,2) DEFAULT 0.00, " +
+                "        total_amount DECIMAL(18,2) DEFAULT 0.00, " +
+                "        it_tds DECIMAL(18,2) DEFAULT 0.00, " +
+                "        gst_tds DECIMAL(18,2) DEFAULT 0.00, " +
+                "        passed_amount DECIMAL(18,2) DEFAULT 0.00, " +
+                "        passed_date DATE NULL, " +
+                "        mode_of_payment VARCHAR(50) DEFAULT 'NEFT', " +
+                "        remarks NVARCHAR(MAX) NULL, " +
+                "        created_at DATETIME2 DEFAULT GETDATE(), " +
+                "        updated_at DATETIME2 DEFAULT GETDATE() " +
+                "    ); " +
+                "    CREATE INDEX idx_sales_ledger_inv ON sales_ledger(invoice_no, invoice_date); " +
+                "    PRINT 'Auto-created sales_ledger table successfully!'; " +
+                "END"
+            );
+            System.out.println("Verified/Created 'sales_ledger' table in MS SQL Server!");
+        } catch (Exception e) {
+            System.out.println("Table migration notice (sales_ledger): " + e.getMessage());
+        }
+
+        // Auto-create purchase_ledger table if not exists
+        try {
+            jdbcTemplate.execute(
+                "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'purchase_ledger') " +
+                "BEGIN " +
+                "    CREATE TABLE purchase_ledger ( " +
+                "        id BIGINT IDENTITY(1,1) PRIMARY KEY, " +
+                "        serial_number INT NULL, " +
+                "        dealer_store_name NVARCHAR(MAX) NULL, " +
+                "        invoice_no VARCHAR(100) NOT NULL, " +
+                "        invoice_date DATE NOT NULL, " +
+                "        taxable_amount DECIMAL(18,2) DEFAULT 0.00, " +
+                "        tax_amount DECIMAL(18,2) DEFAULT 0.00, " +
+                "        total_amount DECIMAL(18,2) DEFAULT 0.00, " +
+                "        paid_amount DECIMAL(18,2) DEFAULT 0.00, " +
+                "        payment_date DATE NULL, " +
+                "        mode_of_payment VARCHAR(50) DEFAULT 'NEFT', " +
+                "        balance_amount DECIMAL(18,2) DEFAULT 0.00, " +
+                "        supplier_remarks NVARCHAR(MAX) NULL, " +
+                "        remarks NVARCHAR(MAX) NULL, " +
+                "        created_at DATETIME2 DEFAULT GETDATE(), " +
+                "        updated_at DATETIME2 DEFAULT GETDATE() " +
+                "    ); " +
+                "    CREATE INDEX idx_purchase_ledger_inv ON purchase_ledger(invoice_no, invoice_date); " +
+                "    PRINT 'Auto-created purchase_ledger table successfully!'; " +
+                "END"
+            );
+            System.out.println("Verified/Created 'purchase_ledger' table in MS SQL Server!");
+        } catch (Exception e) {
+            System.out.println("Table migration notice (purchase_ledger): " + e.getMessage());
+        }
     }
 }
