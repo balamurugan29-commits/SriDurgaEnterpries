@@ -610,9 +610,95 @@ export const SalesLedgerPage = () => {
     setPeriodPreset('ALL');
   };
 
+  // Pre-calculate FIFO chronological payment allocation per customer across all sales entries
+  const salesEntriesWithAllocation = useMemo(() => {
+    const custMap = {};
+    ledgerEntries.forEach(item => {
+      const cName = (item.billedTo || item.billedToRemarks || 'UNKNOWN').trim().toUpperCase();
+      if (!custMap[cName]) custMap[cName] = [];
+      custMap[cName].push(item);
+    });
+
+    const result = [];
+
+    Object.entries(custMap).forEach(([custUpper, items]) => {
+      let baseOpening = 0;
+      for (const [k, val] of Object.entries(customerOpenings)) {
+        const cleanK = k.trim().toUpperCase();
+        if (cleanK === custUpper || cleanK.includes(custUpper) || custUpper.includes(cleanK)) {
+          baseOpening = Number(val) || 0;
+          break;
+        }
+      }
+
+      let totalCustomerPayments = items.reduce((sum, it) => sum + (Number(it.passedAmount) || 0), 0);
+      let paymentPool = Math.max(0, totalCustomerPayments - baseOpening);
+
+      const sortedBills = items
+        .filter(it => (Number(it.totalAmount) || 0) > 0)
+        .sort((a, b) => {
+          const dateA = a.invoiceDate || a.passedDate || '';
+          const dateB = b.invoiceDate || b.passedDate || '';
+          if (dateA && dateB && dateA !== dateB) return dateA.localeCompare(dateB);
+          if (!dateA && dateB) return 1;
+          if (dateA && !dateB) return -1;
+          return (a.id || 0) - (b.id || 0);
+        });
+
+      const billAllocationMap = new Map();
+      sortedBills.forEach(bill => {
+        const billTotal = Number(bill.totalAmount) || 0;
+        const billAllocatedPassed = Math.min(billTotal, paymentPool);
+        paymentPool -= billAllocatedPassed;
+        const billAllocatedBalance = Math.max(0, billTotal - billAllocatedPassed);
+
+        let billStatus = 'PENDING';
+        if (billAllocatedBalance === 0) {
+          billStatus = 'PASSED';
+        } else if (billAllocatedPassed > 0) {
+          billStatus = 'PARTIAL';
+        }
+
+        billAllocationMap.set(bill.id || bill, {
+          allocatedPassed: billAllocatedPassed,
+          allocatedBalance: billAllocatedBalance,
+          allocatedStatus: billStatus
+        });
+      });
+
+      items.forEach(it => {
+        const total = Number(it.totalAmount) || 0;
+        const directPassed = Number(it.passedAmount) || 0;
+
+        if (total > 0) {
+          const alloc = billAllocationMap.get(it.id || it) || {
+            allocatedPassed: directPassed,
+            allocatedBalance: Math.max(0, total - directPassed),
+            allocatedStatus: directPassed >= total ? 'PASSED' : (directPassed > 0 ? 'PARTIAL' : 'PENDING')
+          };
+          result.push({
+            ...it,
+            allocatedPassed: alloc.allocatedPassed,
+            allocatedBalance: alloc.allocatedBalance,
+            allocatedStatus: alloc.allocatedStatus
+          });
+        } else {
+          result.push({
+            ...it,
+            allocatedPassed: directPassed,
+            allocatedBalance: 0,
+            allocatedStatus: 'PASSED'
+          });
+        }
+      });
+    });
+
+    return result;
+  }, [ledgerEntries, customerOpenings]);
+
   // Filtered List
   const filteredLedgers = useMemo(() => {
-    return ledgerEntries.filter(item => {
+    return salesEntriesWithAllocation.filter(item => {
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch = !q ||
         (item.invoiceNo && item.invoiceNo.toLowerCase().includes(q)) ||
@@ -623,27 +709,29 @@ export const SalesLedgerPage = () => {
       const custQ = filterCustomer.toLowerCase().trim();
       const matchesCust = !custQ || (item.billedTo && item.billedTo.toLowerCase().includes(custQ));
 
-      // Payment Status (Passed vs Pending)
+      // Payment Status using true FIFO allocation
       let matchesStatus = true;
-      const isPassed = Number(item.passedAmount) > 0 || (item.passedDate && item.passedDate.trim() !== '');
-      if (filterPaymentStatus === 'PASSED') matchesStatus = isPassed;
-      if (filterPaymentStatus === 'PENDING') matchesStatus = !isPassed;
+      if (filterPaymentStatus === 'PASSED') matchesStatus = item.allocatedStatus === 'PASSED';
+      if (filterPaymentStatus === 'PARTIAL') matchesStatus = item.allocatedStatus === 'PARTIAL';
+      if (filterPaymentStatus === 'PENDING') matchesStatus = item.allocatedStatus === 'PENDING';
 
       // Mode
-      const matchesMode = filterMode === 'ALL' || item.modeOfPayment === filterMode;
+      let matchesMode = true;
+      if (filterMode !== 'ALL') {
+        const itemMode = (item.modeOfPayment || '').toUpperCase().trim();
+        const selectedMode = filterMode.toUpperCase().trim();
+        matchesMode = itemMode === selectedMode || itemMode.includes(selectedMode);
+      }
 
       // Date
+      const itemDate = item.invoiceDate || item.passedDate;
       let matchesDate = true;
-      if (item.invoiceDate) {
-        if (fromDate && item.invoiceDate < fromDate) matchesDate = false;
-        if (toDate && item.invoiceDate > toDate) matchesDate = false;
-      } else if (fromDate || toDate) {
-        matchesDate = false;
-      }
+      if (fromDate && itemDate && itemDate < fromDate) matchesDate = false;
+      if (toDate && itemDate && itemDate > toDate) matchesDate = false;
 
       return matchesSearch && matchesCust && matchesStatus && matchesMode && matchesDate;
     });
-  }, [ledgerEntries, searchQuery, filterCustomer, filterPaymentStatus, filterMode, fromDate, toDate]);
+  }, [salesEntriesWithAllocation, searchQuery, filterCustomer, filterPaymentStatus, filterMode, fromDate, toDate]);
 
   // Pagination Slice Calculation
   const totalPages = pageSize === 'ALL' ? 1 : Math.max(1, Math.ceil(filteredLedgers.length / (Number(pageSize) || 50)));

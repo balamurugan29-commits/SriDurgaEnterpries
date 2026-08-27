@@ -469,9 +469,105 @@ export const PurchaseLedgerPage = () => {
     setPeriodPreset('ALL');
   };
 
+  // Pre-calculate FIFO chronological payment allocation per dealer across all purchase entries
+  const purchaseEntriesWithAllocation = useMemo(() => {
+    // 1. Group records by normalized dealer name
+    const dealerMap = {};
+    purchaseEntries.forEach(item => {
+      const dName = (item.dealerStoreName || item.supplierRemarks || 'UNKNOWN').trim().toUpperCase();
+      if (!dealerMap[dName]) dealerMap[dName] = [];
+      dealerMap[dName].push(item);
+    });
+
+    const result = [];
+
+    // 2. Allocate payments FIFO per dealer
+    Object.entries(dealerMap).forEach(([dealerUpper, items]) => {
+      // Find dealer opening balance
+      let baseOpening = 0;
+      for (const [k, val] of Object.entries(dealerOpenings)) {
+        const cleanK = k.trim().toUpperCase();
+        if (cleanK === dealerUpper || cleanK.includes(dealerUpper) || dealerUpper.includes(cleanK)) {
+          baseOpening = Number(val) || 0;
+          break;
+        }
+      }
+
+      // Calculate total payments made to this dealer
+      let totalDealerPayments = items.reduce((sum, it) => sum + (Number(it.paidAmount || it.passedAmount) || 0), 0);
+
+      // Payments first clear the opening balance
+      let paymentPool = Math.max(0, totalDealerPayments - baseOpening);
+
+      // Sort bills chronologically (oldest -> newest)
+      const sortedBills = items
+        .filter(it => (Number(it.totalAmount) || 0) > 0)
+        .sort((a, b) => {
+          const dateA = a.invoiceDate || a.paymentDate || '';
+          const dateB = b.invoiceDate || b.paymentDate || '';
+          if (dateA && dateB && dateA !== dateB) return dateA.localeCompare(dateB);
+          if (!dateA && dateB) return 1;
+          if (dateA && !dateB) return -1;
+          return (a.id || 0) - (b.id || 0);
+        });
+
+      // Map of bill ID/ref to allocated payment and balance
+      const billAllocationMap = new Map();
+      sortedBills.forEach(bill => {
+        const billTotal = Number(bill.totalAmount) || 0;
+        const billAllocatedPaid = Math.min(billTotal, paymentPool);
+        paymentPool -= billAllocatedPaid;
+        const billAllocatedBalance = Math.max(0, billTotal - billAllocatedPaid);
+
+        let billStatus = 'PENDING';
+        if (billAllocatedBalance === 0) {
+          billStatus = 'PAID';
+        } else if (billAllocatedPaid > 0) {
+          billStatus = 'PARTIAL';
+        }
+
+        billAllocationMap.set(bill.id || bill, {
+          allocatedPaid: billAllocatedPaid,
+          allocatedBalance: billAllocatedBalance,
+          allocatedStatus: billStatus
+        });
+      });
+
+      // Attach allocated payment information to each original item
+      items.forEach(it => {
+        const total = Number(it.totalAmount) || 0;
+        const directPaid = Number(it.paidAmount || it.passedAmount) || 0;
+
+        if (total > 0) {
+          const alloc = billAllocationMap.get(it.id || it) || {
+            allocatedPaid: directPaid,
+            allocatedBalance: Math.max(0, total - directPaid),
+            allocatedStatus: directPaid >= total ? 'PAID' : (directPaid > 0 ? 'PARTIAL' : 'PENDING')
+          };
+          result.push({
+            ...it,
+            allocatedPaid: alloc.allocatedPaid,
+            allocatedBalance: alloc.allocatedBalance,
+            allocatedStatus: alloc.allocatedStatus
+          });
+        } else {
+          // Payment voucher record (total === 0, paid > 0)
+          result.push({
+            ...it,
+            allocatedPaid: directPaid,
+            allocatedBalance: 0,
+            allocatedStatus: 'PAID'
+          });
+        }
+      });
+    });
+
+    return result;
+  }, [purchaseEntries, dealerOpenings]);
+
   // Filtered List
   const filteredPurchases = useMemo(() => {
-    return purchaseEntries.filter(item => {
+    return purchaseEntriesWithAllocation.filter(item => {
       const dealer = (item.dealerStoreName || item.supplierRemarks || '').toLowerCase();
       const invNo = (item.invoiceNo || '').toLowerCase();
       const mode = (item.modeOfPayment || '').toLowerCase();
@@ -493,17 +589,14 @@ export const PurchaseLedgerPage = () => {
       const dealerQ = filterDealer.toLowerCase().trim();
       const matchesDealer = !dealerQ || dealer.includes(dealerQ);
 
-      // Payment Status (PAID / PARTIAL / PENDING)
-      const total = Number(item.totalAmount) || 0;
-      const paid = Number(item.paidAmount || item.passedAmount) || 0;
-
+      // Payment Status (PAID / PARTIAL / PENDING) using true FIFO allocation
       let matchesStatus = true;
       if (filterPaymentStatus === 'PAID') {
-        matchesStatus = (total > 0 && paid >= total) || (total === 0 && paid > 0);
+        matchesStatus = item.allocatedStatus === 'PAID';
       } else if (filterPaymentStatus === 'PARTIAL') {
-        matchesStatus = (total > 0 && paid > 0 && paid < total);
+        matchesStatus = item.allocatedStatus === 'PARTIAL';
       } else if (filterPaymentStatus === 'PENDING') {
-        matchesStatus = (total > 0 && paid === 0);
+        matchesStatus = item.allocatedStatus === 'PENDING';
       }
 
       // Mode of Payment (NEFT, RTGS, CHEQUE, CASH, UPI, etc.)
@@ -522,7 +615,7 @@ export const PurchaseLedgerPage = () => {
 
       return matchesSearch && matchesDealer && matchesStatus && matchesMode && matchesDate;
     });
-  }, [purchaseEntries, searchQuery, filterDealer, filterPaymentStatus, filterMode, fromDate, toDate]);
+  }, [purchaseEntriesWithAllocation, searchQuery, filterDealer, filterPaymentStatus, filterMode, fromDate, toDate]);
 
   // Pagination Slice Calculation
   const totalPages = pageSize === 'ALL' ? 1 : Math.max(1, Math.ceil(filteredPurchases.length / (Number(pageSize) || 50)));
@@ -629,7 +722,7 @@ export const PurchaseLedgerPage = () => {
       const taxable = Number(item.taxableAmount) || 0;
       const tax = Number(item.taxAmount) || 0;
       const total = Number(item.totalAmount) || (taxable + tax);
-      const paid = Number(item.paidAmount || item.passedAmount) || 0;
+      const paid = Number(item.allocatedPaid !== undefined ? item.allocatedPaid : (item.paidAmount || item.passedAmount)) || 0;
 
       acc.taxableAmount += taxable;
       acc.taxAmount += tax;
@@ -643,7 +736,14 @@ export const PurchaseLedgerPage = () => {
       paidAmount: 0
     });
 
-    if (filterDealer && filterDealer.trim()) {
+    if (filterPaymentStatus === 'PENDING') {
+      // If filtering exclusively by Pending (Unpaid), the balance is the exact sum of remaining pending balances
+      const pendingSum = filteredPurchases.reduce((sum, it) => sum + (it.allocatedBalance !== undefined ? it.allocatedBalance : (Number(it.totalAmount) || 0)), 0);
+      agg.paidAmount = 0;
+      agg.balanceAmount = pendingSum;
+    } else if (filterPaymentStatus === 'PAID') {
+      agg.balanceAmount = 0;
+    } else if (filterDealer && filterDealer.trim()) {
       // For a specific dealer: Opening Balance + Total Purchases - Total Paid
       agg.balanceAmount = Math.max(0, (openingBalance + agg.totalAmount) - agg.paidAmount);
     } else {
@@ -688,7 +788,7 @@ export const PurchaseLedgerPage = () => {
       agg.balanceAmount = totalAllPartiesBalance;
     }
     return agg;
-  }, [filteredPurchases, openingBalance, filterDealer, dealerOpenings]);
+  }, [filteredPurchases, openingBalance, filterDealer, filterPaymentStatus, dealerOpenings]);
 
   // Handler to set/save Opening Balance for current dealer
   const handleSaveOpeningBalance = (newAmount) => {
@@ -1679,8 +1779,8 @@ export const PurchaseLedgerPage = () => {
                   const taxable = Number(l.taxableAmount) || 0;
                   const tax = Number(l.taxAmount) || 0;
                   const total = Number(l.totalAmount) || (taxable + tax);
-                  const paid = Number(l.paidAmount || l.passedAmount) || 0;
-                  const billBalance = total > 0 ? Math.max(0, total - paid) : 0;
+                  const paid = l.allocatedPaid !== undefined ? Number(l.allocatedPaid) : (Number(l.paidAmount || l.passedAmount) || 0);
+                  const billBalance = l.allocatedBalance !== undefined ? Number(l.allocatedBalance) : (total > 0 ? Math.max(0, total - paid) : 0);
                   const isSelected = selectedItemIds.includes(l.id);
 
                   return (
