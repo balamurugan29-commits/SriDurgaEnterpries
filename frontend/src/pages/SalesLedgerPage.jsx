@@ -2688,37 +2688,14 @@ export const SalesLedgerPage = () => {
                 </h3>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <button
-                  type="button"
-                  onClick={handlePrintStatement}
-                  className="btn btn-primary"
-                  style={{
-                    padding: '0.45rem 1rem',
-                    fontSize: '0.825rem',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    background: 'linear-gradient(135deg, #c084fc 0%, #9333ea 100%)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#ffffff'
-                  }}
-                  title="Print Multi-Page Statement on A4"
-                >
-                  <Printer size={16} />
-                  <span>Print Statement (A4)</span>
-                </button>
-                <button 
-                  onClick={() => setIsPdfModalOpen(false)} 
-                  className="btn btn-outline" 
-                  style={{ width: '32px', height: '32px', borderRadius: '50%', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  title="Close Preview"
-                >
-                  <X size={16} />
-                </button>
-              </div>
+              <button 
+                onClick={() => setIsPdfModalOpen(false)} 
+                className="btn btn-outline" 
+                style={{ width: '32px', height: '32px', borderRadius: '50%', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                title="Close Preview"
+              >
+                <X size={16} />
+              </button>
             </div>
 
             {/* Statement Printable Paper (White Background like Bank/Tally Ledger) */}
@@ -3220,11 +3197,14 @@ export const SalesLedgerPage = () => {
                     gap: '0.5rem', 
                     background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)', 
                     border: 'none',
-                    boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)'
+                    boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)',
+                    borderRadius: '8px',
+                    color: '#ffffff'
                   }}
+                  title="Print Multi-Page Statement on A4"
                 >
                   <Printer size={16} />
-                  <span>Print / Save as PDF</span>
+                  <span>Print Statement (A4)</span>
                 </button>
               </div>
             </div>
