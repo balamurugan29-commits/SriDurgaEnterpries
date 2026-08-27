@@ -417,3 +417,58 @@ BEGIN
     CREATE INDEX idx_purchase_ledger_inv ON purchase_ledger(invoice_no, invoice_date);
 END;
 GO
+
+-- =============================================================================
+-- 12. PROFORMA INVOICE TABLE
+-- =============================================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'proforma_invoice')
+BEGIN
+    CREATE TABLE proforma_invoice (
+        id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        proforma_number VARCHAR(50) NOT NULL UNIQUE,
+        proforma_date DATE NOT NULL,
+        customer_name NVARCHAR(150) NOT NULL,
+        customer_address NVARCHAR(500) NULL,
+        customer_phone VARCHAR(20) NULL,
+        vendor_code VARCHAR(50) NULL,
+        po_number VARCHAR(50) NULL,
+        po_date VARCHAR(50) NULL,
+        epf_code VARCHAR(50) NULL,
+        esi_code VARCHAR(50) NULL,
+        gstin VARCHAR(50) NULL,
+        pan VARCHAR(50) NULL,
+        state_code VARCHAR(50) NULL,
+        customer_pan VARCHAR(50) NULL,
+        customer_gstin VARCHAR(50) NULL,
+        customer_state_code VARCHAR(50) NULL,
+        sac_code VARCHAR(50) NULL,
+        gst_percent DECIMAL(5,2) DEFAULT 18.00,
+        equipment_header NVARCHAR(255) NULL,
+        total_amount DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+        notes NVARCHAR(500) NULL,
+        created_at DATETIME2 DEFAULT GETDATE()
+    );
+    CREATE INDEX idx_proforma_number ON proforma_invoice(proforma_number);
+END;
+GO
+
+-- =============================================================================
+-- 13. PROFORMA ITEMS TABLE
+-- =============================================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'proforma_items')
+BEGIN
+    CREATE TABLE proforma_items (
+        id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        proforma_invoice_id BIGINT NOT NULL,
+        serial_number INT NOT NULL,
+        item_code VARCHAR(50) NOT NULL,
+        description NVARCHAR(MAX) NOT NULL,
+        unit VARCHAR(20) DEFAULT 'No',
+        quantity DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+        rate DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+        amount DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+        CONSTRAINT FK_Proforma_Items FOREIGN KEY (proforma_invoice_id) REFERENCES proforma_invoice(id) ON DELETE CASCADE
+    );
+    CREATE INDEX idx_proforma_id ON proforma_items(proforma_invoice_id);
+END;
+GO

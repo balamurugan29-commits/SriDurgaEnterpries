@@ -276,6 +276,49 @@ CREATE TABLE IF NOT EXISTS purchase_ledger (
     INDEX idx_purchase_ledger_inv (invoice_no, invoice_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 13. PROFORMA INVOICE TABLE
+CREATE TABLE IF NOT EXISTS proforma_invoice (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    proforma_number VARCHAR(50) NOT NULL UNIQUE,
+    proforma_date DATE NOT NULL,
+    customer_name VARCHAR(150) NOT NULL,
+    customer_address VARCHAR(500),
+    customer_phone VARCHAR(20),
+    vendor_code VARCHAR(50),
+    po_number VARCHAR(50),
+    po_date VARCHAR(50),
+    epf_code VARCHAR(50),
+    esi_code VARCHAR(50),
+    gstin VARCHAR(50),
+    pan VARCHAR(50),
+    state_code VARCHAR(50),
+    customer_pan VARCHAR(50),
+    customer_gstin VARCHAR(50),
+    customer_state_code VARCHAR(50),
+    sac_code VARCHAR(50),
+    gst_percent DECIMAL(5, 2) DEFAULT 18.00,
+    equipment_header VARCHAR(255),
+    total_amount DECIMAL(18, 2) NOT NULL DEFAULT 0.00,
+    notes VARCHAR(500),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_proforma_number (proforma_number)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 14. PROFORMA ITEMS TABLE
+CREATE TABLE IF NOT EXISTS proforma_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    proforma_invoice_id BIGINT NOT NULL,
+    serial_number INT NOT NULL,
+    item_code VARCHAR(50) NOT NULL,
+    description TEXT NOT NULL,
+    unit VARCHAR(20) DEFAULT 'No',
+    quantity DECIMAL(18, 2) NOT NULL DEFAULT 0.00,
+    rate DECIMAL(18, 2) NOT NULL DEFAULT 0.00,
+    amount DECIMAL(18, 2) NOT NULL DEFAULT 0.00,
+    INDEX idx_proforma_items_id (proforma_invoice_id),
+    CONSTRAINT fk_proforma_items FOREIGN KEY (proforma_invoice_id) REFERENCES proforma_invoice(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- =============================================================================
 -- SEED DATA
 -- =============================================================================

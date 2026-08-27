@@ -37,7 +37,7 @@ export const Sidebar = ({ activePage, setActivePage }) => {
   );
 
   const [invoiceDropdownOpen, setInvoiceDropdownOpen] = useState(
-    activePage === 'challan' || activePage === 'challan-list' || activePage === 'challans-list'
+    activePage === 'challan' || activePage === 'challan-list' || activePage === 'challans-list' || activePage === 'proforma-invoice' || activePage === 'proforma-invoice-history' || activePage === 'proforma-invoice-list' || activePage === 'proforma-invoices'
   );
 
   const [cardDropdownOpen, setCardDropdownOpen] = useState(
@@ -69,7 +69,7 @@ export const Sidebar = ({ activePage, setActivePage }) => {
 
   const isMasterActive = activePage === 'master' || activePage === 'customer-master';
   const isCertActive = activePage === 'work-completion' || activePage === 'work-completion-history' || activePage === 'work-completion-list';
-  const isInvoiceActive = activePage === 'challan' || activePage === 'challan-list' || activePage === 'challans-list';
+  const isInvoiceActive = activePage === 'challan' || activePage === 'challan-list' || activePage === 'challans-list' || activePage === 'proforma-invoice' || activePage === 'proforma-invoice-history' || activePage === 'proforma-invoice-list' || activePage === 'proforma-invoices';
   const isCardActive = activePage === 'job-card' || activePage === 'job-card-history' || activePage === 'job-card-list';
   const isPassActive = activePage === 'gate-pass' || activePage === 'gate-pass-list' || activePage === 'gate-pass-history';
   const isAuditActive = activePage === 'sales-ledger' || activePage === 'purchase-ledger';
@@ -733,6 +733,48 @@ export const Sidebar = ({ activePage, setActivePage }) => {
                 <History size={16} color="#fbbf24" />
                 <span>Tax Invoice History</span>
               </button>
+
+              <button
+                onClick={() => handleNavClick('proforma-invoice')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.625rem',
+                  padding: '0.6rem 0.75rem',
+                  borderRadius: '8px',
+                  border: activePage === 'proforma-invoice' ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid transparent',
+                  background: activePage === 'proforma-invoice' ? 'rgba(56, 189, 248, 0.18)' : 'transparent',
+                  color: activePage === 'proforma-invoice' ? 'var(--text-main)' : 'var(--text-muted)',
+                  fontSize: '0.825rem',
+                  fontWeight: activePage === 'proforma-invoice' ? 700 : 500,
+                  cursor: 'pointer',
+                  textAlign: 'left'
+                }}
+              >
+                <FileSpreadsheet size={16} color="#38bdf8" />
+                <span>Proforma Invoice</span>
+              </button>
+
+              <button
+                onClick={() => handleNavClick('proforma-invoice-history')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.625rem',
+                  padding: '0.6rem 0.75rem',
+                  borderRadius: '8px',
+                  border: activePage === 'proforma-invoice-history' || activePage === 'proforma-invoice-list' || activePage === 'proforma-invoices' ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid transparent',
+                  background: activePage === 'proforma-invoice-history' || activePage === 'proforma-invoice-list' || activePage === 'proforma-invoices' ? 'rgba(56, 189, 248, 0.18)' : 'transparent',
+                  color: activePage === 'proforma-invoice-history' || activePage === 'proforma-invoice-list' || activePage === 'proforma-invoices' ? 'var(--text-main)' : 'var(--text-muted)',
+                  fontSize: '0.825rem',
+                  fontWeight: activePage === 'proforma-invoice-history' || activePage === 'proforma-invoice-list' || activePage === 'proforma-invoices' ? 700 : 500,
+                  cursor: 'pointer',
+                  textAlign: 'left'
+                }}
+              >
+                <History size={16} color="#38bdf8" />
+                <span>Proforma Invoice History</span>
+              </button>
             </div>
           )}
 
@@ -802,6 +844,62 @@ export const Sidebar = ({ activePage, setActivePage }) => {
                   <span style={{ fontSize: '0.8rem' }}>Tax Invoice History</span>
                 </div>
                 <span style={{ fontSize: '0.6rem', background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '0.1rem 0.35rem', borderRadius: '3px', fontWeight: 600 }}>
+                  History
+                </span>
+              </button>
+
+              {/* Sub-item 3: Proforma Invoice */}
+              <button
+                onClick={() => handleNavClick('proforma-invoice')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                  padding: '0.55rem 0.8rem',
+                  borderRadius: '8px',
+                  border: activePage === 'proforma-invoice' ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid transparent',
+                  background: activePage === 'proforma-invoice' ? 'linear-gradient(90deg, rgba(56, 189, 248, 0.25) 0%, rgba(56, 189, 248, 0.05) 100%)' : 'transparent',
+                  color: activePage === 'proforma-invoice' ? 'var(--text-main)' : 'var(--text-muted)',
+                  fontWeight: activePage === 'proforma-invoice' ? 600 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  textAlign: 'left'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                  <FileSpreadsheet size={16} color={activePage === 'proforma-invoice' ? '#38bdf8' : '#9ca3af'} />
+                  <span style={{ fontSize: '0.8rem' }}>Proforma Invoice</span>
+                </div>
+                <span style={{ fontSize: '0.6rem', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', padding: '0.1rem 0.35rem', borderRadius: '3px', fontWeight: 600 }}>
+                  PC/
+                </span>
+              </button>
+
+              {/* Sub-item 4: Proforma Invoice History */}
+              <button
+                onClick={() => handleNavClick('proforma-invoice-history')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                  padding: '0.55rem 0.8rem',
+                  borderRadius: '8px',
+                  border: activePage === 'proforma-invoice-history' || activePage === 'proforma-invoice-list' || activePage === 'proforma-invoices' ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid transparent',
+                  background: activePage === 'proforma-invoice-history' || activePage === 'proforma-invoice-list' || activePage === 'proforma-invoices' ? 'linear-gradient(90deg, rgba(56, 189, 248, 0.25) 0%, rgba(56, 189, 248, 0.05) 100%)' : 'transparent',
+                  color: activePage === 'proforma-invoice-history' || activePage === 'proforma-invoice-list' || activePage === 'proforma-invoices' ? 'var(--text-main)' : 'var(--text-muted)',
+                  fontWeight: activePage === 'proforma-invoice-history' || activePage === 'proforma-invoice-list' || activePage === 'proforma-invoices' ? 600 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  textAlign: 'left'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                  <History size={16} color={activePage === 'proforma-invoice-history' || activePage === 'proforma-invoice-list' || activePage === 'proforma-invoices' ? '#38bdf8' : '#9ca3af'} />
+                  <span style={{ fontSize: '0.8rem' }}>Proforma History</span>
+                </div>
+                <span style={{ fontSize: '0.6rem', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', padding: '0.1rem 0.35rem', borderRadius: '3px', fontWeight: 600 }}>
                   History
                 </span>
               </button>

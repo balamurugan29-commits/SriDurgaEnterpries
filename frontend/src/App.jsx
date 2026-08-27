@@ -19,6 +19,8 @@ import { GatePassPage } from './pages/GatePassPage';
 import { GatePassListPage } from './pages/GatePassListPage';
 import { SalesLedgerPage } from './pages/SalesLedgerPage';
 import { PurchaseLedgerPage } from './pages/PurchaseLedgerPage';
+import { ProformaInvoicePage } from './pages/ProformaInvoicePage';
+import { ProformaInvoiceListPage } from './pages/ProformaInvoiceListPage';
 
 const MainApp = () => {
   const { isAuthenticated } = useAuth();
@@ -31,6 +33,7 @@ const MainApp = () => {
   const activePage = pathSegment;
 
   const [editingChallan, setEditingChallan] = useState(null);
+  const [editingProforma, setEditingProforma] = useState(null);
   const [editingJobCard, setEditingJobCard] = useState(null);
   const [editingCertificate, setEditingCertificate] = useState(null);
   const [editingGatePass, setEditingGatePass] = useState(null);
@@ -51,6 +54,15 @@ const MainApp = () => {
 
   const handleClearEditingChallan = () => {
     setEditingChallan(null);
+  };
+
+  const handleEditProformaFromList = (proforma) => {
+    setEditingProforma(proforma);
+    navigate('/proforma-invoice');
+  };
+
+  const handleClearEditingProforma = () => {
+    setEditingProforma(null);
   };
 
   const handleEditJobCardFromList = (jobCard) => {
@@ -143,6 +155,27 @@ const MainApp = () => {
             <Route 
               path="/challans-list" 
               element={<Navigate to="/challan-list" replace />} 
+            />
+            <Route 
+              path="/proforma-invoice" 
+              element={
+                <ProformaInvoicePage
+                  initialProforma={editingProforma}
+                  clearEditingProforma={handleClearEditingProforma}
+                />
+              } 
+            />
+            <Route 
+              path="/proforma-invoice-history" 
+              element={<ProformaInvoiceListPage onEditProforma={handleEditProformaFromList} />} 
+            />
+            <Route 
+              path="/proforma-invoice-list" 
+              element={<Navigate to="/proforma-invoice-history" replace />} 
+            />
+            <Route 
+              path="/proforma-invoices" 
+              element={<Navigate to="/proforma-invoice-history" replace />} 
             />
             <Route 
               path="/job-card" 

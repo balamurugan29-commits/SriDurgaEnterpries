@@ -1097,4 +1097,119 @@ export const deletePurchaseLedger = async (id) => {
   }
 };
 
+// =============================================================================
+// PROFORMA INVOICE API CALLS (Sequential PC/XX/YY-ZZ Numbering)
+// =============================================================================
+
+export const fetchProformas = async (searchQuery = '') => {
+  try {
+    const res = await api.get('/proforma-invoices');
+    const list = res.data || [];
+    if (!searchQuery) return list;
+    const q = searchQuery.toLowerCase();
+    return list.filter(p =>
+      (p.proformaNumber && p.proformaNumber.toLowerCase().includes(q)) ||
+      (p.customerName && p.customerName.toLowerCase().includes(q)) ||
+      (p.equipmentHeader && p.equipmentHeader.toLowerCase().includes(q))
+    );
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for fetchProformas');
+    const local = localStorage.getItem('sri_durga_proforma_history');
+    const list = local ? JSON.parse(local) : [];
+    if (!searchQuery) return list;
+    const q = searchQuery.toLowerCase();
+    return list.filter(p =>
+      (p.proformaNumber && p.proformaNumber.toLowerCase().includes(q)) ||
+      (p.customerName && p.customerName.toLowerCase().includes(q)) ||
+      (p.equipmentHeader && p.equipmentHeader.toLowerCase().includes(q))
+    );
+  }
+};
+
+export const fetchProformaById = async (id) => {
+  try {
+    const res = await api.get(`/proforma-invoices/${id}`);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for fetchProformaById');
+    const local = localStorage.getItem('sri_durga_proforma_history');
+    const list = local ? JSON.parse(local) : [];
+    const found = list.find(p => p.id === id || String(p.id) === String(id));
+    if (found) return found;
+    throw new Error('Proforma Invoice not found');
+  }
+};
+
+export const fetchNextProformaNumber = async () => {
+  try {
+    const res = await api.get('/proforma-invoices/generate-next-number');
+    if (res.data && res.data.proformaNumber) {
+      return res.data.proformaNumber;
+    }
+  } catch (err) {
+    console.warn('Backend unavailable, generating client-side Proforma Invoice number');
+  }
+
+  // Fallback client-side generation (e.g., "PC/01/26-27")
+  const fySuffix = getIndianFySuffix();
+  const local = localStorage.getItem('sri_durga_proforma_history');
+  const list = local ? JSON.parse(local) : [];
+  const currentFyList = list.filter(p => (p.proformaNumber || '').endsWith(fySuffix));
+  const nextSeq = currentFyList.length + 1;
+  const seqStr = String(nextSeq).padStart(2, '0');
+  return `PC/${seqStr}/${fySuffix}`;
+};
+
+export const createProforma = async (proformaData) => {
+  try {
+    const res = await api.post('/proforma-invoices', proformaData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for createProforma');
+    const local = localStorage.getItem('sri_durga_proforma_history');
+    const list = local ? JSON.parse(local) : [];
+    const newProforma = {
+      ...proformaData,
+      id: Date.now(),
+      createdAt: new Date().toISOString()
+    };
+    list.unshift(newProforma);
+    localStorage.setItem('sri_durga_proforma_history', JSON.stringify(list));
+    return newProforma;
+  }
+};
+
+export const updateProforma = async (id, proformaData) => {
+  try {
+    const res = await api.put(`/proforma-invoices/${id}`, proformaData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for updateProforma');
+    const local = localStorage.getItem('sri_durga_proforma_history');
+    let list = local ? JSON.parse(local) : [];
+    const idx = list.findIndex(p => p.id === id || String(p.id) === String(id));
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...proformaData, updatedAt: new Date().toISOString() };
+      localStorage.setItem('sri_durga_proforma_history', JSON.stringify(list));
+      return list[idx];
+    }
+    throw new Error('Proforma Invoice not found');
+  }
+};
+
+export const deleteProforma = async (id) => {
+  try {
+    const res = await api.delete(`/proforma-invoices/${id}`);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for deleteProforma');
+    const local = localStorage.getItem('sri_durga_proforma_history');
+    let list = local ? JSON.parse(local) : [];
+    list = list.filter(p => p.id !== id && String(p.id) !== String(id));
+    localStorage.setItem('sri_durga_proforma_history', JSON.stringify(list));
+    return { message: 'Proforma Invoice deleted' };
+  }
+};
+
+
 

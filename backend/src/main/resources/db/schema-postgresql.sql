@@ -271,7 +271,46 @@ CREATE TABLE IF NOT EXISTS purchase_ledger (
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_purchase_ledger_inv ON purchase_ledger(invoice_no, invoice_date);
+CREATE TABLE IF NOT EXISTS proforma_invoice (
+    id BIGSERIAL PRIMARY KEY,
+    proforma_number VARCHAR(50) NOT NULL UNIQUE,
+    proforma_date DATE NOT NULL,
+    customer_name VARCHAR(150) NOT NULL,
+    customer_address VARCHAR(500),
+    customer_phone VARCHAR(20),
+    vendor_code VARCHAR(50),
+    po_number VARCHAR(50),
+    po_date VARCHAR(50),
+    epf_code VARCHAR(50),
+    esi_code VARCHAR(50),
+    gstin VARCHAR(50),
+    pan VARCHAR(50),
+    state_code VARCHAR(50),
+    customer_pan VARCHAR(50),
+    customer_gstin VARCHAR(50),
+    customer_state_code VARCHAR(50),
+    sac_code VARCHAR(50),
+    gst_percent NUMERIC(5, 2) DEFAULT 18.00,
+    equipment_header VARCHAR(255),
+    total_amount NUMERIC(18, 2) NOT NULL DEFAULT 0.00,
+    notes VARCHAR(500),
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_proforma_number ON proforma_invoice(proforma_number);
+
+CREATE TABLE IF NOT EXISTS proforma_items (
+    id BIGSERIAL PRIMARY KEY,
+    proforma_invoice_id BIGINT NOT NULL,
+    serial_number INT NOT NULL,
+    item_code VARCHAR(50) NOT NULL,
+    description TEXT NOT NULL,
+    unit VARCHAR(20) DEFAULT 'No',
+    quantity NUMERIC(18, 2) NOT NULL DEFAULT 0.00,
+    rate NUMERIC(18, 2) NOT NULL DEFAULT 0.00,
+    amount NUMERIC(18, 2) NOT NULL DEFAULT 0.00,
+    CONSTRAINT fk_proforma_items FOREIGN KEY (proforma_invoice_id) REFERENCES proforma_invoice(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_proforma_items_id ON proforma_items(proforma_invoice_id);
 
 -- =============================================================================
 -- SEED DATA

@@ -89,6 +89,8 @@ export const Navbar = ({ activePage, setActivePage }) => {
       case 'customer-master': return 'Customer Directory Management';
       case 'challan': return 'Create Tax Invoice';
       case 'challans-list': case 'challan-list': return 'Tax Invoice History';
+      case 'proforma-invoice': return 'Create Proforma Invoice';
+      case 'proforma-invoice-history': case 'proforma-invoice-list': case 'proforma-invoices': return 'Proforma Invoice History';
       case 'gate-pass': return 'Create In & Out Gate Pass';
       case 'gate-pass-list': case 'gate-pass-history': return 'In & Out Gate Pass History';
       case 'job-card': return 'Create Job Card';
@@ -103,7 +105,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
 
   const isMasterActive = activePage === 'master' || activePage === 'customer-master';
   const isCertActive = activePage === 'work-completion' || activePage === 'work-completion-history' || activePage === 'work-completion-list';
-  const isInvoiceActive = activePage === 'challan' || activePage === 'challan-list' || activePage === 'challans-list';
+  const isInvoiceActive = activePage === 'challan' || activePage === 'challan-list' || activePage === 'challans-list' || activePage === 'proforma-invoice' || activePage === 'proforma-invoice-history' || activePage === 'proforma-invoice-list' || activePage === 'proforma-invoices';
   const isCardActive = activePage === 'job-card' || activePage === 'job-card-history' || activePage === 'job-card-list';
   const isPassActive = activePage === 'gate-pass' || activePage === 'gate-pass-list' || activePage === 'gate-pass-history';
   const isAuditActive = activePage === 'sales-ledger' || activePage === 'purchase-ledger';
@@ -527,6 +529,49 @@ export const Navbar = ({ activePage, setActivePage }) => {
                 >
                   <History size={15} color="#fbbf24" />
                   <span>Tax Invoice History</span>
+                </button>
+
+                <div style={{ height: '1px', background: 'var(--border-color)', margin: '2px 0' }} />
+
+                <button
+                  onClick={() => { setActivePage('proforma-invoice'); setTopInvoiceOpen(false); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: activePage === 'proforma-invoice' ? 'rgba(56, 189, 248, 0.18)' : 'transparent',
+                    color: 'var(--text-main)',
+                    fontSize: '0.825rem',
+                    fontWeight: activePage === 'proforma-invoice' ? 700 : 500,
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  <FileSpreadsheet size={15} color="#38bdf8" />
+                  <span>Proforma Invoice</span>
+                </button>
+                <button
+                  onClick={() => { setActivePage('proforma-invoice-history'); setTopInvoiceOpen(false); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: activePage === 'proforma-invoice-history' || activePage === 'proforma-invoice-list' || activePage === 'proforma-invoices' ? 'rgba(56, 189, 248, 0.18)' : 'transparent',
+                    color: 'var(--text-main)',
+                    fontSize: '0.825rem',
+                    fontWeight: activePage === 'proforma-invoice-history' || activePage === 'proforma-invoice-list' || activePage === 'proforma-invoices' ? 700 : 500,
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  <History size={15} color="#38bdf8" />
+                  <span>Proforma Invoice History</span>
                 </button>
               </div>
             )}
