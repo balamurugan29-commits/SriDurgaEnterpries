@@ -1085,6 +1085,106 @@ export const PurchaseLedgerPage = () => {
     });
   };
 
+  // Direct Multi-Page A4 Statement Printing via Isolated Iframe
+  const handlePrintStatement = () => {
+    const elem = document.getElementById('purchase-statement-print-sheet');
+    if (!elem) {
+      window.print();
+      return;
+    }
+
+    const title = filterDealer && filterDealer.trim()
+      ? `Purchase Statement - ${resolvedDealerName}`
+      : 'All Suppliers Purchase Statement';
+
+    const contentHtml = elem.innerHTML;
+
+    const existingIframe = document.getElementById('purchase-statement-print-iframe');
+    if (existingIframe) {
+      existingIframe.remove();
+    }
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'purchase-statement-print-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow || iframe.contentDocument;
+    const targetDoc = doc.document || doc;
+
+    targetDoc.open();
+    targetDoc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>${title}</title>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 12mm 10mm 12mm 10mm;
+            }
+            * {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
+              background: #ffffff !important;
+              color: #000000 !important;
+              font-family: Calibri, "Segoe UI", Arial, sans-serif;
+              font-size: 12px;
+              line-height: 1.3;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              page-break-inside: auto;
+            }
+            tr {
+              page-break-inside: avoid;
+              page-break-after: auto;
+            }
+            thead {
+              display: table-header-group;
+            }
+            tfoot {
+              display: table-footer-group;
+            }
+            th, td {
+              font-size: 11px;
+            }
+          </style>
+        </head>
+        <body>
+          <div style="width: 100%; margin: 0; padding: 0;">
+            ${contentHtml}
+          </div>
+        </body>
+      </html>
+    `);
+    targetDoc.close();
+
+    setTimeout(() => {
+      try {
+        if (iframe.contentWindow) {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        }
+      } catch (e) {
+        console.error('Error invoking print iframe:', e);
+        window.print();
+      }
+    }, 200);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'success' })} />
@@ -2613,7 +2713,7 @@ export const PurchaseLedgerPage = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <button
                   type="button"
-                  onClick={() => window.print()}
+                  onClick={handlePrintStatement}
                   className="btn btn-primary"
                   style={{
                     padding: '0.45rem 1rem',
@@ -3139,7 +3239,7 @@ export const PurchaseLedgerPage = () => {
 
                 <button
                   type="button"
-                  onClick={() => window.print()}
+                  onClick={handlePrintStatement}
                   className="btn btn-primary"
                   style={{ 
                     padding: '0.5rem 1.5rem', 
