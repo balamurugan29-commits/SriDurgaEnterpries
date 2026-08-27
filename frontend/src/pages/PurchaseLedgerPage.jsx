@@ -527,18 +527,22 @@ export const PurchaseLedgerPage = () => {
 
   // Calculate Dynamic Opening Balance for current Dealer & Date Filter
   const openingBalance = useMemo(() => {
-    const dealerKey = (filterDealer || '').trim().toUpperCase();
+    const targetDealer = (resolvedDealerName && resolvedDealerName !== 'SRI DURGA ENTERPRISES, KARAIKAL.') 
+      ? resolvedDealerName.trim().toUpperCase() 
+      : (filterDealer || '').trim().toUpperCase();
+
     let baseOpening = 0;
     
     // 1. Saved explicit opening balance for this store
-    if (dealerKey) {
+    if (targetDealer) {
       for (const [k, val] of Object.entries(dealerOpenings)) {
-        if (k.toUpperCase().includes(dealerKey) || dealerKey.includes(k.toUpperCase())) {
+        const cleanK = k.trim().toUpperCase();
+        if (cleanK === targetDealer || cleanK.includes(targetDealer) || targetDealer.includes(cleanK)) {
           baseOpening = Number(val) || 0;
           break;
         }
       }
-    } else if (dealerOpenings['DEFAULT']) {
+    } else if (dealerOpenings['DEFAULT'] !== undefined) {
       baseOpening = Number(dealerOpenings['DEFAULT']) || 0;
     }
 
@@ -546,7 +550,7 @@ export const PurchaseLedgerPage = () => {
     let priorUnpaid = 0;
     purchaseEntries.forEach(item => {
       const dealer = (item.dealerStoreName || item.supplierRemarks || '').toUpperCase();
-      const matchesDealer = !dealerKey || dealer.includes(dealerKey);
+      const matchesDealer = !targetDealer || dealer.includes(targetDealer) || targetDealer.includes(dealer);
       if (matchesDealer) {
         let isPrior = false;
         if (fromDate && item.invoiceDate && item.invoiceDate < fromDate) {
@@ -564,11 +568,14 @@ export const PurchaseLedgerPage = () => {
     });
 
     return baseOpening + priorUnpaid;
-  }, [dealerOpenings, filterDealer, fromDate, purchaseEntries]);
+  }, [dealerOpenings, filterDealer, resolvedDealerName, fromDate, purchaseEntries]);
 
   // Handler to set/save Opening Balance for current dealer
   const handleSaveOpeningBalance = (newAmount) => {
-    const dealerKey = (filterDealer || 'DEFAULT').trim();
+    const dealerKey = (resolvedDealerName && resolvedDealerName !== 'SRI DURGA ENTERPRISES, KARAIKAL.')
+      ? resolvedDealerName.trim()
+      : (filterDealer ? filterDealer.trim() : 'DEFAULT');
+
     const updated = {
       ...dealerOpenings,
       [dealerKey]: Number(newAmount) || 0
@@ -2513,23 +2520,52 @@ export const PurchaseLedgerPage = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {/* Subheader Opening Balance Row */}
-                        {openingBalance > 0 && (
-                          <tr style={{ borderBottom: '1px solid #e5e7eb', fontWeight: 800 }}>
-                            {activeStatementCols.map((col, cIdx) => {
-                              if (col.key === 'slNo') return <td key={col.key} style={{ textAlign: 'center', padding: '6px 4px', color: '#9ca3af' }}>-</td>;
-                              if (col.key === 'invoiceDate') return <td key={col.key} style={{ textAlign: 'center', padding: '6px 4px', color: '#16a34a' }}>{getFinancialYearStartDate(fromDate)}</td>;
-                              if (col.key === 'dealerStoreName' || col.key === 'invoiceNo' || col.key === 'modeOfPayment') {
-                                if (cIdx === 1) return <td key={col.key} style={{ padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>Opening Balance</td>;
-                                return <td key={col.key} style={{ padding: '6px 4px', color: '#9ca3af' }}>-</td>;
-                              }
-                              if (['totalAmount', 'balanceAmount'].includes(col.key)) {
-                                return <td key={col.key} style={{ textAlign: 'right', padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>{openingBalance.toFixed(2)}</td>;
-                              }
-                              return <td key={col.key} style={{ textAlign: 'right', padding: '6px 4px', color: '#9ca3af' }}>-</td>;
-                            })}
-                          </tr>
-                        )}
+                        {/* Subheader Opening Balance Row (Always rendered on top of table) */}
+                        <tr style={{ borderBottom: '1px solid #e5e7eb', fontWeight: 800 }}>
+                          {activeStatementCols.map((col, cIdx) => {
+                            if (col.key === 'slNo') {
+                              return <td key={col.key} style={{ textAlign: 'center', padding: '6px 4px', color: '#9ca3af' }}>-</td>;
+                            }
+                            if (col.key === 'invoiceDate') {
+                              return (
+                                <td key={col.key} style={{ textAlign: 'center', padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>
+                                  {getFinancialYearStartDate(fromDate)}
+                                </td>
+                              );
+                            }
+                            // Column to hold the "Opening Balance" label
+                            const isLabelCol = (
+                              col.key === 'dealerStoreName' || 
+                              (!activeStatementCols.some(c => c.key === 'dealerStoreName') && col.key === 'invoiceNo') ||
+                              (!activeStatementCols.some(c => ['dealerStoreName', 'invoiceNo'].includes(c.key)) && cIdx === 1)
+                            );
+
+                            if (isLabelCol) {
+                              return (
+                                <td key={col.key} style={{ padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>
+                                  Opening Balance
+                                </td>
+                              );
+                            }
+
+                            // Amount Column to hold the opening balance amount
+                            const isAmtCol = (
+                              col.key === 'totalAmount' ||
+                              (!activeStatementCols.some(c => c.key === 'totalAmount') && col.key === 'balanceAmount') ||
+                              (!activeStatementCols.some(c => ['totalAmount', 'balanceAmount'].includes(c.key)) && col.key === 'taxableAmount')
+                            );
+
+                            if (isAmtCol) {
+                              return (
+                                <td key={col.key} style={{ textAlign: 'right', padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>
+                                  {openingBalance.toFixed(2)}
+                                </td>
+                              );
+                            }
+
+                            return <td key={col.key} style={{ textAlign: 'center', padding: '6px 4px', color: '#9ca3af' }}>-</td>;
+                          })}
+                        </tr>
 
                         {/* Transaction Rows */}
                         {statementEntries.map((l, idx) => {
