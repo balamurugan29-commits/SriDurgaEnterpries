@@ -3152,7 +3152,7 @@ export const PurchaseLedgerPage = () => {
                     boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)'
                   }}
                 >
-                  <PrintIcon size={16} />
+                  <Printer size={16} />
                   <span>Print / Save as PDF</span>
                 </button>
               </div>
