@@ -1565,7 +1565,7 @@ export const SalesLedgerPage = () => {
 
                       {/* Mode of Payment */}
                       <td style={{ textAlign: 'center' }}>
-                        {passedAmount > 0 && l.modeOfPayment && l.modeOfPayment !== '-' && l.modeOfPayment !== 'N/A' ? (
+                        {(Number(l.passedAmount) > 0 || isPassed) && l.modeOfPayment && l.modeOfPayment !== '-' && l.modeOfPayment !== 'N/A' ? (
                           <span style={{ 
                             fontSize: '0.72rem', 
                             fontWeight: 700, 
