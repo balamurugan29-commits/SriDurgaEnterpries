@@ -33,7 +33,7 @@ import {
   SlidersHorizontal,
   FileDown,
   FileText,
-  Printer as PrintIcon,
+  Printer,
   UploadCloud,
   FileUp,
   AlertCircle,

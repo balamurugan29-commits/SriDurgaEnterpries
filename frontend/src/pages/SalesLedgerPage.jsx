@@ -35,8 +35,7 @@ import {
   Square,
   SlidersHorizontal,
   FileDown,
-  FileText,
-  Printer as PrintIcon
+  FileText
 } from 'lucide-react';
 
 const SALES_EXPORT_COLUMNS = [
