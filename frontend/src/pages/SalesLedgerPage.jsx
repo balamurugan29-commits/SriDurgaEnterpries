@@ -813,21 +813,48 @@ export const SalesLedgerPage = () => {
       // For a specific customer: Opening Balance + Total Invoiced - Total Passed
       agg.balanceAmount = Math.max(0, (openingBalance + agg.totalAmount) - agg.passedAmount);
     } else {
-      // For ALL customers: Sum of individual pending unpaid invoices + active customer opening balances
-      let totalAllOpenings = 0;
-      Object.values(customerOpenings).forEach(val => {
-        totalAllOpenings += Number(val) || 0;
-      });
-      const sumBillBalances = filteredLedgers.reduce((sum, item) => {
+      // For ALL customers: Group by customer, subtract payments against invoices party-wise, and sum true net pending receivables
+      const partyMap = {};
+
+      filteredLedgers.forEach(item => {
+        const custName = (item.billedTo || item.billedToRemarks || 'UNKNOWN').trim().toUpperCase();
+        if (!partyMap[custName]) {
+          partyMap[custName] = { total: 0, passed: 0 };
+        }
         const total = Number(item.totalAmount) || 0;
         const passed = Number(item.passedAmount) || 0;
-        return sum + (total > 0 ? Math.max(0, total - passed) : 0);
-      }, 0);
+        partyMap[custName].total += total;
+        partyMap[custName].passed += passed;
+      });
 
-      agg.balanceAmount = sumBillBalances + (fromDate ? 0 : totalAllOpenings);
+      let totalAllPartiesBalance = 0;
+      const allCustomerKeys = new Set([
+        ...Object.keys(partyMap),
+        ...Object.keys(customerOpenings).map(k => k.trim().toUpperCase()).filter(k => k !== 'DEFAULT')
+      ]);
+
+      allCustomerKeys.forEach(custUpper => {
+        const pData = partyMap[custUpper] || { total: 0, passed: 0 };
+        
+        let opBal = 0;
+        for (const [k, val] of Object.entries(customerOpenings)) {
+          const cleanK = k.trim().toUpperCase();
+          if (cleanK === custUpper || cleanK.includes(custUpper) || custUpper.includes(cleanK)) {
+            opBal = Number(val) || 0;
+            break;
+          }
+        }
+
+        const partyNetBalance = (opBal + pData.total) - pData.passed;
+        if (partyNetBalance > 0) {
+          totalAllPartiesBalance += partyNetBalance;
+        }
+      });
+
+      agg.balanceAmount = totalAllPartiesBalance;
     }
     return agg;
-  }, [filteredLedgers, openingBalance, filterCustomer, customerOpenings, fromDate]);
+  }, [filteredLedgers, openingBalance, filterCustomer, customerOpenings]);
 
   // Handler to set/save Opening Balance for current customer
   const handleSaveOpeningBalance = (newAmount) => {

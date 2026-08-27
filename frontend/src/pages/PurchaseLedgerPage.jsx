@@ -607,7 +607,7 @@ export const PurchaseLedgerPage = () => {
     return baseOpening + priorUnpaid;
   }, [dealerOpenings, filterDealer, resolvedDealerName, fromDate, purchaseEntries]);
 
-  // Aggregate Totals (Balance Amount = Opening Balance + Total Purchase Amount - Total Paid Amount)
+  // Aggregate Totals (Balance Amount = Party-wise Net Outward Pending Dues)
   const totals = useMemo(() => {
     const agg = filteredPurchases.reduce((acc, item) => {
       const taxable = Number(item.taxableAmount) || 0;
@@ -631,21 +631,48 @@ export const PurchaseLedgerPage = () => {
       // For a specific dealer: Opening Balance + Total Purchases - Total Paid
       agg.balanceAmount = Math.max(0, (openingBalance + agg.totalAmount) - agg.paidAmount);
     } else {
-      // For ALL parties: Sum of individual pending unpaid bills + active dealer opening balances
-      let totalAllOpenings = 0;
-      Object.values(dealerOpenings).forEach(val => {
-        totalAllOpenings += Number(val) || 0;
-      });
-      const sumBillBalances = filteredPurchases.reduce((sum, item) => {
+      // For ALL parties: Group by dealer, subtract payments against invoices party-wise, and sum true net pending balances
+      const partyMap = {};
+
+      filteredPurchases.forEach(item => {
+        const dealerName = (item.dealerStoreName || item.supplierRemarks || 'UNKNOWN').trim().toUpperCase();
+        if (!partyMap[dealerName]) {
+          partyMap[dealerName] = { total: 0, paid: 0 };
+        }
         const total = Number(item.totalAmount) || ((Number(item.taxableAmount) || 0) + (Number(item.taxAmount) || 0));
         const paid = Number(item.paidAmount || item.passedAmount) || 0;
-        return sum + (total > 0 ? Math.max(0, total - paid) : 0);
-      }, 0);
+        partyMap[dealerName].total += total;
+        partyMap[dealerName].paid += paid;
+      });
 
-      agg.balanceAmount = sumBillBalances + (fromDate ? 0 : totalAllOpenings);
+      let totalAllPartiesBalance = 0;
+      const allDealerKeys = new Set([
+        ...Object.keys(partyMap),
+        ...Object.keys(dealerOpenings).map(k => k.trim().toUpperCase()).filter(k => k !== 'DEFAULT')
+      ]);
+
+      allDealerKeys.forEach(dealerUpper => {
+        const pData = partyMap[dealerUpper] || { total: 0, paid: 0 };
+        
+        let opBal = 0;
+        for (const [k, val] of Object.entries(dealerOpenings)) {
+          const cleanK = k.trim().toUpperCase();
+          if (cleanK === dealerUpper || cleanK.includes(dealerUpper) || dealerUpper.includes(cleanK)) {
+            opBal = Number(val) || 0;
+            break;
+          }
+        }
+
+        const partyNetBalance = (opBal + pData.total) - pData.paid;
+        if (partyNetBalance > 0) {
+          totalAllPartiesBalance += partyNetBalance;
+        }
+      });
+
+      agg.balanceAmount = totalAllPartiesBalance;
     }
     return agg;
-  }, [filteredPurchases, openingBalance, filterDealer, dealerOpenings, fromDate]);
+  }, [filteredPurchases, openingBalance, filterDealer, dealerOpenings]);
 
   // Handler to set/save Opening Balance for current dealer
   const handleSaveOpeningBalance = (newAmount) => {
