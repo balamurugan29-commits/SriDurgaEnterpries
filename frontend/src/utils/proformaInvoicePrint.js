@@ -1,4 +1,4 @@
-// Utility for Direct Chrome Print & Proforma Invoice Generation matching exact format
+// Utility for Direct Chrome Print & Proforma Invoice Generation matching exact Tax Invoice format
 
 export function numberToWordsINR(amount) {
   const num = Math.round(Number(amount) || 0);
@@ -63,8 +63,11 @@ export function generateProformaInvoicePrintHtml(proforma) {
   const gstAmount = (subTotal * gstPct) / 100;
   const grossAmount = subTotal + gstAmount;
 
+  const contractNo = proforma.contractNo || proforma.poNumber || '9010038288';
+  const contractPeriod = proforma.contractPeriod || '01.05.2024 to 30.04.2027';
   const vendorCode = proforma.vendorCode || '840305';
-  const poNo = proforma.poNumber || '';
+  const poNo = proforma.poNumber || '5060173862';
+  const bgNo = proforma.bgNo || '8110IPEBG240001  Validity Upto : 30.09.2027';
   const gstin = proforma.gstin || '34ABDFS4476N1ZN';
   const pan = proforma.pan || 'ABDFS4476N';
   const epfCode = proforma.epfCode || 'PC 1758';
@@ -72,10 +75,10 @@ export function generateProformaInvoicePrintHtml(proforma) {
   const stateCode = proforma.stateCode || 'Puducherry (34)';
   const sacCode = proforma.sacCode || '995469';
 
-  const customerName = proforma.customerName || 'The Client / Customer';
-  const customerPan = proforma.customerPan || '';
-  const customerGstin = proforma.customerGstin || '';
-  const customerState = proforma.customerStateCode || '';
+  const customerName = proforma.customerName || 'The G.M (Electrical), Surface Team , ONGC, Tamilnadu.';
+  const customerPan = proforma.customerPan || 'AAACO1598A';
+  const customerGstin = proforma.customerGstin || '33AAACO1598A1ZU';
+  const customerState = proforma.customerStateCode || 'TAMILNADU (33)';
 
   // Pagination logic: ~28-30 items per page
   const ITEMS_PER_PAGE_FIRST = 28;
@@ -83,7 +86,6 @@ export function generateProformaInvoicePrintHtml(proforma) {
 
   const pages = [];
   if (items.length <= 22) {
-    // Single page contains everything
     pages.push({ pageNum: 1, totalPages: 1, items: items, isFirst: true, isLast: true, startIdx: 0 });
   } else {
     let currentIdx = 0;
@@ -106,7 +108,7 @@ export function generateProformaInvoicePrintHtml(proforma) {
     pages.forEach(p => { p.totalPages = totalPages; });
   }
 
-  // Calculate running cumulative totals for brought forward / carried over
+  // Calculate running cumulative totals
   let cumulativeSubtotals = [];
   let running = 0;
   pages.forEach((p, pIdx) => {
@@ -131,172 +133,193 @@ export function generateProformaInvoicePrintHtml(proforma) {
           <!-- Top Header Title Row -->
           <div class="header-title-row">
             <div class="header-main-title">PROFORMA INVOICE</div>
-            <div class="header-copy-type">CUSTOMER ESTIMATE / PROFORMA</div>
+            <div class="header-copy-type">OFFICE COPY</div>
           </div>
 
           <!-- Company Header Section -->
           <div class="company-header-box">
             <div class="logo-box">
-              <svg width="48" height="64" viewBox="0 0 100 135" xmlns="http://www.w3.org/2000/svg">
-                <line x1="50" y1="10" x2="50" y2="124" stroke="#000000" stroke-width="2.8" stroke-linecap="round" />
-                <path d="M 50,14 C 22,14 12,32 12,53 C 12,74 30,81 50,83 C 70,85 86,92 86,108 C 86,122 72,126 50,126 C 28,126 16,118 14,102" 
-                      fill="none" stroke="#000000" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
-                <circle cx="50" cy="14" r="5" fill="#000000" />
-                <circle cx="50" cy="83" r="4.5" fill="#000000" />
-                <circle cx="14" cy="102" r="4" fill="#000000" />
-                <path d="M 50,22 C 34,22 28,34 28,48 C 28,62 38,67 50,68 C 62,69 72,74 72,86 C 72,96 62,100 50,100" 
-                      fill="none" stroke="#000000" stroke-width="2.2" stroke-dasharray="3,2" />
-                <path d="M 50,28 L 74,48 L 50,68 L 26,48 Z" fill="none" stroke="#000000" stroke-width="1.8" />
-                <path d="M 50,72 L 72,88 L 50,104 L 28,88 Z" fill="none" stroke="#000000" stroke-width="1.8" />
-                <text x="50" y="52" font-family="'Times New Roman', serif" font-size="11" font-weight="900" fill="#000000" text-anchor="middle">SDE</text>
-                <text x="50" y="118" font-family="'Times New Roman', serif" font-size="8" font-weight="bold" fill="#000000" text-anchor="middle">ESTD</text>
-              </svg>
+              <img src="/logo.jpg" alt="Logo" style="width: 70px; height: 70px; object-fit: contain;" />
             </div>
-            <div class="company-text">
-              <h1 class="comp-title">SRI DURGA ENTERPRISES</h1>
-              <p class="comp-subtitle">Authorised Industrial Tools, Hardware Suppliers & Electrical Contractors</p>
-              <p class="comp-address">11, Bharathiyar Road, Karaikal - 609 602 | Ph: 04368-222724, Cell: 98424 92946</p>
-              <p class="comp-address">E-mail: sridurgaenterprises@gmail.com | GSTIN: ${gstin}</p>
+            <div class="company-info">
+              <div class="company-name">SRI &nbsp; DURGA &nbsp; ENTERPRISES</div>
+              <div class="company-address">No. 10 V.G. Nagar, Kovilpathu, Karaikal – 609 602</div>
+              <div class="company-contacts">E-mail : sridurgaenterprises@yahoo.com &nbsp;&nbsp; Cell: 9842492946</div>
             </div>
           </div>
 
-          <!-- Metadata 2-Column Grid (Invoice No, Date, Vendor Code, Customer Details) -->
-          <div class="meta-section">
-            <div class="meta-col-left">
-              <div class="meta-row"><span class="lbl">Proforma Invoice No:</span> <span class="val bold-txt">${cleanProformaNo}</span></div>
-              <div class="meta-row"><span class="lbl">Dated:</span> <span class="val">${formattedDate}</span></div>
-              <div class="meta-row"><span class="lbl">Vendor Code:</span> <span class="val">${vendorCode}</span></div>
-              <div class="meta-row"><span class="lbl">PO No / Ref:</span> <span class="val">${poNo || 'N/A'}</span></div>
-              <div class="meta-row"><span class="lbl">SAC / HSN Code:</span> <span class="val">${sacCode}</span></div>
-            </div>
-            <div class="meta-col-right">
-              <div class="meta-row"><span class="lbl">Billed To (Customer):</span> <span class="val bold-txt">${customerName}</span></div>
-              <div class="meta-row"><span class="lbl">Address:</span> <span class="val">${proforma.customerAddress || 'N/A'}</span></div>
-              <div class="meta-row"><span class="lbl">Customer GSTIN:</span> <span class="val bold-txt">${customerGstin || 'N/A'}</span></div>
-              <div class="meta-row"><span class="lbl">Customer PAN:</span> <span class="val">${customerPan || 'N/A'}</span></div>
-              <div class="meta-row"><span class="lbl">State & Code:</span> <span class="val">${customerState || stateCode}</span></div>
-            </div>
-          </div>
+          <!-- Metadata Table Grid -->
+          <table class="meta-table">
+            <tbody>
+              <tr class="meta-row-highlight">
+                <td style="width: 15%; font-weight: 700;">Invoice No.</td>
+                <td style="width: 45%; font-weight: 800; font-size: 13px;">${cleanProformaNo}</td>
+                <td style="width: 15%; font-weight: 700;">Date :</td>
+                <td style="width: 25%; font-weight: 800; font-size: 13px;">${formattedDate}</td>
+              </tr>
+              <tr>
+                <td style="font-weight: 700;">Contract No.</td>
+                <td>${contractNo}</td>
+                <td style="font-weight: 700;">Page</td>
+                <td style="font-weight: 700;">${page.pageNum} of ${page.totalPages}</td>
+              </tr>
+              ${isFirstPage ? `
+                <tr>
+                  <td style="font-weight: 700;">C. Period</td>
+                  <td>${contractPeriod}</td>
+                  <td style="font-weight: 700;">Vendor Code</td>
+                  <td>${vendorCode}</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 800;">P.O. No.</td>
+                  <td style="font-weight: 800;">${poNo}</td>
+                  <td style="font-weight: 800;">GSTIN</td>
+                  <td style="font-weight: 800;">${gstin}</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 700;">B.G. No.</td>
+                  <td>${bgNo}</td>
+                  <td style="font-weight: 800;">PAN</td>
+                  <td style="font-weight: 800;">${pan}</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 700;">EPF Code</td>
+                  <td>${epfCode}</td>
+                  <td style="font-weight: 700;">State Code</td>
+                  <td>${stateCode}</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 700;">ESI CODE</td>
+                  <td>${esiCode}</td>
+                  <td style="font-weight: 700;">Invoice Value</td>
+                  <td style="font-weight: 800;">Rs. ${Math.round(grossAmount)}.00</td>
+                </tr>
+                <tr class="meta-row-billed">
+                  <td style="font-weight: 800; vertical-align: top;">BILLED TO</td>
+                  <td style="font-weight: 700; line-height: 1.3;">
+                    ${customerName}
+                    ${proforma.customerAddress ? `<div style="font-size: 11px; font-weight: normal; margin-top: 2px;">${proforma.customerAddress}</div>` : ''}
+                  </td>
+                  <td style="font-weight: 800; vertical-align: top;">PAN</td>
+                  <td style="font-weight: 800; vertical-align: top;">${customerPan}</td>
+                </tr>
+                <tr class="meta-row-billed">
+                  <td style="font-weight: 800;">GST</td>
+                  <td style="font-weight: 800;">${customerGstin}</td>
+                  <td style="font-weight: 800;">State Code</td>
+                  <td style="font-weight: 800;">${customerState}</td>
+                </tr>
+              ` : ''}
+            </tbody>
+          </table>
 
           <!-- Line Items Table -->
-          <div class="items-table-wrapper">
-            <table class="items-table">
-              <thead>
-                <tr>
-                  <th style="width: 5%;">Sl.No</th>
-                  <th style="width: 15%;">Item Code</th>
-                  <th style="width: 46%;">Description of Goods / Services</th>
-                  <th style="width: 8%;">Qty</th>
-                  <th style="width: 8%;">Unit</th>
-                  <th style="width: 9%;">Rate (₹)</th>
-                  <th style="width: 9%;">Amount (₹)</th>
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th style="width: 38px; text-align: center;">Sl.No.</th>
+                <th style="width: 65px; text-align: center;">Item No.</th>
+                <th style="text-align: center;">Description</th>
+                <th style="width: 85px; text-align: right;">Rate</th>
+                <th style="width: 75px; text-align: center;">Qty</th>
+                <th style="width: 105px; text-align: right;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${!isFirstPage ? `
+                <tr class="brought-forward-row">
+                  <td style="text-align: center;"></td>
+                  <td style="text-align: center;"></td>
+                  <td style="font-weight: 700;">Amount Brought Forward from Page ${page.pageNum - 1}:</td>
+                  <td></td>
+                  <td></td>
+                  <td style="text-align: right; font-weight: 800;">${broughtForwardAmount.toFixed(2)}</td>
                 </tr>
-              </thead>
-              <tbody>
-                ${!isFirstPage ? `
-                  <tr class="continuation-row">
-                    <td colspan="6" style="text-align: right; font-weight: bold; padding: 4px 8px;">Amount Brought Forward from Page ${page.pageNum - 1}:</td>
-                    <td style="text-align: right; font-weight: bold; padding: 4px 8px;">₹${broughtForwardAmount.toFixed(2)}</td>
-                  </tr>
-                ` : ''}
-                
-                ${page.items.map((item, idx) => {
-                  const globalIdx = page.startIdx + idx + 1;
-                  const qty = Number(item.quantity) || 1;
-                  const rate = Number(item.rate) || 0;
-                  const amt = Number(item.amount) || (qty * rate);
-                  return `
-                    <tr>
-                      <td style="text-align: center;">${item.serialNumber || globalIdx}</td>
-                      <td style="font-weight: 700; font-family: monospace;">${item.itemCode || '-'}</td>
-                      <td style="text-align: left;">${item.description || '-'}</td>
-                      <td style="text-align: center;">${qty}</td>
-                      <td style="text-align: center;">${item.unit || 'No'}</td>
-                      <td style="text-align: right;">${rate.toFixed(2)}</td>
-                      <td style="text-align: right; font-weight: 700;">${amt.toFixed(2)}</td>
-                    </tr>
-                  `;
-                }).join('')}
+              ` : ''}
 
-                ${!isLastPage ? `
-                  <tr class="continuation-row">
-                    <td colspan="6" style="text-align: right; font-weight: bold; padding: 4px 8px;">Amount Carried Over to Page ${page.pageNum + 1}:</td>
-                    <td style="text-align: right; font-weight: bold; padding: 4px 8px;">₹${carriedOverAmount.toFixed(2)}</td>
+              ${page.items.map((item, idx) => {
+                const globalIdx = page.startIdx + idx + 1;
+                const qty = Number(item.quantity) || 1;
+                const rate = Number(item.rate) || 0;
+                const amt = Number(item.amount) || (qty * rate);
+                return `
+                  <tr>
+                    <td style="text-align: center;">${item.serialNumber || globalIdx}</td>
+                    <td style="text-align: center; font-weight: 700;">${item.itemCode || ''}</td>
+                    <td style="text-align: left; line-height: 1.3;">${item.description || ''}</td>
+                    <td style="text-align: right;">${rate.toFixed(2)}</td>
+                    <td style="text-align: center;">${qty}</td>
+                    <td style="text-align: right; font-weight: 700;">${amt.toFixed(2)}</td>
                   </tr>
-                ` : ''}
-              </tbody>
-            </table>
-          </div>
+                `;
+              }).join('')}
+
+              ${!isLastPage ? `
+                <tr class="carried-over-row">
+                  <td style="text-align: center;"></td>
+                  <td style="text-align: center;"></td>
+                  <td style="font-weight: 700; text-align: right;">Page ${page.pageNum} Total:</td>
+                  <td></td>
+                  <td></td>
+                  <td style="text-align: right; font-weight: 700;">${(carriedOverAmount - broughtForwardAmount).toFixed(2)}</td>
+                </tr>
+                <tr class="carried-over-row highlight">
+                  <td style="text-align: center;"></td>
+                  <td style="text-align: center;"></td>
+                  <td style="font-weight: 800; text-align: right;">Amount Carried Over to Page ${page.pageNum + 1}:</td>
+                  <td></td>
+                  <td></td>
+                  <td style="text-align: right; font-weight: 800;">${carriedOverAmount.toFixed(2)}</td>
+                </tr>
+              ` : ''}
+            </tbody>
+          </table>
 
           ${isLastPage ? `
-            <!-- Financial Totals & Tax Split Section -->
-            <div class="totals-section">
-              <div class="totals-left">
-                <div class="rupees-words-box">
-                  <span class="rupees-label">Amount Chargeable (in words):</span>
-                  <div class="rupees-text">${wordsInRupees}</div>
-                </div>
-                <div class="bank-details-box">
-                  <div class="bank-title">Bank Account Details for Payment:</div>
-                  <div class="bank-row"><span>Account Name:</span> <strong>SRI DURGA ENTERPRISES</strong></div>
-                  <div class="bank-row"><span>Account No:</span> <strong>1152135000003056</strong></div>
-                  <div class="bank-row"><span>Bank & Branch:</span> <strong>Karur Vysya Bank, Karaikal</strong></div>
-                  <div class="bank-row"><span>IFSC Code:</span> <strong>KVBL0001152</strong></div>
-                </div>
-              </div>
-              <div class="totals-right">
-                <div class="tot-row">
-                  <span class="tot-lbl">Taxable SubTotal:</span>
-                  <span class="tot-val">₹${subTotal.toFixed(2)}</span>
-                </div>
+            <!-- Footer Totals Table -->
+            <table class="totals-table">
+              <tbody>
+                <tr class="total-amount-row">
+                  <td style="text-align: right; font-weight: 700; border-right: 1px solid #000;">Total Amount</td>
+                  <td style="width: 105px; text-align: right; font-weight: 800;">${subTotal.toFixed(2)}</td>
+                </tr>
                 ${isIntraState ? `
-                  <div class="tot-row">
-                    <span class="tot-lbl">CGST / SGST (${(gstPct / 2).toFixed(1)}%):</span>
-                    <span class="tot-val">₹${(gstAmount / 2).toFixed(2)}</span>
-                  </div>
-                  <div class="tot-row">
-                    <span class="tot-lbl">UGST (${(gstPct / 2).toFixed(1)}%):</span>
-                    <span class="tot-val">₹${(gstAmount / 2).toFixed(2)}</span>
-                  </div>
+                  <tr>
+                    <td style="border-right: 1px solid #000;">SAC CODE : ${sacCode} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; CGST &nbsp;&nbsp;&nbsp;&nbsp; ${(gstPct / 2).toFixed(1)}%</td>
+                    <td style="text-align: right;">${(gstAmount / 2).toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td style="border-right: 1px solid #000;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; SGST / UGST &nbsp;&nbsp;&nbsp;&nbsp; ${(gstPct / 2).toFixed(1)}%</td>
+                    <td style="text-align: right;">${(gstAmount / 2).toFixed(2)}</td>
+                  </tr>
                 ` : `
-                  <div class="tot-row">
-                    <span class="tot-lbl">IGST (${gstPct}%):</span>
-                    <span class="tot-val">₹${gstAmount.toFixed(2)}</span>
-                  </div>
+                  <tr>
+                    <td style="border-right: 1px solid #000;">SAC CODE : ${sacCode} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; IGST &nbsp;&nbsp;&nbsp;&nbsp; ${gstPct}%</td>
+                    <td style="text-align: right;">${gstAmount.toFixed(2)}</td>
+                  </tr>
                 `}
-                <div class="tot-row grand-total-row">
-                  <span class="tot-lbl">Gross Total (₹):</span>
-                  <span class="tot-val">₹${grossAmount.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Terms & Signature Box -->
-            <div class="footer-sign-section">
-              <div class="terms-box">
-                <div style="font-weight: bold; text-decoration: underline; margin-bottom: 2px;">Terms & Conditions:</div>
-                <ol style="margin: 0; padding-left: 14px; font-size: 8pt;">
-                  <li>This is a Proforma Estimate issued for advance processing & procurement.</li>
-                  <li>Goods once sold will not be taken back or exchanged.</li>
-                  <li>Subject to Karaikal Jurisdiction.</li>
-                </ol>
-              </div>
-              <div class="sign-box">
-                <div style="font-weight: 800; font-size: 8.5pt;">For SRI DURGA ENTERPRISES</div>
-                <div style="height: 45px;"></div>
-                <div style="font-weight: bold; border-top: 1px dashed #000; padding-top: 2px; font-size: 8pt;">Authorised Signatory</div>
-              </div>
-            </div>
-          ` : `
-            <div style="text-align: right; font-size: 8pt; font-weight: bold; padding: 6px 10px;">
-              Continued on Page ${page.pageNum + 1}...
-            </div>
-          `}
-
-          <!-- Page Number Footer -->
-          <div class="page-footer">
-            Page ${page.pageNum} of ${page.totalPages}
-          </div>
+                <tr class="gross-total-row">
+                  <td style="text-align: right; font-weight: 900; border-right: 1px solid #000; font-size: 13px;">GROSS TOTAL</td>
+                  <td style="text-align: right; font-weight: 900; font-size: 13.5px;">${grossAmount.toFixed(2)}</td>
+                </tr>
+                <tr class="rupees-words-row">
+                  <td colspan="2" style="font-weight: 800; padding: 4px 6px;">${wordsInRupees}</td>
+                </tr>
+                <tr class="signature-bank-row">
+                  <td style="border-right: 1px solid #000; font-size: 11px; padding: 4px 6px; line-height: 1.3;">
+                    <div>Bank Account Details for Payment:</div>
+                    <div>Account Name: <strong>SRI DURGA ENTERPRISES</strong></div>
+                    <div>Account No: <strong>1152135000003056</strong> &nbsp;&nbsp; IFSC: <strong>KVBL0001152</strong></div>
+                    <div>Bank: <strong>Karur Vysya Bank, Karaikal</strong></div>
+                  </td>
+                  <td style="text-align: center; vertical-align: bottom; padding: 4px 6px;">
+                    <div style="font-weight: 800; font-size: 12px; margin-bottom: 28px;">For SRI DURGA ENTERPRISES</div>
+                    <div style="font-weight: 800; font-size: 11px; border-top: 1px dashed #000; padding-top: 2px;">Authorised Signatory</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          ` : ''}
 
         </div>
       </div>
@@ -312,7 +335,7 @@ export function generateProformaInvoicePrintHtml(proforma) {
       <style>
         @page {
           size: A4 portrait;
-          margin: 8mm 8mm 8mm 8mm;
+          margin: 6mm 8mm !important;
         }
         * {
           box-sizing: border-box;
@@ -322,27 +345,34 @@ export function generateProformaInvoicePrintHtml(proforma) {
         body {
           margin: 0;
           padding: 0;
-          font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+          font-family: Arial, sans-serif;
           color: #000000;
           background: #ffffff;
-          font-size: 9pt;
-          line-height: 1.25;
+          font-size: 12px;
         }
         .invoice-page {
           width: 100%;
-          min-height: 275mm;
+          height: 285mm;
+          min-height: 285mm;
           padding: 0;
           margin: 0 auto;
           page-break-after: always;
+          break-after: page;
           display: flex;
           flex-direction: column;
+          justify-content: space-between;
+          border: 2px solid #000000;
+          overflow: hidden;
+        }
+        .invoice-page:last-child {
+          page-break-after: avoid;
+          break-after: avoid;
         }
         .page-break {
           page-break-before: always;
         }
         .invoice-frame {
-          border: 1.5px solid #000000;
-          padding: 8px;
+          padding: 0;
           display: flex;
           flex-direction: column;
           flex: 1;
@@ -351,170 +381,112 @@ export function generateProformaInvoicePrintHtml(proforma) {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          border-bottom: 1.5px solid #000000;
-          padding-bottom: 4px;
-          margin-bottom: 6px;
+          border-bottom: 1px solid #000000;
+          padding: 2px 8px;
         }
         .header-main-title {
-          font-size: 13pt;
-          font-weight: 900;
-          letter-spacing: 0.08em;
+          font-size: 13px;
+          font-weight: 800;
+          letter-spacing: 1px;
+          text-decoration: underline;
         }
         .header-copy-type {
-          font-size: 8pt;
+          font-size: 11px;
           font-weight: 800;
-          padding: 2px 6px;
-          border: 1px solid #000000;
-          background: #f1f5f9;
+          text-transform: uppercase;
         }
         .company-header-box {
           display: flex;
           align-items: center;
-          gap: 12px;
-          border-bottom: 1.5px solid #000000;
-          padding-bottom: 6px;
-          margin-bottom: 6px;
+          border-bottom: 1px solid #000000;
+          padding: 4px;
         }
-        .comp-title {
-          font-size: 15pt;
-          font-weight: 900;
-          margin: 0 0 2px 0;
-          letter-spacing: 0.03em;
-        }
-        .comp-subtitle {
-          font-size: 8pt;
-          font-weight: 700;
-          margin: 0 0 2px 0;
-          color: #1e293b;
-        }
-        .comp-address {
-          font-size: 7.5pt;
-          margin: 0 0 1px 0;
-          color: #334155;
-        }
-        .meta-section {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 10px;
-          border-bottom: 1.5px solid #000000;
-          padding-bottom: 6px;
-          margin-bottom: 6px;
-          font-size: 8.5pt;
-        }
-        .meta-row {
+        .logo-box {
+          width: 85px;
+          min-width: 85px;
+          border-right: 1px solid #000;
           display: flex;
-          margin-bottom: 2px;
+          align-items: center;
+          justify-content: center;
+          padding: 4px;
         }
-        .lbl {
-          font-weight: 700;
-          width: 130px;
-          flex-shrink: 0;
-          color: #1e293b;
-        }
-        .val {
+        .company-info {
           flex: 1;
+          text-align: center;
+          padding: 2px 6px;
         }
-        .bold-txt {
-          font-weight: 800;
+        .company-name {
+          font-size: 19px;
+          font-weight: 900;
+          letter-spacing: 3px;
+          margin: 1px 0;
         }
-        .items-table-wrapper {
-          flex: 1;
-          margin-bottom: 6px;
+        .company-address {
+          font-size: 12px;
+          font-weight: 600;
+          margin: 1px 0;
+        }
+        .company-contacts {
+          font-size: 12px;
+          font-weight: 600;
+          margin: 1px 0;
+        }
+        .meta-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 12px;
+          border-bottom: 1px solid #000000;
+        }
+        .meta-table td {
+          border-right: 1px solid #000000;
+          border-bottom: 1px solid #000000;
+          padding: 3px 6px;
+        }
+        .meta-table td:last-child {
+          border-right: none;
+        }
+        .meta-row-highlight {
+          background: #dce4dc;
         }
         .items-table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 8pt;
+          font-size: 12px;
+          flex: 1;
         }
         .items-table th, .items-table td {
-          border: 1px solid #000000;
-          padding: 4px 6px;
+          border-right: 1px solid #000000;
+          border-bottom: 1px solid #000000;
+          padding: 3px 5px;
+        }
+        .items-table th:last-child, .items-table td:last-child {
+          border-right: none;
         }
         .items-table th {
-          background: #f1f5f9;
-          font-weight: 800;
-          text-align: center;
-        }
-        .continuation-row td {
-          background: #f8fafc;
-        }
-        .totals-section {
-          display: grid;
-          grid-template-columns: 1.2fr 0.8fr;
-          gap: 8px;
-          border: 1.5px solid #000000;
-          margin-bottom: 6px;
-          padding: 6px;
-          font-size: 8pt;
-        }
-        .rupees-words-box {
-          margin-bottom: 6px;
-        }
-        .rupees-label {
-          font-weight: 800;
-          text-decoration: underline;
-        }
-        .rupees-text {
-          font-style: italic;
-          font-weight: 700;
-          margin-top: 2px;
-        }
-        .bank-details-box {
-          font-size: 7.5pt;
-          background: #f8fafc;
-          padding: 4px 6px;
-          border: 1px dashed #64748b;
-        }
-        .bank-title {
-          font-weight: 800;
-          margin-bottom: 2px;
-        }
-        .bank-row {
-          display: flex;
-          justify-content: space-between;
-        }
-        .totals-right {
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          gap: 3px;
-        }
-        .tot-row {
-          display: flex;
-          justify-content: space-between;
-          padding: 2px 4px;
-        }
-        .tot-lbl {
-          font-weight: 700;
-        }
-        .tot-val {
-          font-weight: 800;
-        }
-        .grand-total-row {
-          border-top: 1.5px solid #000000;
-          border-bottom: 1.5px solid #000000;
-          padding: 4px;
-          font-size: 9.5pt;
-          background: #f1f5f9;
-        }
-        .footer-sign-section {
-          display: grid;
-          grid-template-columns: 1.2fr 0.8fr;
-          gap: 8px;
-          border: 1.5px solid #000000;
-          padding: 6px;
-        }
-        .sign-box {
-          text-align: center;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-        }
-        .page-footer {
-          text-align: center;
-          font-size: 7.5pt;
+          background: #ffffff;
           font-weight: bold;
-          margin-top: 4px;
+        }
+        .brought-forward-row, .carried-over-row {
+          background: #f8fafc;
+        }
+        .carried-over-row.highlight {
+          background: #dce4dc;
+        }
+        .totals-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 12px;
+          border-top: 1px solid #000000;
+        }
+        .totals-table td {
+          border-bottom: 1px solid #000000;
+          padding: 3px 6px;
+        }
+        .gross-total-row {
+          background: #dce4dc;
+        }
+        .rupees-words-row {
+          background: #ffffff;
         }
       </style>
     </head>
@@ -527,7 +499,7 @@ export function generateProformaInvoicePrintHtml(proforma) {
 
 export function printProformaInvoiceDirect(proforma) {
   const html = generateProformaInvoicePrintHtml(proforma);
-  const printWindow = window.open('', '_blank', 'width=900,height=800');
+  const printWindow = window.open('', '_blank', 'width=900,height=1000');
   if (printWindow) {
     printWindow.document.open();
     printWindow.document.write(html);
@@ -535,6 +507,6 @@ export function printProformaInvoiceDirect(proforma) {
     printWindow.focus();
     setTimeout(() => {
       printWindow.print();
-    }, 450);
+    }, 400);
   }
 }
