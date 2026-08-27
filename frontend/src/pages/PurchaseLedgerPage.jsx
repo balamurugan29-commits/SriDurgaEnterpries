@@ -1168,8 +1168,8 @@ export const PurchaseLedgerPage = () => {
             .individual-party-page {
               page-break-after: always !important;
               break-after: page !important;
-              page-break-inside: avoid !important;
-              padding: 25px 0 !important;
+              display: block !important;
+              padding: 0 0 15px 0 !important;
             }
             .individual-party-page:last-child {
               page-break-after: auto !important;
@@ -3071,104 +3071,105 @@ export const PurchaseLedgerPage = () => {
                                 pageBreakAfter: pIdx === consolidatedSuppliers.length - 1 ? 'auto' : 'always', 
                                 breakAfter: pIdx === consolidatedSuppliers.length - 1 ? 'auto' : 'page',
                                 borderBottom: pIdx === consolidatedSuppliers.length - 1 ? 'none' : '2px dashed #cbd5e1',
-                                padding: '2rem 1.5rem 3rem 1.5rem',
-                                maxWidth: '780px',
-                                margin: '0 auto'
+                                paddingBottom: '2rem'
                               }}
                             >
                               {/* 1. Page Header */}
-                              <div style={{ textAlign: 'center', marginBottom: '1.5rem', borderBottom: '2px solid #000000', paddingBottom: '0.75rem' }}>
-                                <h1 style={{ color: '#000000', fontSize: '1.55rem', fontWeight: 900, letterSpacing: '0.05em', margin: '0 0 0.25rem 0', textTransform: 'uppercase' }}>
+                              <div style={{ textAlign: 'center', marginBottom: '0.85rem', borderBottom: '2px solid #000000', paddingBottom: '0.5rem' }}>
+                                <h1 style={{ color: '#000000', fontSize: '1.45rem', fontWeight: 900, letterSpacing: '0.05em', margin: '0 0 0.25rem 0', textTransform: 'uppercase' }}>
                                   SRI DURGA ENTERPRISES, KARAIKAL.
                                 </h1>
-                                <div style={{ fontSize: '0.875rem', color: '#334155', fontWeight: 600 }}>
+                                <div style={{ fontSize: '0.825rem', color: '#334155', fontWeight: 600 }}>
                                   Authorised Industrial Tools & Hardware Suppliers | Karaikal
                                 </div>
-                                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#000000', marginTop: '0.45rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                                <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#000000', marginTop: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                                   SUPPLIER / DEALER STATEMENT OF ACCOUNT
                                 </div>
                               </div>
 
-                              {/* 2. ONE Unified Combined Centered Statement Card */}
-                              <div style={{ border: '2px solid #000000', borderRadius: '8px', overflow: 'hidden', margin: '1.5rem 0', background: '#ffffff', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
-                                
-                                {/* Top Header Row: Party Name & Period */}
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', padding: '1rem 1.25rem', background: '#f8fafc', borderBottom: '1.5px solid #000000' }}>
-                                  <div>
-                                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Name of Dealer / Supplier:</div>
-                                    <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#000000', marginTop: '2px' }}>{sup.dealerName}</div>
-                                  </div>
-                                  <div style={{ textAlign: 'right', fontSize: '0.875rem' }}>
-                                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Statement Period:</div>
-                                    <div style={{ fontWeight: 800, color: '#000000', marginTop: '2px' }}>
-                                      {fromDate ? new Date(fromDate).toLocaleDateString('en-GB') : getActiveFinancialYearStartDate()} To {toDate ? new Date(toDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}
-                                    </div>
+                              {/* 2. Party & Statement Meta Info Box (Box 1) */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', margin: '0.5rem 0', padding: '0.75rem 1rem', border: '1.5px solid #000000', borderRadius: '4px', background: '#f8fafc' }}>
+                                <div>
+                                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Name of Dealer / Supplier:</div>
+                                  <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#000000', marginTop: '2px' }}>{sup.dealerName}</div>
+                                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>Dealer Sl. No: #{pIdx + 1} of {consolidatedSuppliers.length}</div>
+                                </div>
+                                <div style={{ textAlign: 'right', fontSize: '0.85rem' }}>
+                                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Statement Period:</div>
+                                  <div style={{ fontWeight: 800, color: '#000000', marginTop: '2px' }}>
+                                    {fromDate ? new Date(fromDate).toLocaleDateString('en-GB') : getActiveFinancialYearStartDate()} To {toDate ? new Date(toDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}
                                   </div>
                                 </div>
+                              </div>
 
-                                {/* Middle Rows: Summary Numbers Table */}
-                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.95rem', fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}>
+                              {/* 3. Clean Financial Summary Table (Box 2 - Immediately below Box 1) */}
+                              <div style={{ margin: '0.5rem 0', border: '1.5px solid #000000', borderRadius: '4px', overflow: 'hidden' }}>
+                                <div style={{ background: '#f1f5f9', padding: '0.5rem 1rem', borderBottom: '1.5px solid #000000', fontWeight: 800, fontSize: '0.825rem', textTransform: 'uppercase', color: '#0f172a' }}>
+                                  Account Balance Summary
+                                </div>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}>
                                   <tbody>
                                     {sup.openingBalance !== 0 && (
                                       <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                        <td style={{ padding: '12px 18px', fontWeight: 700, color: '#334155' }}>Opening Balance</td>
-                                        <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: 800, color: '#16a34a', fontSize: '1.05rem' }}>
+                                        <td style={{ padding: '7px 12px', fontWeight: 700, color: '#475569' }}>Opening Balance</td>
+                                        <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 800, color: '#16a34a' }}>
                                           ₹{sup.openingBalance.toFixed(2)}
                                         </td>
                                       </tr>
                                     )}
                                     <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                      <td style={{ padding: '12px 18px', fontWeight: 700, color: '#334155' }}>Total Purchases / Bills</td>
-                                      <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: 800, color: '#0f172a', fontSize: '1.05rem' }}>
+                                      <td style={{ padding: '7px 12px', fontWeight: 700, color: '#475569' }}>Total Purchases / Bills</td>
+                                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>
                                         ₹{sup.totalAmount.toFixed(2)}
                                       </td>
                                     </tr>
-                                    <tr style={{ borderBottom: '2px solid #000000' }}>
-                                      <td style={{ padding: '12px 18px', fontWeight: 700, color: '#334155' }}>Total Paid Amount</td>
-                                      <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: 800, color: '#1e40af', fontSize: '1.05rem' }}>
+                                    <tr style={{ borderBottom: '1.5px solid #000000' }}>
+                                      <td style={{ padding: '7px 12px', fontWeight: 700, color: '#475569' }}>Total Paid Amount</td>
+                                      <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 800, color: '#1e40af' }}>
                                         ₹{sup.paidAmount.toFixed(2)}
                                       </td>
                                     </tr>
                                   </tbody>
                                 </table>
-
-                                {/* Bottom Highlight Row: Closing Status & Amount */}
-                                <div style={{ 
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  justifyContent: 'space-between', 
-                                  padding: '1.25rem 1.5rem', 
-                                  background: sup.netBalance > 0 ? '#fef2f2' : (sup.netBalance < 0 ? '#eff6ff' : '#f0fdf4'),
-                                  borderTop: '1px solid rgba(0,0,0,0.08)'
-                                }}>
-                                  <div>
-                                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                      Statement Closing Status
-                                    </div>
-                                    <div style={{ fontSize: '1.05rem', fontWeight: 900, color: sup.netBalance > 0 ? '#991b1b' : (sup.netBalance < 0 ? '#1e40af' : '#166534'), marginTop: '3px' }}>
-                                      {sup.netBalance > 0 
-                                        ? 'Outstanding Balance Pending to be Paid'
-                                        : sup.netBalance < 0 
-                                          ? 'Advance / Extra Amount Paid Available in Credit'
-                                          : 'Account Fully Settled & Cleared'}
-                                    </div>
-                                  </div>
-                                  <div style={{ textAlign: 'right' }}>
-                                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: sup.netBalance > 0 ? '#dc2626' : (sup.netBalance < 0 ? '#1e40af' : '#16a34a') }}>
-                                      ₹{Math.abs(sup.netBalance).toFixed(2)}
-                                    </div>
-                                    {sup.netBalance < 0 && (
-                                      <span style={{ fontSize: '0.75rem', fontWeight: 800, background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: '4px' }}>
-                                        EXTRA / ADVANCE
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-
                               </div>
 
-                              {/* 3. Formal Authorisation Signatures */}
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '3rem', paddingTop: '1.25rem', borderTop: '1px solid #e2e8f0', fontSize: '0.875rem', fontWeight: 800 }}>
+                              {/* 4. Formal Dues / Advance Status Notice Box (Box 3 - Immediately below Box 2) */}
+                              <div style={{ 
+                                margin: '0.5rem 0', 
+                                padding: '0.85rem 1.25rem', 
+                                border: sup.netBalance > 0 ? '1.5px solid #dc2626' : (sup.netBalance < 0 ? '1.5px solid #1e40af' : '1.5px solid #16a34a'),
+                                borderRadius: '6px',
+                                background: sup.netBalance > 0 ? '#fef2f2' : (sup.netBalance < 0 ? '#eff6ff' : '#f0fdf4'),
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between'
+                              }}>
+                                <div>
+                                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>
+                                    Statement Closing Status
+                                  </div>
+                                  <div style={{ fontSize: '0.95rem', fontWeight: 800, color: sup.netBalance > 0 ? '#991b1b' : (sup.netBalance < 0 ? '#1e40af' : '#166534'), marginTop: '2px' }}>
+                                    {sup.netBalance > 0 
+                                      ? `Outstanding Balance Pending to be Paid`
+                                      : sup.netBalance < 0 
+                                        ? `Advance / Extra Amount Paid Available in Credit`
+                                        : `Account Fully Settled & Cleared`}
+                                  </div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                  <div style={{ fontSize: '1.45rem', fontWeight: 900, color: sup.netBalance > 0 ? '#dc2626' : (sup.netBalance < 0 ? '#1e40af' : '#16a34a') }}>
+                                    ₹{Math.abs(sup.netBalance).toFixed(2)}
+                                  </div>
+                                  {sup.netBalance < 0 && (
+                                    <span style={{ fontSize: '0.72rem', fontWeight: 800, background: '#dbeafe', color: '#1e40af', padding: '1px 6px', borderRadius: '4px' }}>
+                                      EXTRA / ADVANCE
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* 5. Formal Authorisation Signatures */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0', fontSize: '0.85rem', fontWeight: 800 }}>
                                 <div>Prepared & Verified By</div>
                                 <div style={{ textAlign: 'center' }}>
                                   <div>For SRI DURGA ENTERPRISES</div>
