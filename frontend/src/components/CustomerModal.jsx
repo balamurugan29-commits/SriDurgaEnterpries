@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Building2 } from 'lucide-react';
+import { X, Save, Building2, MapPin } from 'lucide-react';
 
 export const CustomerModal = ({ isOpen, onClose, onSave, customer }) => {
   const [customerName, setCustomerName] = useState('');
   const [gstin, setGstin] = useState('');
   const [pan, setPan] = useState('');
+  const [stateCode, setStateCode] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
 
@@ -13,18 +14,46 @@ export const CustomerModal = ({ isOpen, onClose, onSave, customer }) => {
       setCustomerName(customer.customerName || '');
       setGstin(customer.gstin || '');
       setPan(customer.pan || '');
+      setStateCode(customer.stateCode || (customer.gstin && customer.gstin.startsWith('34') ? 'Puducherry (34)' : customer.gstin && customer.gstin.startsWith('33') ? 'Tamil Nadu (33)' : ''));
       setPhone(customer.phone || '');
       setAddress(customer.address || '');
     } else {
       setCustomerName('');
       setGstin('');
       setPan('');
+      setStateCode('');
       setPhone('');
       setAddress('');
     }
   }, [customer, isOpen]);
 
   if (!isOpen) return null;
+
+  // Auto-extract PAN and State Code from GSTIN if valid format
+  const handleGstinChange = (val) => {
+    const cleanGst = val.toUpperCase().trim();
+    setGstin(cleanGst);
+
+    if (cleanGst.length >= 12 && !pan) {
+      // Standard GSTIN: 2 digits state code + 10 chars PAN + 3 chars
+      const extractedPan = cleanGst.substring(2, 12);
+      setPan(extractedPan);
+    }
+
+    if (cleanGst.startsWith('34') && !stateCode) {
+      setStateCode('Puducherry (34)');
+    } else if (cleanGst.startsWith('33') && !stateCode) {
+      setStateCode('Tamil Nadu (33)');
+    } else if (cleanGst.startsWith('29') && !stateCode) {
+      setStateCode('Karnataka (29)');
+    } else if (cleanGst.startsWith('27') && !stateCode) {
+      setStateCode('Maharashtra (27)');
+    } else if (cleanGst.startsWith('37') && !stateCode) {
+      setStateCode('Andhra Pradesh (37)');
+    } else if (cleanGst.startsWith('32') && !stateCode) {
+      setStateCode('Kerala (32)');
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -39,6 +68,7 @@ export const CustomerModal = ({ isOpen, onClose, onSave, customer }) => {
       customerName: customerName.trim(),
       gstin: gstin.trim(),
       pan: pan.trim(),
+      stateCode: stateCode.trim(),
       phone: phone.trim(),
       address: address.trim()
     });
@@ -46,7 +76,7 @@ export const CustomerModal = ({ isOpen, onClose, onSave, customer }) => {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-      <div className="glass-panel" style={{ width: '100%', maxWidth: '600px', background: 'var(--bg-card-solid)', border: '1px solid var(--border-color-accent)', borderRadius: '16px', overflow: 'hidden' }}>
+      <div className="glass-panel" style={{ width: '100%', maxWidth: '640px', background: 'var(--bg-card-solid)', border: '1px solid var(--border-color-accent)', borderRadius: '16px', overflow: 'hidden' }}>
         
         {/* Modal Header */}
         <div style={{ padding: '1.25rem 1.5rem', background: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -76,7 +106,7 @@ export const CustomerModal = ({ isOpen, onClose, onSave, customer }) => {
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
               <label className="form-label">GSTIN</label>
               <input
@@ -84,7 +114,7 @@ export const CustomerModal = ({ isOpen, onClose, onSave, customer }) => {
                 className="form-input"
                 placeholder="e.g. 34AAACO2519H1ZR"
                 value={gstin}
-                onChange={e => setGstin(e.target.value)}
+                onChange={e => handleGstinChange(e.target.value)}
               />
             </div>
 
@@ -95,12 +125,25 @@ export const CustomerModal = ({ isOpen, onClose, onSave, customer }) => {
                 className="form-input"
                 placeholder="e.g. AAACO2519H"
                 value={pan}
-                onChange={e => setPan(e.target.value)}
+                onChange={e => setPan(e.target.value.toUpperCase())}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <label className="form-label">State Code</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g. Puducherry (34) or Tamil Nadu (33)"
+                value={stateCode}
+                onChange={e => setStateCode(e.target.value)}
               />
             </div>
 
             <div>
-              <label className="form-label">Contact Phone</label>
+              <label className="form-label">Contact Phone / Mobile</label>
               <input
                 type="text"
                 className="form-input"

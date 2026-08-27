@@ -10,6 +10,7 @@ const CUSTOMER_COLUMNS = [
   { key: 'customerName', label: 'CUSTOMER / COMPANY NAME' },
   { key: 'gstin', label: 'GSTIN' },
   { key: 'pan', label: 'PAN' },
+  { key: 'stateCode', label: 'STATE CODE' },
   { key: 'phone', label: 'PHONE' },
   { key: 'address', label: 'ADDRESS' }
 ];
@@ -99,7 +100,7 @@ export const CustomerMasterPage = () => {
               Customer & Party Directory
             </h2>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-              Maintain verified customer GSTIN, PAN, and billing address profiles for auto-fetch.
+              Maintain verified customer GSTIN, PAN, State Code, and billing address profiles for auto-fetch.
             </p>
           </div>
         </div>
@@ -119,7 +120,7 @@ export const CustomerMasterPage = () => {
             type="text"
             className="form-input"
             style={{ paddingLeft: '2.75rem', paddingRight: searchQuery ? '2.5rem' : '1rem' }}
-            placeholder="Search Customers by Name or GSTIN..."
+            placeholder="Search Customers by Name, GSTIN, State..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
@@ -168,78 +169,96 @@ export const CustomerMasterPage = () => {
           <table className="custom-table">
             <thead>
               <tr>
-                <th style={{ width: '60px', textAlign: 'center' }}>S.No</th>
+                <th style={{ width: '50px', textAlign: 'center' }}>S.No</th>
                 <th>Customer / Company Name</th>
-                <th style={{ width: '180px' }}>GSTIN</th>
-                <th style={{ width: '130px' }}>PAN</th>
-                <th style={{ width: '140px' }}>Phone / Mobile</th>
+                <th style={{ width: '160px' }}>GSTIN</th>
+                <th style={{ width: '110px' }}>PAN</th>
+                <th style={{ width: '140px' }}>State Code</th>
+                <th style={{ width: '130px' }}>Phone / Mobile</th>
                 <th>Registered Address</th>
-                <th style={{ width: '110px', textAlign: 'center' }}>Actions</th>
+                <th style={{ width: '90px', textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <td colSpan={8} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                     <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 0.5rem auto' }} />
                     <p style={{ margin: 0 }}>Loading customer directory...</p>
                   </td>
                 </tr>
               ) : customers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <td colSpan={8} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                     No customer records found. Click '+ Add New Customer' to register one.
                   </td>
                 </tr>
               ) : (
-                customers.map((cust, idx) => (
-                  <tr key={cust.id}>
-                    <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)' }}>
-                      {idx + 1}
-                    </td>
-                    <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>
-                      {cust.customerName}
-                    </td>
-                    <td>
-                      <span className="badge badge-code" style={{ color: '#34d399', borderColor: 'rgba(16, 185, 129, 0.3)', background: 'rgba(16, 185, 129, 0.15)' }}>
-                        {cust.gstin || 'N/A'}
-                      </span>
-                    </td>
-                    <td style={{ color: 'var(--text-subtle)', fontWeight: 600 }}>
-                      {cust.pan || 'N/A'}
-                    </td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                      {cust.phone ? (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                          <Phone size={12} color="#818cf8" /> {cust.phone}
+                customers.map((cust, idx) => {
+                  const stateVal = cust.stateCode || (cust.gstin && cust.gstin.startsWith('34') ? 'Puducherry (34)' : cust.gstin && cust.gstin.startsWith('33') ? 'Tamil Nadu (33)' : 'N/A');
+                  return (
+                    <tr key={cust.id}>
+                      <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)' }}>
+                        {idx + 1}
+                      </td>
+                      <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>
+                        {cust.customerName}
+                      </td>
+                      <td>
+                        <span className="badge badge-code" style={{ color: '#34d399', borderColor: 'rgba(16, 185, 129, 0.3)', background: 'rgba(16, 185, 129, 0.15)' }}>
+                          {cust.gstin || 'N/A'}
                         </span>
-                      ) : 'N/A'}
-                    </td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem', maxWidth: '300px', lineHeight: 1.4 }}>
-                      {cust.address || 'N/A'}
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
-                        <button 
-                          onClick={() => handleEdit(cust)} 
-                          className="btn btn-outline" 
-                          style={{ padding: '0.35rem 0.5rem', color: '#818cf8', borderColor: 'rgba(99, 102, 241, 0.3)' }}
-                          title="Edit Customer Details"
-                        >
-                          <Edit3 size={13} />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(cust)} 
-                          className="btn btn-danger" 
-                          style={{ padding: '0.35rem 0.5rem' }}
-                          title="Delete Customer"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td style={{ color: 'var(--text-subtle)', fontWeight: 600 }}>
+                        {cust.pan || 'N/A'}
+                      </td>
+                      <td>
+                        <span style={{ 
+                          display: 'inline-block',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          color: '#38bdf8',
+                          background: 'rgba(56, 189, 248, 0.12)',
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '4px',
+                          border: '1px solid rgba(56, 189, 248, 0.25)'
+                        }}>
+                          {stateVal}
+                        </span>
+                      </td>
+                      <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                        {cust.phone ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <Phone size={12} color="#818cf8" /> {cust.phone}
+                          </span>
+                        ) : 'N/A'}
+                      </td>
+                      <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem', maxWidth: '280px', lineHeight: 1.4 }}>
+                        {cust.address || 'N/A'}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                          <button 
+                            onClick={() => handleEdit(cust)} 
+                            className="btn btn-outline" 
+                            style={{ padding: '0.35rem 0.5rem', color: '#818cf8', borderColor: 'rgba(99, 102, 241, 0.3)' }}
+                            title="Edit Customer Details"
+                          >
+                            <Edit3 size={13} />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(cust)} 
+                            className="btn btn-danger" 
+                            style={{ padding: '0.35rem 0.5rem' }}
+                            title="Delete Customer"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
