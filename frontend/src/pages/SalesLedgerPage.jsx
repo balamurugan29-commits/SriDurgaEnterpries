@@ -3056,23 +3056,23 @@ export const SalesLedgerPage = () => {
                               }}
                             >
                               {/* 1. Page Header */}
-                              <div style={{ textAlign: 'center', marginBottom: '1rem', borderBottom: '2px solid #000000', paddingBottom: '0.6rem' }}>
-                                <h1 style={{ color: '#000000', fontSize: '1.4rem', fontWeight: 900, letterSpacing: '0.05em', margin: '0 0 0.25rem 0', textTransform: 'uppercase' }}>
+                              <div style={{ textAlign: 'center', marginBottom: '1.25rem', borderBottom: '2px solid #000000', paddingBottom: '0.65rem' }}>
+                                <h1 style={{ color: '#000000', fontSize: '1.45rem', fontWeight: 900, letterSpacing: '0.05em', margin: '0 0 0.25rem 0', textTransform: 'uppercase' }}>
                                   SRI DURGA ENTERPRISES, KARAIKAL.
                                 </h1>
                                 <div style={{ fontSize: '0.825rem', color: '#334155', fontWeight: 600 }}>
                                   No. 14, Main Road, Karaikal - 609602 | GSTIN: 34AAVFS0000A1Z5
                                 </div>
-                                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#000000', marginTop: '0.4rem', textTransform: 'uppercase' }}>
+                                <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#000000', marginTop: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                                   CUSTOMER STATEMENT OF ACCOUNT
                                 </div>
                               </div>
 
                               {/* 2. Customer & Statement Meta Info Box */}
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', margin: '0.75rem 0', padding: '0.75rem 1rem', border: '1.5px solid #000000', borderRadius: '4px', background: '#f8fafc' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', margin: '0.75rem 0 1.25rem 0', padding: '0.85rem 1rem', border: '1.5px solid #000000', borderRadius: '4px', background: '#f8fafc' }}>
                                 <div>
                                   <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Billed To / Customer:</div>
-                                  <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#000000', marginTop: '2px' }}>{cust.customerName}</div>
+                                  <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#000000', marginTop: '2px' }}>{cust.customerName}</div>
                                   <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>Customer Sl. No: #{pIdx + 1} of {consolidatedCustomers.length}</div>
                                 </div>
                                 <div style={{ textAlign: 'right', fontSize: '0.85rem' }}>
@@ -3083,86 +3083,41 @@ export const SalesLedgerPage = () => {
                                 </div>
                               </div>
 
-                              {/* 3. Customer's Full Transaction Table */}
-                              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.825rem', margin: '0.75rem 0', fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}>
-                                <thead>
-                                  <tr style={{ borderTop: '1.5px solid #000000', borderBottom: '1.5px solid #000000', background: '#f1f5f9', fontWeight: 800 }}>
-                                    <th style={{ padding: '6px 4px', textAlign: 'center', width: '40px' }}>Sl.</th>
-                                    <th style={{ padding: '6px 6px', textAlign: 'center', width: '90px' }}>Date</th>
-                                    <th style={{ padding: '6px 6px', textAlign: 'left' }}>Invoice No / Ref</th>
-                                    <th style={{ padding: '6px 6px', textAlign: 'right' }}>Taxable (₹)</th>
-                                    <th style={{ padding: '6px 6px', textAlign: 'right' }}>Tax (₹)</th>
-                                    <th style={{ padding: '6px 6px', textAlign: 'right' }}>Total Bill (₹)</th>
-                                    <th style={{ padding: '6px 6px', textAlign: 'right' }}>Received (₹)</th>
-                                    <th style={{ padding: '6px 6px', textAlign: 'right' }}>Running Balance (₹)</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {/* Opening Balance Row */}
-                                  <tr style={{ borderBottom: '1px solid #e2e8f0', background: 'rgba(22, 163, 74, 0.04)', fontWeight: 700 }}>
-                                    <td style={{ textAlign: 'center', padding: '5px' }}>-</td>
-                                    <td style={{ textAlign: 'center', padding: '5px' }}>{fromDate ? new Date(fromDate).toLocaleDateString('en-GB') : getActiveFinancialYearStartDate()}</td>
-                                    <td style={{ padding: '5px 6px', color: '#16a34a', fontWeight: 800 }}>OPENING BALANCE</td>
-                                    <td style={{ textAlign: 'right', padding: '5px' }}>-</td>
-                                    <td style={{ textAlign: 'right', padding: '5px' }}>-</td>
-                                    <td style={{ textAlign: 'right', padding: '5px' }}>-</td>
-                                    <td style={{ textAlign: 'right', padding: '5px' }}>-</td>
-                                    <td style={{ textAlign: 'right', padding: '5px', fontWeight: 800, color: '#16a34a' }}>
-                                      {cust.openingBalance.toFixed(2)}
-                                    </td>
-                                  </tr>
-
-                                  {/* Transaction Bills & Receipts */}
-                                  {cust.entries.length > 0 ? (
-                                    cust.entries.map((b, bIdx) => (
-                                      <tr key={bIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                        <td style={{ textAlign: 'center', padding: '5px' }}>{bIdx + 1}</td>
-                                        <td style={{ textAlign: 'center', padding: '5px' }}>{formatStDate(b.invoiceDate || b.passedDate)}</td>
-                                        <td style={{ padding: '5px 6px', fontWeight: 600 }}>{b.invoiceNo || '-'}</td>
-                                        <td style={{ textAlign: 'right', padding: '5px' }}>{b.taxableAmount ? Number(b.taxableAmount).toFixed(2) : '-'}</td>
-                                        <td style={{ textAlign: 'right', padding: '5px' }}>{b.taxAmount ? Number(b.taxAmount).toFixed(2) : '-'}</td>
-                                        <td style={{ textAlign: 'right', padding: '5px', fontWeight: 700 }}>{b.totalAmount ? Number(b.totalAmount).toFixed(2) : '-'}</td>
-                                        <td style={{ textAlign: 'right', padding: '5px', color: '#1e40af', fontWeight: 700 }}>{b.passedAmount ? Number(b.passedAmount).toFixed(2) : '-'}</td>
-                                        <td style={{ 
-                                          textAlign: 'right', 
-                                          padding: '5px', 
-                                          fontWeight: 800, 
-                                          color: b.runningBalance > 0 ? '#dc2626' : (b.runningBalance < 0 ? '#1e40af' : '#16a34a') 
-                                        }}>
-                                          {b.runningBalance.toFixed(2)}
+                              {/* 3. Clean Financial Summary Table (Total, Received, Opening Balance - No individual bill rows) */}
+                              <div style={{ margin: '1rem 0 1.5rem 0', border: '1.5px solid #000000', borderRadius: '4px', overflow: 'hidden' }}>
+                                <div style={{ background: '#f1f5f9', padding: '0.65rem 1rem', borderBottom: '1.5px solid #000000', fontWeight: 800, fontSize: '0.85rem', textTransform: 'uppercase', color: '#0f172a' }}>
+                                  Account Balance Summary
+                                </div>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}>
+                                  <tbody>
+                                    {cust.openingBalance !== 0 && (
+                                      <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                        <td style={{ padding: '8px 12px', fontWeight: 700, color: '#475569' }}>Opening Balance (ஆரம்ப இருப்பு)</td>
+                                        <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#16a34a' }}>
+                                          ₹{cust.openingBalance.toFixed(2)}
                                         </td>
                                       </tr>
-                                    ))
-                                  ) : (
-                                    <tr>
-                                      <td colSpan={8} style={{ textAlign: 'center', padding: '1rem', color: '#94a3b8' }}>
-                                        No transaction invoices in this selected date range
+                                    )}
+                                    <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                      <td style={{ padding: '8px 12px', fontWeight: 700, color: '#475569' }}>Total Sales / Invoices (மொத்த விற்பனை)</td>
+                                      <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>
+                                        ₹{cust.totalAmount.toFixed(2)}
                                       </td>
                                     </tr>
-                                  )}
-
-                                  {/* Customer Totals Row */}
-                                  <tr style={{ borderTop: '2px solid #000000', borderBottom: '2px solid #000000', fontWeight: 900, background: '#f8fafc' }}>
-                                    <td colSpan={3} style={{ padding: '7px 6px', textAlign: 'left', textTransform: 'uppercase' }}>CUSTOMER TOTALS :</td>
-                                    <td style={{ textAlign: 'right', padding: '7px 5px' }}>{cust.taxableAmount.toFixed(2)}</td>
-                                    <td style={{ textAlign: 'right', padding: '7px 5px' }}>{cust.taxAmount.toFixed(2)}</td>
-                                    <td style={{ textAlign: 'right', padding: '7px 5px' }}>{cust.totalAmount.toFixed(2)}</td>
-                                    <td style={{ textAlign: 'right', padding: '7px 5px', color: '#1e40af' }}>{cust.passedAmount.toFixed(2)}</td>
-                                    <td style={{ 
-                                      textAlign: 'right', 
-                                      padding: '7px 5px', 
-                                      color: cust.netBalance > 0 ? '#dc2626' : (cust.netBalance < 0 ? '#1e40af' : '#16a34a') 
-                                    }}>
-                                      {cust.netBalance.toFixed(2)}
-                                    </td>
-                                  </tr>
-                                </tbody>
-                              </table>
+                                    <tr style={{ borderBottom: '1.5px solid #000000' }}>
+                                      <td style={{ padding: '8px 12px', fontWeight: 700, color: '#475569' }}>Total Received / Passed Amount (பெற்ற தொகை)</td>
+                                      <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#1e40af' }}>
+                                        ₹{cust.passedAmount.toFixed(2)}
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
 
                               {/* 4. Formal Dues / Advance Status Notice Box */}
                               <div style={{ 
-                                margin: '1rem 0', 
-                                padding: '0.85rem 1.25rem', 
+                                margin: '1rem 0 1.5rem 0', 
+                                padding: '1rem 1.25rem', 
                                 border: cust.netBalance > 0 ? '1.5px solid #dc2626' : (cust.netBalance < 0 ? '1.5px solid #1e40af' : '1.5px solid #16a34a'),
                                 borderRadius: '6px',
                                 background: cust.netBalance > 0 ? '#fef2f2' : (cust.netBalance < 0 ? '#eff6ff' : '#f0fdf4'),
@@ -3183,7 +3138,7 @@ export const SalesLedgerPage = () => {
                                   </div>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
-                                  <div style={{ fontSize: '1.35rem', fontWeight: 900, color: cust.netBalance > 0 ? '#dc2626' : (cust.netBalance < 0 ? '#1e40af' : '#16a34a') }}>
+                                  <div style={{ fontSize: '1.45rem', fontWeight: 900, color: cust.netBalance > 0 ? '#dc2626' : (cust.netBalance < 0 ? '#1e40af' : '#16a34a') }}>
                                     ₹{Math.abs(cust.netBalance).toFixed(2)}
                                   </div>
                                   {cust.netBalance < 0 && (
@@ -3195,11 +3150,11 @@ export const SalesLedgerPage = () => {
                               </div>
 
                               {/* 5. Formal Authorisation Signatures */}
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem', paddingTop: '1rem', fontSize: '0.85rem', fontWeight: 800 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2.5rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0', fontSize: '0.85rem', fontWeight: 800 }}>
                                 <div>Prepared & Verified By</div>
                                 <div style={{ textAlign: 'center' }}>
                                   <div>For SRI DURGA ENTERPRISES</div>
-                                  <div style={{ height: '35px' }}></div>
+                                  <div style={{ height: '40px' }}></div>
                                   <div>Authorised Signatory</div>
                                 </div>
                               </div>
