@@ -2054,8 +2054,15 @@ export const SalesLedgerPage = () => {
               
               {/* Section 1: Invoice Information */}
               <div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
-                  1. Invoice Information
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    1. Invoice Information
+                  </div>
+                  {editingItem && (
+                    <span style={{ fontSize: '0.7rem', color: '#94a3b8', background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      🔒 Locked (Read Only)
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                   <div>
@@ -2066,6 +2073,8 @@ export const SalesLedgerPage = () => {
                       required
                       placeholder="e.g. 61/25-26"
                       className="form-input"
+                      readOnly={!!editingItem}
+                      style={editingItem ? { cursor: 'not-allowed', opacity: 0.85, background: 'rgba(15, 23, 42, 0.65)' } : {}}
                       value={formData.invoiceNo}
                       onChange={handleInputChange}
                     />
@@ -2077,6 +2086,8 @@ export const SalesLedgerPage = () => {
                       name="invoiceDate"
                       required
                       className="form-input"
+                      readOnly={!!editingItem}
+                      style={editingItem ? { cursor: 'not-allowed', opacity: 0.85, background: 'rgba(15, 23, 42, 0.65)' } : {}}
                       value={formData.invoiceDate}
                       onChange={handleInputChange}
                     />
@@ -2088,6 +2099,8 @@ export const SalesLedgerPage = () => {
                       name="billedTo"
                       placeholder="e.g. M/s. Ocean Sparkle Ltd, Karaikal Port (GST: 34AAACO2519H1ZR)"
                       className="form-input"
+                      readOnly={!!editingItem}
+                      style={editingItem ? { cursor: 'not-allowed', opacity: 0.85, background: 'rgba(15, 23, 42, 0.65)' } : {}}
                       value={formData.billedTo}
                       onChange={handleInputChange}
                     />
@@ -2097,8 +2110,15 @@ export const SalesLedgerPage = () => {
 
               {/* Section 2: Financials & Tax Split */}
               <div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
-                  2. Taxable Value & GST Split
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    2. Taxable Value & GST Split
+                  </div>
+                  {editingItem && (
+                    <span style={{ fontSize: '0.7rem', color: '#94a3b8', background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      🔒 Locked (Read Only)
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
                   <div>
@@ -2110,6 +2130,8 @@ export const SalesLedgerPage = () => {
                       required
                       placeholder="0.00"
                       className="form-input"
+                      readOnly={!!editingItem}
+                      style={editingItem ? { cursor: 'not-allowed', opacity: 0.85, background: 'rgba(15, 23, 42, 0.65)' } : {}}
                       value={formData.taxableAmount}
                       onChange={handleInputChange}
                     />
@@ -2122,6 +2144,8 @@ export const SalesLedgerPage = () => {
                       name="igst"
                       placeholder="0.00"
                       className="form-input"
+                      readOnly={!!editingItem}
+                      style={editingItem ? { cursor: 'not-allowed', opacity: 0.85, background: 'rgba(15, 23, 42, 0.65)' } : {}}
                       value={formData.igst}
                       onChange={handleInputChange}
                     />
@@ -2134,6 +2158,8 @@ export const SalesLedgerPage = () => {
                       name="sgst"
                       placeholder="0.00"
                       className="form-input"
+                      readOnly={!!editingItem}
+                      style={editingItem ? { cursor: 'not-allowed', opacity: 0.85, background: 'rgba(15, 23, 42, 0.65)' } : {}}
                       value={formData.sgst}
                       onChange={handleInputChange}
                     />
@@ -2146,6 +2172,8 @@ export const SalesLedgerPage = () => {
                       name="ugst"
                       placeholder="0.00"
                       className="form-input"
+                      readOnly={!!editingItem}
+                      style={editingItem ? { cursor: 'not-allowed', opacity: 0.85, background: 'rgba(15, 23, 42, 0.65)' } : {}}
                       value={formData.ugst}
                       onChange={handleInputChange}
                     />
@@ -2161,7 +2189,8 @@ export const SalesLedgerPage = () => {
                       step="0.01"
                       name="taxAmount"
                       className="form-input"
-                      style={{ background: 'rgba(0,0,0,0.3)', fontWeight: 700, color: '#818cf8' }}
+                      readOnly
+                      style={{ background: 'rgba(0,0,0,0.3)', fontWeight: 700, color: '#818cf8', cursor: 'not-allowed' }}
                       value={formData.taxAmount}
                       onChange={handleInputChange}
                     />
@@ -2173,7 +2202,8 @@ export const SalesLedgerPage = () => {
                       step="0.01"
                       name="totalAmount"
                       className="form-input"
-                      style={{ background: 'rgba(0,0,0,0.3)', fontWeight: 900, color: '#34d399' }}
+                      readOnly
+                      style={{ background: 'rgba(0,0,0,0.3)', fontWeight: 900, color: '#34d399', cursor: 'not-allowed' }}
                       value={formData.totalAmount}
                       onChange={handleInputChange}
                     />
