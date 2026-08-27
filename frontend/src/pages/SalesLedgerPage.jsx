@@ -624,12 +624,30 @@ export const SalesLedgerPage = () => {
 
       // Payment Status (Passed vs Pending)
       let matchesStatus = true;
-      const isPassed = Number(item.passedAmount) > 0 || (item.passedDate && item.passedDate.trim() !== '');
+      const passed = Number(item.passedAmount) || 0;
+      const isPassed = passed > 0 || (item.passedDate && item.passedDate.trim() !== '');
       if (filterPaymentStatus === 'PASSED') matchesStatus = isPassed;
       if (filterPaymentStatus === 'PENDING') matchesStatus = !isPassed;
 
-      // Mode
-      const matchesMode = filterMode === 'ALL' || item.modeOfPayment === filterMode;
+      // Mode of Payment (Only invoices with realized/passed payment match specific modes)
+      const rawMode = (item.modeOfPayment || '').trim().toUpperCase();
+      const effectiveMode = (passed > 0 && rawMode && rawMode !== '-' && rawMode !== '--' && rawMode !== 'N/A') 
+        ? rawMode 
+        : '';
+
+      let matchesMode = true;
+      if (filterMode !== 'ALL') {
+        const targetMode = filterMode.trim().toUpperCase();
+        if (targetMode === 'UNPAID' || targetMode === 'NONE' || targetMode === '-') {
+          matchesMode = !effectiveMode;
+        } else {
+          matchesMode = Boolean(effectiveMode) && (
+            effectiveMode === targetMode || 
+            effectiveMode.includes(targetMode) || 
+            targetMode.includes(effectiveMode)
+          );
+        }
+      }
 
       // Date
       let matchesDate = true;

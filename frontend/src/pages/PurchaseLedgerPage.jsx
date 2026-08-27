@@ -447,8 +447,25 @@ export const PurchaseLedgerPage = () => {
       if (filterPaymentStatus === 'PARTIAL') matchesStatus = (paid > 0 && balance > 0);
       if (filterPaymentStatus === 'PENDING') matchesStatus = (paid === 0 && total > 0);
 
-      // Mode
-      const matchesMode = filterMode === 'ALL' || item.modeOfPayment === filterMode;
+      // Mode of Payment (Only rows where payment was actually made (paid > 0) match specific modes like NEFT, CASH, etc.)
+      const rawMode = (item.modeOfPayment || '').trim().toUpperCase();
+      const effectiveMode = (paid > 0 && rawMode && rawMode !== '-' && rawMode !== '--' && rawMode !== 'N/A') 
+        ? rawMode 
+        : '';
+
+      let matchesMode = true;
+      if (filterMode !== 'ALL') {
+        const targetMode = filterMode.trim().toUpperCase();
+        if (targetMode === 'UNPAID' || targetMode === 'NONE' || targetMode === '-') {
+          matchesMode = !effectiveMode;
+        } else {
+          matchesMode = Boolean(effectiveMode) && (
+            effectiveMode === targetMode || 
+            effectiveMode.includes(targetMode) || 
+            targetMode.includes(effectiveMode)
+          );
+        }
+      }
 
       // Date
       let matchesDate = true;
