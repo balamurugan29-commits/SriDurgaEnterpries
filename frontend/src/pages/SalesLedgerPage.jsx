@@ -58,11 +58,8 @@ const SALES_EXPORT_COLUMNS = [
   { key: 'remarks', label: 'Remarks', default: true }
 ];
 
-// Helper: Calculate Financial Year Start Date formatted (e.g. 01/04/2026, 01/04/2027 etc.)
-const getFinancialYearStartDate = (fromDate) => {
-  if (fromDate) {
-    return new Date(fromDate).toLocaleDateString('en-GB');
-  }
+// Helper: Calculate Active Financial Year Start Date formatted (e.g. 01/04/2026, 01/04/2027 etc.)
+const getActiveFinancialYearStartDate = () => {
   const today = new Date();
   const currentMonth = today.getMonth(); // 0 = Jan, 3 = Apr
   const currentYear = today.getFullYear();
@@ -70,11 +67,8 @@ const getFinancialYearStartDate = (fromDate) => {
   return `01/04/${fyStartYear}`;
 };
 
-// Helper: Get ISO Date for start of Financial Year (e.g. '2026-04-01', '2027-04-01')
-const getFinancialYearStartIso = (fromDate) => {
-  if (fromDate) {
-    return fromDate;
-  }
+// Helper: Get ISO Date for start of active Financial Year (e.g. '2026-04-01', '2027-04-01')
+const getActiveFinancialYearStartIso = () => {
   const today = new Date();
   const currentMonth = today.getMonth(); // 0 = Jan, 3 = Apr
   const currentYear = today.getFullYear();
@@ -776,7 +770,7 @@ export const SalesLedgerPage = () => {
       baseOpening = Number(customerOpenings['DEFAULT']) || 0;
     }
 
-    const cutoffDate = getFinancialYearStartIso(fromDate);
+    const cutoffDate = getActiveFinancialYearStartIso();
 
     // 2. Sum unpaid balances from prior invoices (dated before cutoffDate e.g. 01/04/2026, or previous FY /25-26)
     let priorUnpaid = 0;
@@ -799,7 +793,7 @@ export const SalesLedgerPage = () => {
     });
 
     return baseOpening + priorUnpaid;
-  }, [customerOpenings, filterCustomer, resolvedCustomerName, fromDate, ledgerEntries]);
+  }, [customerOpenings, filterCustomer, resolvedCustomerName, ledgerEntries]);
 
   // Handler to set/save Opening Balance for current customer
   const handleSaveOpeningBalance = (newAmount) => {
@@ -2524,7 +2518,7 @@ export const SalesLedgerPage = () => {
                     Customer Sales Ledger for: <span style={{ textDecoration: 'underline' }}>{filterCustomer && filterCustomer.trim() ? resolvedCustomerName.toUpperCase() : 'ALL CUSTOMERS'}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#000000', fontSize: '0.9rem', fontWeight: 800, padding: '0 1rem' }}>
-                    <span>From: &nbsp; {getFinancialYearStartDate(fromDate)} &nbsp; To: &nbsp; {toDate ? new Date(toDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}</span>
+                    <span>From: &nbsp; {getActiveFinancialYearStartDate()} &nbsp; To: &nbsp; {toDate ? new Date(toDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}</span>
                     <span>Page No &nbsp; 1</span>
                   </div>
                 </div>
@@ -2535,7 +2529,7 @@ export const SalesLedgerPage = () => {
                 {/* 3. Dynamic Columns Statement Table */}
                 {(() => {
                   const activeStatementCols = SALES_EXPORT_COLUMNS.filter(col => exportSelectedCols[col.key]);
-                  const cutoffDate = getFinancialYearStartIso(fromDate);
+                  const cutoffDate = getActiveFinancialYearStartIso();
 
                   // Filter out invoices that belong to prior years because they are already rolled into Opening Balance!
                   const rawEntries = exportScope === 'ALL' ? ledgerEntries : filteredLedgers;
@@ -2543,7 +2537,7 @@ export const SalesLedgerPage = () => {
                     if (item.invoiceDate && item.invoiceDate < cutoffDate) {
                       return false;
                     }
-                    if (!item.invoiceDate && item.invoiceNo && (item.invoiceNo.includes('/25-26') || item.invoiceNo.includes('/24-25')) && !fromDate) {
+                    if (!item.invoiceDate && item.invoiceNo && (item.invoiceNo.includes('/25-26') || item.invoiceNo.includes('/24-25'))) {
                       return false;
                     }
                     return true;
@@ -2595,7 +2589,7 @@ export const SalesLedgerPage = () => {
                             if (col.key === 'invoiceDate') {
                               return (
                                 <td key={col.key} style={{ textAlign: 'center', padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>
-                                  {getFinancialYearStartDate(fromDate)}
+                                  {getActiveFinancialYearStartDate()}
                                 </td>
                               );
                             }
