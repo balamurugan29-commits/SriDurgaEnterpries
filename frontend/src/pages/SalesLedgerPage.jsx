@@ -2518,7 +2518,7 @@ export const SalesLedgerPage = () => {
                     Customer Sales Ledger for: <span style={{ textDecoration: 'underline' }}>{filterCustomer && filterCustomer.trim() ? resolvedCustomerName.toUpperCase() : 'ALL CUSTOMERS'}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#000000', fontSize: '0.9rem', fontWeight: 800, padding: '0 1rem' }}>
-                    <span>From: &nbsp; {getActiveFinancialYearStartDate()} &nbsp; To: &nbsp; {toDate ? new Date(toDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}</span>
+                    <span>From: &nbsp; {fromDate ? new Date(fromDate).toLocaleDateString('en-GB') : (statementEntries.length > 0 && statementEntries[statementEntries.length - 1].invoiceDate ? new Date(statementEntries[statementEntries.length - 1].invoiceDate).toLocaleDateString('en-GB') : getActiveFinancialYearStartDate())} &nbsp; To: &nbsp; {toDate ? new Date(toDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}</span>
                     <span>Page No &nbsp; 1</span>
                   </div>
                 </div>
@@ -2529,19 +2529,12 @@ export const SalesLedgerPage = () => {
                 {/* 3. Dynamic Columns Statement Table */}
                 {(() => {
                   const activeStatementCols = SALES_EXPORT_COLUMNS.filter(col => exportSelectedCols[col.key]);
-                  const cutoffDate = getActiveFinancialYearStartIso();
 
-                  // Filter out invoices that belong to prior years because they are already rolled into Opening Balance!
+                  // When no fromDate is specified, include all matching customer entries in full!
                   const rawEntries = exportScope === 'ALL' ? ledgerEntries : filteredLedgers;
-                  const statementEntries = rawEntries.filter(item => {
-                    if (item.invoiceDate && item.invoiceDate < cutoffDate) {
-                      return false;
-                    }
-                    if (!item.invoiceDate && item.invoiceNo && (item.invoiceNo.includes('/25-26') || item.invoiceNo.includes('/24-25'))) {
-                      return false;
-                    }
-                    return true;
-                  });
+                  const statementEntries = fromDate 
+                    ? rawEntries.filter(item => !item.invoiceDate || item.invoiceDate >= fromDate)
+                    : rawEntries;
 
                   let sumTaxable = 0, sumIgst = 0, sumSgst = 0, sumUgst = 0, sumTax = 0, sumTotal = 0, sumItTds = 0, sumGstTds = 0, sumPassed = 0;
                   statementEntries.forEach(item => {
@@ -2589,7 +2582,7 @@ export const SalesLedgerPage = () => {
                             if (col.key === 'invoiceDate') {
                               return (
                                 <td key={col.key} style={{ textAlign: 'center', padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>
-                                  {getActiveFinancialYearStartDate()}
+                                  {fromDate ? new Date(fromDate).toLocaleDateString('en-GB') : getActiveFinancialYearStartDate()}
                                 </td>
                               );
                             }
