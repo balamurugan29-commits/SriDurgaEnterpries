@@ -154,6 +154,15 @@ export const SalesLedgerPage = () => {
   const [toDate, setToDate] = useState('');
   const [periodPreset, setPeriodPreset] = useState('ALL');
 
+  // Pagination States (Page Split & Page Size Selector)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50); // 25, 50, 100, 250, 'ALL'
+
+  // Reset page when filter criteria changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterCustomer, filterPaymentStatus, filterMode, fromDate, toDate, periodPreset]);
+
   // Automatic Fetch & Merge from Tax Invoice History (DeliveryChallans)
   const loadAllSalesLedgerData = async () => {
     try {
@@ -610,7 +619,23 @@ export const SalesLedgerPage = () => {
     });
   }, [ledgerEntries, searchQuery, filterCustomer, filterPaymentStatus, filterMode, fromDate, toDate]);
 
-  // Select All & Bulk Selection Handlers (Defined after filteredLedgers)
+  // Pagination Slice Calculation
+  const totalPages = pageSize === 'ALL' ? 1 : Math.max(1, Math.ceil(filteredLedgers.length / (Number(pageSize) || 50)));
+  const effectivePage = Math.min(currentPage, totalPages);
+  const startIndex = pageSize === 'ALL' ? 0 : (effectivePage - 1) * Number(pageSize);
+  const endIndex = pageSize === 'ALL' ? filteredLedgers.length : Math.min(startIndex + Number(pageSize), filteredLedgers.length);
+  const paginatedLedgers = useMemo(() => {
+    return filteredLedgers.slice(startIndex, endIndex);
+  }, [filteredLedgers, startIndex, endIndex]);
+
+  // Safe Date Formatting Helper to prevent "Invalid Date"
+  const formatCellDate = (val) => {
+    if (!val || val === '-' || val === '--' || String(val).trim() === '') return '-';
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? String(val) : d.toLocaleDateString('en-GB');
+  };
+
+  // Select All & Bulk Selection Handlers
   const isAllSelected = filteredLedgers.length > 0 && selectedItemIds.length === filteredLedgers.length;
   const isIndeterminate = selectedItemIds.length > 0 && selectedItemIds.length < filteredLedgers.length;
 
@@ -1328,13 +1353,22 @@ export const SalesLedgerPage = () => {
           </div>
         )}
 
-        <div className="custom-table-container" style={{ border: 'none', borderRadius: 0, overflowX: 'auto' }}>
+        <div 
+          className="custom-table-container" 
+          style={{ 
+            border: 'none', 
+            borderRadius: 0, 
+            overflowX: 'auto',
+            overflowY: 'auto',
+            maxHeight: 'calc(100vh - 320px)',
+            position: 'relative'
+          }}
+        >
           <table className="custom-table" style={{ fontSize: '0.825rem', borderCollapse: 'collapse', width: '100%' }}>
             <thead>
-              {/* Main Header Row */}
-              <tr style={{ background: 'rgba(30, 41, 59, 0.95)', textAlign: 'center' }}>
-                {/* Select All Checkbox */}
-                <th rowSpan={2} style={{ width: '45px', textAlign: 'center', verticalAlign: 'middle', borderRight: '1px solid rgba(255,255,255,0.1)' }} className="no-print">
+              {/* Top Grouped Header Row */}
+              <tr style={{ background: '#0f172a', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', position: 'sticky', top: 0, zIndex: 16 }}>
+                <th rowSpan={2} style={{ width: '45px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', background: '#0f172a' }} className="no-print">
                   <input
                     type="checkbox"
                     style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#6366f1' }}
@@ -1346,74 +1380,55 @@ export const SalesLedgerPage = () => {
                     title="Select All / Deselect All Invoices"
                   />
                 </th>
-                <th rowSpan={2} style={{ width: '45px', verticalAlign: 'middle', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
-                  Sl. No.
+                <th rowSpan={2} style={{ width: '55px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', background: '#0f172a' }}>Sl. No.</th>
+                <th rowSpan={2} style={{ width: '110px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#fbbf24', background: '#0f172a' }}>INVOICE NO</th>
+                <th rowSpan={2} style={{ width: '95px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', background: '#0f172a' }}>INVOICE Date</th>
+                <th rowSpan={2} style={{ minWidth: '160px', borderRight: '1px solid rgba(255,255,255,0.1)', background: '#0f172a' }}>Billed To</th>
+                <th rowSpan={2} style={{ width: '115px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#38bdf8', background: '#0f172a' }}>Taxable Amount</th>
+                
+                {/* Group: GST Breakdown */}
+                <th colSpan={3} style={{ background: '#1e293b', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#fde047', fontSize: '0.75rem', padding: '4px' }}>
+                  GST BREAKDOWN
                 </th>
-                <th colSpan={2} style={{ textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', fontWeight: 800 }}>
-                  INVOICE
+
+                <th rowSpan={2} style={{ width: '105px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#818cf8', background: '#0f172a' }}>Tax Amount</th>
+                <th rowSpan={2} style={{ width: '125px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#34d399', fontWeight: 800, background: '#0f172a' }}>Total Amount</th>
+                <th rowSpan={2} style={{ width: '95px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#f87171', background: '#0f172a' }}>IT TDS (2%)</th>
+                <th rowSpan={2} style={{ width: '95px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#f87171', background: '#0f172a' }}>GST TDS (2%)</th>
+                
+                {/* Group: Passed Payment */}
+                <th colSpan={2} style={{ background: '#064e3b', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#6ee7b7', fontSize: '0.75rem', padding: '4px' }}>
+                  PASSED / REALIZED
                 </th>
-                <th rowSpan={2} style={{ verticalAlign: 'middle', minWidth: '170px', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
-                  Billed To
-                </th>
-                <th rowSpan={2} style={{ verticalAlign: 'middle', width: '115px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
-                  Taxable Amount
-                </th>
-                <th colSpan={3} style={{ textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', fontWeight: 800 }}>
-                  GST
-                </th>
-                <th rowSpan={2} style={{ verticalAlign: 'middle', width: '100px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#818cf8' }}>
-                  Tax Amount
-                </th>
-                <th rowSpan={2} style={{ verticalAlign: 'middle', width: '115px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#34d399', fontWeight: 800 }}>
-                  Total Amount
-                </th>
-                <th rowSpan={2} style={{ verticalAlign: 'middle', width: '80px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
-                  IT
-                </th>
-                <th rowSpan={2} style={{ verticalAlign: 'middle', width: '80px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
-                  GST TDS
-                </th>
-                <th colSpan={2} style={{ textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontWeight: 800 }}>
-                  Passed
-                </th>
-                <th rowSpan={2} style={{ verticalAlign: 'middle', width: '110px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
-                  Mode of Payment
-                </th>
-                <th rowSpan={2} style={{ verticalAlign: 'middle', minWidth: '150px', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#38bdf8' }}>
-                  Remarks
-                </th>
-                <th rowSpan={2} style={{ verticalAlign: 'middle', width: '75px', textAlign: 'center' }} className="no-print">
-                  Actions
-                </th>
+
+                <th rowSpan={2} style={{ width: '100px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', background: '#0f172a' }}>Mode of Payment</th>
+                <th rowSpan={2} style={{ minWidth: '150px', borderRight: '1px solid rgba(255,255,255,0.1)', background: '#0f172a' }}>Remarks</th>
+                <th rowSpan={2} style={{ width: '120px', textAlign: 'center', background: '#0f172a' }} className="no-print">Actions</th>
               </tr>
 
-              {/* Sub-Header Row */}
-              <tr style={{ background: 'rgba(15, 23, 42, 0.95)', fontSize: '0.75rem' }}>
-                {/* Under INVOICE */}
-                <th style={{ width: '105px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#93c5fd' }}>NO</th>
-                <th style={{ width: '85px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#93c5fd' }}>Date</th>
-
-                {/* Under GST */}
-                <th style={{ width: '85px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#fde047' }}>IGST</th>
-                <th style={{ width: '85px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#fde047' }}>SGST</th>
-                <th style={{ width: '85px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#fde047' }}>UGST</th>
+              {/* Sub-header Row for Grouped Columns */}
+              <tr style={{ background: '#0f172a', textAlign: 'center', position: 'sticky', top: '28px', zIndex: 15, boxShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
+                {/* Under GST Breakdown */}
+                <th style={{ width: '85px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#fde047', background: '#1e293b' }}>IGST</th>
+                <th style={{ width: '85px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#fde047', background: '#1e293b' }}>SGST</th>
+                <th style={{ width: '85px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#fde047', background: '#1e293b' }}>UGST</th>
 
                 {/* Under Passed */}
-                <th style={{ width: '105px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#86efac' }}>Amount</th>
-                <th style={{ width: '85px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#86efac' }}>Date</th>
+                <th style={{ width: '105px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#86efac', background: '#064e3b' }}>Amount</th>
+                <th style={{ width: '85px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#86efac', background: '#064e3b' }}>Date</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={16} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <td colSpan={17} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                     <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 0.5rem auto' }} />
                     <p style={{ margin: 0 }}>Auto-fetching Tax Invoices from History...</p>
                   </td>
                 </tr>
               ) : filteredLedgers.length === 0 ? (
                 <tr>
-                  <td colSpan={16} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <td colSpan={17} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                     <BookOpen size={32} style={{ margin: '0 auto 0.75rem auto', opacity: 0.4 }} />
                     <p style={{ fontWeight: 600, color: 'white', marginBottom: '0.35rem' }}>No Tax Invoices found</p>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-subtle)', marginBottom: '1rem' }}>
@@ -1425,13 +1440,14 @@ export const SalesLedgerPage = () => {
                   </td>
                 </tr>
               ) : (
-                filteredLedgers.map((l, idx) => {
+                paginatedLedgers.map((l, pIdx) => {
+                  const globalIdx = startIndex + pIdx;
                   const isPassed = Number(l.passedAmount) > 0 || (l.passedDate && l.passedDate.trim() !== '');
-                  const itemKey = l.id || l.invoiceNo || idx;
+                  const itemKey = l.id || l.invoiceNo || globalIdx;
                   const isSelected = selectedItemIds.includes(itemKey);
 
                   return (
-                    <tr key={l.invoiceNo || idx} style={{ background: isSelected ? 'rgba(99, 102, 241, 0.14)' : undefined }}>
+                    <tr key={l.invoiceNo || globalIdx} style={{ background: isSelected ? 'rgba(99, 102, 241, 0.14)' : undefined }}>
                       {/* Row Checkbox */}
                       <td style={{ textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.05)' }} className="no-print">
                         <input
@@ -1444,7 +1460,7 @@ export const SalesLedgerPage = () => {
 
                       {/* Sl. No. */}
                       <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)' }}>
-                        {idx + 1}
+                        {globalIdx + 1}
                       </td>
 
                       {/* INVOICE NO */}
@@ -1456,7 +1472,7 @@ export const SalesLedgerPage = () => {
 
                       {/* INVOICE Date */}
                       <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
-                        {l.invoiceDate ? new Date(l.invoiceDate).toLocaleDateString('en-GB') : '-'}
+                        {formatCellDate(l.invoiceDate)}
                       </td>
 
                       {/* Billed To */}
@@ -1511,7 +1527,7 @@ export const SalesLedgerPage = () => {
 
                       {/* Passed -> Date */}
                       <td style={{ textAlign: 'center', fontSize: '0.78rem', color: l.passedDate ? '#34d399' : 'var(--text-subtle)' }}>
-                        {l.passedDate ? new Date(l.passedDate).toLocaleDateString('en-GB') : '-'}
+                        {formatCellDate(l.passedDate)}
                       </td>
 
                       {/* Mode of Payment */}
@@ -1604,51 +1620,146 @@ export const SalesLedgerPage = () => {
             {/* Table Grand Total Summary Footer */}
             {filteredLedgers.length > 0 && (
               <tfoot>
-                <tr style={{ background: 'rgba(15, 23, 42, 0.98)', borderTop: '2px solid rgba(99, 102, 241, 0.6)', fontWeight: 900 }}>
-                  <td colSpan={4} style={{ textAlign: 'right', padding: '0.85rem 1rem', color: '#f8fafc', fontSize: '0.9rem' }}>
+                <tr style={{ background: '#0f172a', borderTop: '2px solid rgba(99, 102, 241, 0.6)', fontWeight: 900, position: 'sticky', bottom: 0, zIndex: 14, boxShadow: '0 -2px 8px rgba(0,0,0,0.6)' }}>
+                  <td colSpan={5} style={{ textAlign: 'right', padding: '0.85rem 1rem', color: '#f8fafc', fontSize: '0.9rem', background: '#0f172a' }}>
                     GRAND TOTALS:
                   </td>
                   {/* Taxable Amount */}
-                  <td style={{ textAlign: 'right', color: '#38bdf8', fontSize: '0.9rem' }}>
+                  <td style={{ textAlign: 'right', color: '#38bdf8', fontSize: '0.9rem', background: '#0f172a' }}>
                     ₹{totals.taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   {/* IGST */}
-                  <td style={{ textAlign: 'right', color: '#fde047', fontSize: '0.85rem' }}>
+                  <td style={{ textAlign: 'right', color: '#fde047', fontSize: '0.85rem', background: '#0f172a' }}>
                     ₹{totals.igst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   {/* SGST */}
-                  <td style={{ textAlign: 'right', color: '#fde047', fontSize: '0.85rem' }}>
+                  <td style={{ textAlign: 'right', color: '#fde047', fontSize: '0.85rem', background: '#0f172a' }}>
                     ₹{totals.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   {/* UGST */}
-                  <td style={{ textAlign: 'right', color: '#fde047', fontSize: '0.85rem' }}>
+                  <td style={{ textAlign: 'right', color: '#fde047', fontSize: '0.85rem', background: '#0f172a' }}>
                     ₹{totals.ugst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   {/* Tax Amount */}
-                  <td style={{ textAlign: 'right', color: '#818cf8', fontSize: '0.9rem' }}>
+                  <td style={{ textAlign: 'right', color: '#818cf8', fontSize: '0.9rem', background: '#0f172a' }}>
                     ₹{totals.taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   {/* Total Amount */}
-                  <td style={{ textAlign: 'right', color: '#34d399', fontSize: '1rem', fontWeight: 900 }}>
+                  <td style={{ textAlign: 'right', color: '#34d399', fontSize: '1rem', fontWeight: 900, background: '#0f172a' }}>
                     ₹{totals.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   {/* IT */}
-                  <td style={{ textAlign: 'right', color: '#f87171', fontSize: '0.85rem' }}>
+                  <td style={{ textAlign: 'right', color: '#f87171', fontSize: '0.85rem', background: '#0f172a' }}>
                     ₹{totals.itTds.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   {/* GST TDS */}
-                  <td style={{ textAlign: 'right', color: '#f87171', fontSize: '0.85rem' }}>
+                  <td style={{ textAlign: 'right', color: '#f87171', fontSize: '0.85rem', background: '#0f172a' }}>
                     ₹{totals.gstTds.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   {/* Passed Amount */}
-                  <td style={{ textAlign: 'right', color: '#fbbf24', fontSize: '0.95rem' }}>
+                  <td style={{ textAlign: 'right', color: '#fbbf24', fontSize: '0.95rem', background: '#0f172a' }}>
                     ₹{totals.passedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
-                  <td colSpan={3} className="no-print"></td>
+                  <td colSpan={3} className="no-print" style={{ background: '#0f172a' }}></td>
                 </tr>
               </tfoot>
             )}
           </table>
+        </div>
+
+        {/* PAGINATION & BOTTOM STATUS BAR */}
+        <div 
+          className="no-print"
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            flexWrap: 'wrap', 
+            gap: '1rem',
+            padding: '0.85rem 1.5rem', 
+            background: 'rgba(15, 23, 42, 0.98)', 
+            borderTop: '1px solid var(--border-color)',
+            fontSize: '0.825rem',
+            color: 'var(--text-muted)'
+          }}
+        >
+          {/* Left: Row Counts & Page Size Dropdown */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <span>
+              Showing <strong style={{ color: '#f8fafc' }}>{filteredLedgers.length === 0 ? 0 : startIndex + 1} - {endIndex}</strong> of <strong style={{ color: '#f8fafc' }}>{filteredLedgers.length}</strong> Invoices
+            </span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.75rem' }}>Rows per page:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  const val = e.target.value === 'ALL' ? 'ALL' : Number(e.target.value);
+                  setPageSize(val);
+                  setCurrentPage(1);
+                }}
+                className="form-input"
+                style={{ width: 'auto', padding: '0.25rem 0.5rem', fontSize: '0.8rem', height: '30px' }}
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={250}>250</option>
+                <option value="ALL">All ({filteredLedgers.length})</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Right: Page Navigation Buttons */}
+          {pageSize !== 'ALL' && totalPages > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(1)}
+                disabled={effectivePage <= 1}
+                className="btn btn-outline"
+                style={{ padding: '0.3rem 0.6rem', fontSize: '0.78rem' }}
+                title="First Page"
+              >
+                « First
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={effectivePage <= 1}
+                className="btn btn-outline"
+                style={{ padding: '0.3rem 0.6rem', fontSize: '0.78rem' }}
+                title="Previous Page"
+              >
+                ‹ Prev
+              </button>
+
+              <span style={{ padding: '0 0.5rem', fontWeight: 700, color: '#f8fafc' }}>
+                Page {effectivePage} of {totalPages}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={effectivePage >= totalPages}
+                className="btn btn-outline"
+                style={{ padding: '0.3rem 0.6rem', fontSize: '0.78rem' }}
+                title="Next Page"
+              >
+                Next ›
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={effectivePage >= totalPages}
+                className="btn btn-outline"
+                style={{ padding: '0.3rem 0.6rem', fontSize: '0.78rem' }}
+                title="Last Page"
+              >
+                Last »
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

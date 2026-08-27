@@ -152,6 +152,15 @@ export const PurchaseLedgerPage = () => {
   const [toDate, setToDate] = useState('');
   const [periodPreset, setPeriodPreset] = useState('ALL');
 
+  // Pagination States (Page Split & Page Size Selector)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50); // 25, 50, 100, 250, 'ALL'
+
+  // Reset page when filter criteria changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterDealer, filterPaymentStatus, filterMode, fromDate, toDate, periodPreset]);
+
   // Load Purchase Ledger Data
   const loadPurchaseData = async () => {
     try {
@@ -410,7 +419,23 @@ export const PurchaseLedgerPage = () => {
     });
   }, [purchaseEntries, searchQuery, filterDealer, filterPaymentStatus, filterMode, fromDate, toDate]);
 
-  // Select All & Bulk Selection Handlers (Defined after filteredPurchases)
+  // Pagination Slice Calculation
+  const totalPages = pageSize === 'ALL' ? 1 : Math.max(1, Math.ceil(filteredPurchases.length / (Number(pageSize) || 50)));
+  const effectivePage = Math.min(currentPage, totalPages);
+  const startIndex = pageSize === 'ALL' ? 0 : (effectivePage - 1) * Number(pageSize);
+  const endIndex = pageSize === 'ALL' ? filteredPurchases.length : Math.min(startIndex + Number(pageSize), filteredPurchases.length);
+  const paginatedPurchases = useMemo(() => {
+    return filteredPurchases.slice(startIndex, endIndex);
+  }, [filteredPurchases, startIndex, endIndex]);
+
+  // Safe Date Formatting Helper to prevent "Invalid Date"
+  const formatCellDate = (val) => {
+    if (!val || val === '-' || val === '--' || String(val).trim() === '') return '-';
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? String(val) : d.toLocaleDateString('en-GB');
+  };
+
+  // Select All & Bulk Selection Handlers
   const isAllSelected = filteredPurchases.length > 0 && selectedItemIds.length === filteredPurchases.length;
   const isIndeterminate = selectedItemIds.length > 0 && selectedItemIds.length < filteredPurchases.length;
 
@@ -1430,12 +1455,22 @@ export const PurchaseLedgerPage = () => {
           </div>
         )}
 
-        <div className="custom-table-container" style={{ border: 'none', borderRadius: 0, overflowX: 'auto' }}>
+        <div 
+          className="custom-table-container" 
+          style={{ 
+            border: 'none', 
+            borderRadius: 0, 
+            overflowX: 'auto',
+            overflowY: 'auto',
+            maxHeight: 'calc(100vh - 320px)',
+            position: 'relative'
+          }}
+        >
           <table className="custom-table" style={{ fontSize: '0.825rem', borderCollapse: 'collapse', width: '100%' }}>
             <thead>
-              <tr style={{ background: 'rgba(30, 41, 59, 0.95)', textAlign: 'left' }}>
+              <tr style={{ background: '#0f172a', textAlign: 'left', position: 'sticky', top: 0, zIndex: 15, boxShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
                 {/* Select All Checkbox */}
-                <th style={{ width: '45px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)' }} className="no-print">
+                <th style={{ width: '45px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', background: '#0f172a' }} className="no-print">
                   <input
                     type="checkbox"
                     style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#ec4899' }}
@@ -1447,40 +1482,40 @@ export const PurchaseLedgerPage = () => {
                     title="Select All / Deselect All Bills"
                   />
                 </th>
-                <th style={{ width: '55px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
+                <th style={{ width: '55px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', background: '#0f172a' }}>
                   Sl.No.
                 </th>
-                <th style={{ minWidth: '180px', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#fbcfe8' }}>
+                <th style={{ minWidth: '180px', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#fbcfe8', background: '#0f172a' }}>
                   Name of Dealer/Store
                 </th>
-                <th style={{ width: '120px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#f472b6' }}>
+                <th style={{ width: '120px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#f472b6', background: '#0f172a' }}>
                   Invoice No.
                 </th>
-                <th style={{ width: '95px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)' }}>
+                <th style={{ width: '95px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', background: '#0f172a' }}>
                   Date
                 </th>
-                <th style={{ width: '120px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#38bdf8' }}>
+                <th style={{ width: '120px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#38bdf8', background: '#0f172a' }}>
                   Taxable Amount
                 </th>
-                <th style={{ width: '105px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#818cf8' }}>
+                <th style={{ width: '105px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#818cf8', background: '#0f172a' }}>
                   Tax
                 </th>
-                <th style={{ width: '125px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#f472b6', fontWeight: 800 }}>
+                <th style={{ width: '125px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#f472b6', fontWeight: 800, background: '#0f172a' }}>
                   Total Amount
                 </th>
-                <th style={{ width: '120px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#34d399', fontWeight: 700 }}>
+                <th style={{ width: '120px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#34d399', fontWeight: 700, background: '#0f172a' }}>
                   Paid Amount
                 </th>
-                <th style={{ width: '95px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#34d399' }}>
+                <th style={{ width: '95px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#34d399', background: '#0f172a' }}>
                   Payment Date
                 </th>
-                <th style={{ width: '110px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
+                <th style={{ width: '110px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', background: '#0f172a' }}>
                   Mode of Payment
                 </th>
-                <th style={{ width: '120px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#fbbf24', fontWeight: 800 }}>
+                <th style={{ width: '120px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#fbbf24', fontWeight: 800, background: '#0f172a' }}>
                   Balance Amount
                 </th>
-                <th style={{ width: '75px', textAlign: 'center' }} className="no-print">
+                <th style={{ width: '75px', textAlign: 'center', background: '#0f172a' }} className="no-print">
                   Actions
                 </th>
               </tr>
@@ -1488,14 +1523,14 @@ export const PurchaseLedgerPage = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={12} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <td colSpan={13} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                     <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 0.5rem auto' }} />
                     <p style={{ margin: 0 }}>Loading Purchase Ledger entries...</p>
                   </td>
                 </tr>
               ) : filteredPurchases.length === 0 ? (
                 <tr>
-                  <td colSpan={12} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <td colSpan={13} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                     <ShoppingBag size={32} style={{ margin: '0 auto 0.75rem auto', opacity: 0.4, color: '#f472b6' }} />
                     <p style={{ fontWeight: 600, color: 'white', marginBottom: '0.35rem' }}>No Purchase Ledger records found</p>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-subtle)', marginBottom: '1rem' }}>
@@ -1507,7 +1542,8 @@ export const PurchaseLedgerPage = () => {
                   </td>
                 </tr>
               ) : (
-                filteredPurchases.map((l, idx) => {
+                paginatedPurchases.map((l, pIdx) => {
+                  const globalIdx = startIndex + pIdx;
                   const taxable = Number(l.taxableAmount) || 0;
                   const tax = Number(l.taxAmount) || 0;
                   const total = Number(l.totalAmount) || (taxable + tax);
@@ -1516,7 +1552,7 @@ export const PurchaseLedgerPage = () => {
                   const isSelected = selectedItemIds.includes(l.id);
 
                   return (
-                    <tr key={l.id || idx} style={{ background: isSelected ? 'rgba(236, 72, 153, 0.14)' : undefined }}>
+                    <tr key={l.id || globalIdx} style={{ background: isSelected ? 'rgba(236, 72, 153, 0.14)' : undefined }}>
                       {/* Row Checkbox */}
                       <td style={{ textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.05)' }} className="no-print">
                         <input
@@ -1529,7 +1565,7 @@ export const PurchaseLedgerPage = () => {
 
                       {/* Sl.No. */}
                       <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)' }}>
-                        {idx + 1}
+                        {globalIdx + 1}
                       </td>
 
                       {/* Name of Dealer/Store */}
@@ -1546,7 +1582,7 @@ export const PurchaseLedgerPage = () => {
 
                       {/* Date */}
                       <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
-                        {l.invoiceDate ? new Date(l.invoiceDate).toLocaleDateString('en-GB') : '-'}
+                        {formatCellDate(l.invoiceDate)}
                       </td>
 
                       {/* Taxable Amount */}
@@ -1571,7 +1607,7 @@ export const PurchaseLedgerPage = () => {
 
                       {/* Payment Date */}
                       <td style={{ textAlign: 'center', fontSize: '0.78rem', color: (l.paymentDate || l.passedDate) ? '#34d399' : 'var(--text-subtle)' }}>
-                        {(l.paymentDate || l.passedDate) ? new Date(l.paymentDate || l.passedDate).toLocaleDateString('en-GB') : '-'}
+                        {formatCellDate(l.paymentDate || l.passedDate)}
                       </td>
 
                       {/* Mode of Payment */}
@@ -1623,37 +1659,132 @@ export const PurchaseLedgerPage = () => {
             {/* Table Grand Total Summary Footer */}
             {filteredPurchases.length > 0 && (
               <tfoot>
-                <tr style={{ background: 'rgba(15, 23, 42, 0.98)', borderTop: '2px solid rgba(236, 72, 153, 0.6)', fontWeight: 900 }}>
-                  <td colSpan={5} style={{ textAlign: 'right', padding: '0.85rem 1rem', color: '#f8fafc', fontSize: '0.9rem' }}>
+                <tr style={{ background: '#0f172a', borderTop: '2px solid rgba(236, 72, 153, 0.6)', fontWeight: 900, position: 'sticky', bottom: 0, zIndex: 14, boxShadow: '0 -2px 8px rgba(0,0,0,0.6)' }}>
+                  <td colSpan={5} style={{ textAlign: 'right', padding: '0.85rem 1rem', color: '#f8fafc', fontSize: '0.9rem', background: '#0f172a' }}>
                     GRAND TOTALS:
                   </td>
                   {/* Taxable Amount */}
-                  <td style={{ textAlign: 'right', color: '#38bdf8', fontSize: '0.9rem' }}>
+                  <td style={{ textAlign: 'right', color: '#38bdf8', fontSize: '0.9rem', background: '#0f172a' }}>
                     ₹{totals.taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   {/* Tax */}
-                  <td style={{ textAlign: 'right', color: '#818cf8', fontSize: '0.9rem' }}>
+                  <td style={{ textAlign: 'right', color: '#818cf8', fontSize: '0.9rem', background: '#0f172a' }}>
                     ₹{totals.taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   {/* Total Amount */}
-                  <td style={{ textAlign: 'right', color: '#f472b6', fontSize: '1rem', fontWeight: 900 }}>
+                  <td style={{ textAlign: 'right', color: '#f472b6', fontSize: '1rem', fontWeight: 900, background: '#0f172a' }}>
                     ₹{totals.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   {/* Paid Amount */}
-                  <td style={{ textAlign: 'right', color: '#34d399', fontSize: '0.95rem' }}>
+                  <td style={{ textAlign: 'right', color: '#34d399', fontSize: '0.95rem', background: '#0f172a' }}>
                     ₹{totals.paidAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
-                  <td style={{ textAlign: 'center' }}>-</td>
-                  <td style={{ textAlign: 'center' }}>-</td>
+                  <td style={{ textAlign: 'center', background: '#0f172a' }}>-</td>
+                  <td style={{ textAlign: 'center', background: '#0f172a' }}>-</td>
                   {/* Balance Amount */}
-                  <td style={{ textAlign: 'right', color: totals.balanceAmount > 0 ? '#fbbf24' : '#34d399', fontSize: '0.95rem' }}>
+                  <td style={{ textAlign: 'right', color: totals.balanceAmount > 0 ? '#fbbf24' : '#34d399', fontSize: '0.95rem', background: '#0f172a' }}>
                     ₹{totals.balanceAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
-                  <td className="no-print"></td>
+                  <td className="no-print" style={{ background: '#0f172a' }}></td>
                 </tr>
               </tfoot>
             )}
           </table>
+        </div>
+
+        {/* PAGINATION & BOTTOM STATUS BAR */}
+        <div 
+          className="no-print"
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            flexWrap: 'wrap', 
+            gap: '1rem',
+            padding: '0.85rem 1.5rem', 
+            background: 'rgba(15, 23, 42, 0.98)', 
+            borderTop: '1px solid var(--border-color)',
+            fontSize: '0.825rem',
+            color: 'var(--text-muted)'
+          }}
+        >
+          {/* Left: Row Counts & Page Size Dropdown */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <span>
+              Showing <strong style={{ color: '#f8fafc' }}>{filteredPurchases.length === 0 ? 0 : startIndex + 1} - {endIndex}</strong> of <strong style={{ color: '#f8fafc' }}>{filteredPurchases.length}</strong> Purchase Bills
+            </span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.75rem' }}>Rows per page:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  const val = e.target.value === 'ALL' ? 'ALL' : Number(e.target.value);
+                  setPageSize(val);
+                  setCurrentPage(1);
+                }}
+                className="form-input"
+                style={{ width: 'auto', padding: '0.25rem 0.5rem', fontSize: '0.8rem', height: '30px' }}
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={250}>250</option>
+                <option value="ALL">All ({filteredPurchases.length})</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Right: Page Navigation Buttons */}
+          {pageSize !== 'ALL' && totalPages > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(1)}
+                disabled={effectivePage <= 1}
+                className="btn btn-outline"
+                style={{ padding: '0.3rem 0.6rem', fontSize: '0.78rem' }}
+                title="First Page"
+              >
+                « First
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={effectivePage <= 1}
+                className="btn btn-outline"
+                style={{ padding: '0.3rem 0.6rem', fontSize: '0.78rem' }}
+                title="Previous Page"
+              >
+                ‹ Prev
+              </button>
+
+              <span style={{ padding: '0 0.5rem', fontWeight: 700, color: '#f8fafc' }}>
+                Page {effectivePage} of {totalPages}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={effectivePage >= totalPages}
+                className="btn btn-outline"
+                style={{ padding: '0.3rem 0.6rem', fontSize: '0.78rem' }}
+                title="Next Page"
+              >
+                Next ›
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={effectivePage >= totalPages}
+                className="btn btn-outline"
+                style={{ padding: '0.3rem 0.6rem', fontSize: '0.78rem' }}
+                title="Last Page"
+              >
+                Last »
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
