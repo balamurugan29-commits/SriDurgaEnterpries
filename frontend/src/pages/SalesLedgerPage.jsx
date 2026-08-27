@@ -3092,20 +3092,20 @@ export const SalesLedgerPage = () => {
                                   <tbody>
                                     {cust.openingBalance !== 0 && (
                                       <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                        <td style={{ padding: '8px 12px', fontWeight: 700, color: '#475569' }}>Opening Balance (ஆரம்ப இருப்பு)</td>
+                                        <td style={{ padding: '8px 12px', fontWeight: 700, color: '#475569' }}>Opening Balance</td>
                                         <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#16a34a' }}>
                                           ₹{cust.openingBalance.toFixed(2)}
                                         </td>
                                       </tr>
                                     )}
                                     <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                      <td style={{ padding: '8px 12px', fontWeight: 700, color: '#475569' }}>Total Sales / Invoices (மொத்த விற்பனை)</td>
+                                      <td style={{ padding: '8px 12px', fontWeight: 700, color: '#475569' }}>Total Sales / Invoices</td>
                                       <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>
                                         ₹{cust.totalAmount.toFixed(2)}
                                       </td>
                                     </tr>
                                     <tr style={{ borderBottom: '1.5px solid #000000' }}>
-                                      <td style={{ padding: '8px 12px', fontWeight: 700, color: '#475569' }}>Total Received / Passed Amount (பெற்ற தொகை)</td>
+                                      <td style={{ padding: '8px 12px', fontWeight: 700, color: '#475569' }}>Total Received Amount</td>
                                       <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#1e40af' }}>
                                         ₹{cust.passedAmount.toFixed(2)}
                                       </td>
@@ -3131,10 +3131,10 @@ export const SalesLedgerPage = () => {
                                   </div>
                                   <div style={{ fontSize: '0.95rem', fontWeight: 800, color: cust.netBalance > 0 ? '#991b1b' : (cust.netBalance < 0 ? '#1e40af' : '#166534'), marginTop: '2px' }}>
                                     {cust.netBalance > 0 
-                                      ? `Outstanding Balance Pending to be Received (வாடிக்கையாளர் தரவேண்டிய நிலுவைத் தொகை)`
+                                      ? `Outstanding Balance Pending to be Received`
                                       : cust.netBalance < 0 
-                                        ? `Advance / Extra Amount Paid by Customer (முன்தொகை / அதிகப்பணம்)`
-                                        : `Account Fully Settled & Cleared (கணக்கு முழுமையாக முடிக்கப்பட்டது)`}
+                                        ? `Advance / Extra Amount Paid by Customer`
+                                        : `Account Fully Settled & Cleared`}
                                   </div>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
