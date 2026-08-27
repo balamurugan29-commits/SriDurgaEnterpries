@@ -922,12 +922,16 @@ export const updateSalesLedger = async (id, ledgerData) => {
 export const deleteSalesLedger = async (id) => {
   try {
     const res = await api.delete(`/sales-ledger/${id}`);
+    const local = localStorage.getItem('sri_durga_sales_ledger');
+    let list = local ? JSON.parse(local) : [];
+    list = list.filter(l => l.id !== id && String(l.id) !== String(id));
+    localStorage.setItem('sri_durga_sales_ledger', JSON.stringify(list));
     return res.data;
   } catch (err) {
     console.warn('Backend unavailable, using client storage fallback for deleteSalesLedger');
     const local = localStorage.getItem('sri_durga_sales_ledger');
     let list = local ? JSON.parse(local) : [];
-    list = list.filter(l => l.id !== id);
+    list = list.filter(l => l.id !== id && String(l.id) !== String(id));
     localStorage.setItem('sri_durga_sales_ledger', JSON.stringify(list));
     return { message: 'Sales Ledger entry deleted' };
   }
@@ -972,6 +976,10 @@ export const fetchPurchaseLedgers = async () => {
 export const createPurchaseLedger = async (ledgerData) => {
   try {
     const res = await api.post('/purchase-ledger', ledgerData);
+    const local = localStorage.getItem('sri_durga_purchase_ledger');
+    const list = local ? JSON.parse(local) : [];
+    list.unshift(res.data);
+    localStorage.setItem('sri_durga_purchase_ledger', JSON.stringify(list));
     return res.data;
   } catch (err) {
     console.warn('Backend unavailable, using client storage fallback for createPurchaseLedger');
@@ -1003,6 +1011,10 @@ export const createPurchaseLedger = async (ledgerData) => {
 export const bulkCreatePurchaseLedgers = async (entries) => {
   try {
     const res = await api.post('/purchase-ledger/bulk', entries);
+    const local = localStorage.getItem('sri_durga_purchase_ledger');
+    const list = local ? JSON.parse(local) : [];
+    const merged = [...(res.data || []), ...list];
+    localStorage.setItem('sri_durga_purchase_ledger', JSON.stringify(merged));
     return res.data;
   } catch (err) {
     console.warn('Backend bulk endpoint unavailable, using client storage batch fallback');
@@ -1045,12 +1057,19 @@ export const bulkCreatePurchaseLedgers = async (entries) => {
 export const updatePurchaseLedger = async (id, ledgerData) => {
   try {
     const res = await api.put(`/purchase-ledger/${id}`, ledgerData);
+    const local = localStorage.getItem('sri_durga_purchase_ledger');
+    let list = local ? JSON.parse(local) : [];
+    const idx = list.findIndex(l => l.id === id || String(l.id) === String(id));
+    if (idx !== -1) {
+      list[idx] = res.data;
+      localStorage.setItem('sri_durga_purchase_ledger', JSON.stringify(list));
+    }
     return res.data;
   } catch (err) {
     console.warn('Backend unavailable, using client storage fallback for updatePurchaseLedger');
     const local = localStorage.getItem('sri_durga_purchase_ledger');
     let list = local ? JSON.parse(local) : [];
-    const idx = list.findIndex(l => l.id === id);
+    const idx = list.findIndex(l => l.id === id || String(l.id) === String(id));
     if (idx !== -1) {
       list[idx] = { ...list[idx], ...ledgerData, updatedAt: new Date().toISOString() };
       localStorage.setItem('sri_durga_purchase_ledger', JSON.stringify(list));
@@ -1063,12 +1082,16 @@ export const updatePurchaseLedger = async (id, ledgerData) => {
 export const deletePurchaseLedger = async (id) => {
   try {
     const res = await api.delete(`/purchase-ledger/${id}`);
+    const local = localStorage.getItem('sri_durga_purchase_ledger');
+    let list = local ? JSON.parse(local) : [];
+    list = list.filter(l => l.id !== id && String(l.id) !== String(id));
+    localStorage.setItem('sri_durga_purchase_ledger', JSON.stringify(list));
     return res.data;
   } catch (err) {
     console.warn('Backend unavailable, using client storage fallback for deletePurchaseLedger');
     const local = localStorage.getItem('sri_durga_purchase_ledger');
     let list = local ? JSON.parse(local) : [];
-    list = list.filter(l => l.id !== id);
+    list = list.filter(l => l.id !== id && String(l.id) !== String(id));
     localStorage.setItem('sri_durga_purchase_ledger', JSON.stringify(list));
     return { message: 'Purchase Ledger entry deleted' };
   }

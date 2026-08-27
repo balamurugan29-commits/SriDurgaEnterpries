@@ -325,19 +325,57 @@ export const PurchaseLedgerPage = () => {
     }
   };
 
-  // Delete Entry
+  // Delete Single Entry
   const handleDelete = async (item) => {
-    if (!window.confirm(`Are you sure you want to delete purchase record for Invoice: ${item.invoiceNo}?`)) {
+    const inv = item.invoiceNo && item.invoiceNo !== '-' && item.invoiceNo !== 'N/A' 
+      ? `Invoice "${item.invoiceNo}"` 
+      : `bill for "${item.dealerStoreName || 'this supplier'}" (₹${(Number(item.totalAmount) || 0).toLocaleString('en-IN')})`;
+
+    if (!window.confirm(`Are you sure you want to delete ${inv}?`)) {
       return;
     }
     try {
       if (item.id) {
         await deletePurchaseLedger(item.id);
       }
-      setToast({ message: `Purchase record ${item.invoiceNo} deleted.`, type: 'success' });
+      setPurchaseEntries(prev => prev.filter(p => p.id !== item.id && String(p.id) !== String(item.id)));
+      setToast({ message: `Purchase record deleted successfully!`, type: 'success' });
       loadPurchaseData();
     } catch (err) {
       setToast({ message: 'Failed to delete: ' + err.message, type: 'error' });
+    }
+  };
+
+  // Selection Handlers for Bulk Operations
+  const handleSelectItemToggle = (id) => {
+    setSelectedItemIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllToggle = () => {
+    if (selectedItemIds.length === filteredPurchases.length && filteredPurchases.length > 0) {
+      setSelectedItemIds([]);
+    } else {
+      setSelectedItemIds(filteredPurchases.map(p => p.id).filter(Boolean));
+    }
+  };
+
+  const handleBulkDeleteSelected = async () => {
+    if (selectedItemIds.length === 0) return;
+    if (!window.confirm(`Are you sure you want to delete ${selectedItemIds.length} selected purchase records from database?`)) {
+      return;
+    }
+    try {
+      for (const id of selectedItemIds) {
+        await deletePurchaseLedger(id);
+      }
+      setPurchaseEntries(prev => prev.filter(p => !selectedItemIds.includes(p.id) && !selectedItemIds.includes(String(p.id))));
+      setSelectedItemIds([]);
+      setToast({ message: `Successfully deleted ${selectedItemIds.length} purchase records!`, type: 'success' });
+      loadPurchaseData();
+    } catch (err) {
+      setToast({ message: 'Failed to bulk delete: ' + err.message, type: 'error' });
     }
   };
 
@@ -441,41 +479,9 @@ export const PurchaseLedgerPage = () => {
     return isNaN(d.getTime()) ? String(val) : d.toLocaleDateString('en-GB');
   };
 
-  // Select All & Bulk Selection Handlers
+  // Select All & Bulk Selection Indicators
   const isAllSelected = filteredPurchases.length > 0 && selectedItemIds.length === filteredPurchases.length;
   const isIndeterminate = selectedItemIds.length > 0 && selectedItemIds.length < filteredPurchases.length;
-
-  const handleSelectAllToggle = () => {
-    if (isAllSelected) {
-      setSelectedItemIds([]);
-    } else {
-      setSelectedItemIds(filteredPurchases.map(p => p.id));
-    }
-  };
-
-  const handleSelectItemToggle = (id) => {
-    setSelectedItemIds(prev => 
-      prev.includes(id) ? prev.filter(itemId => itemId !== id) : [...prev, id]
-    );
-  };
-
-  const handleBulkDeleteSelected = async () => {
-    if (selectedItemIds.length === 0) return;
-    if (!window.confirm(`Are you sure you want to delete all ${selectedItemIds.length} selected purchase bills?`)) return;
-
-    try {
-      setLoading(true);
-      await Promise.all(selectedItemIds.map(id => deletePurchaseLedger(id)));
-      setToast({ message: `Successfully deleted ${selectedItemIds.length} purchase records!`, type: 'success' });
-      setSelectedItemIds([]);
-      await loadPurchaseData();
-    } catch (err) {
-      console.error('Bulk delete failed:', err);
-      setToast({ message: 'Failed to delete some records: ' + err.message, type: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Unique Dealer/Store Names for Autocomplete Filter
   const uniqueDealerOptions = useMemo(() => {
@@ -1534,7 +1540,7 @@ export const PurchaseLedgerPage = () => {
                 <th style={{ width: '120px', textAlign: 'right', borderRight: '1px solid rgba(255,255,255,0.1)', color: '#fbbf24', fontWeight: 800, background: '#0f172a' }}>
                   Balance Amount
                 </th>
-                <th style={{ width: '75px', textAlign: 'center', background: '#0f172a' }} className="no-print">
+                <th style={{ width: '100px', minWidth: '100px', textAlign: 'center', background: '#0f172a', position: 'sticky', right: 0, zIndex: 16, borderLeft: '1px solid rgba(255,255,255,0.12)', boxShadow: '-2px 0 6px rgba(0,0,0,0.4)' }} className="no-print">
                   Actions
                 </th>
               </tr>
@@ -1547,17 +1553,22 @@ export const PurchaseLedgerPage = () => {
                     <p style={{ margin: 0 }}>Loading Purchase Ledger entries...</p>
                   </td>
                 </tr>
-              ) : filteredPurchases.length === 0 ? (
+              ) : paginatedPurchases.length === 0 ? (
                 <tr>
-                  <td colSpan={13} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    <ShoppingBag size={32} style={{ margin: '0 auto 0.75rem auto', opacity: 0.4, color: '#f472b6' }} />
-                    <p style={{ fontWeight: 600, color: 'white', marginBottom: '0.35rem' }}>No Purchase Ledger records found</p>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-subtle)', marginBottom: '1rem' }}>
-                      Click <strong>"+ New Purchase Entry"</strong> to add dealer bills, tax values, paid amounts, and balances.
-                    </p>
-                    <button onClick={handleOpenNewModal} className="btn btn-primary" style={{ fontSize: '0.8rem', background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', border: 'none' }}>
-                      <Plus size={14} /> Add Purchase Entry
-                    </button>
+                  <td colSpan={13} style={{ textAlign: 'center', padding: '3.5rem 1rem', color: 'var(--text-subtle)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                      <FileSpreadsheet size={38} color="#9ca3af" />
+                      <p style={{ fontSize: '1rem', fontWeight: 600, color: '#e2e8f0', margin: 0 }}>
+                        {searchQuery || filterDealer || filterPaymentStatus !== 'ALL' || filterMode !== 'ALL' || fromDate || toDate
+                          ? 'No matching purchase ledger records found.'
+                          : 'No purchase ledger records found. Click "+ New Purchase Entry" or "Upload Excel" to add.'}
+                      </p>
+                      {(searchQuery || filterDealer || filterPaymentStatus !== 'ALL' || filterMode !== 'ALL' || fromDate || toDate) && (
+                        <button onClick={handleResetFilters} className="btn btn-outline" style={{ fontSize: '0.8rem', padding: '0.35rem 0.85rem' }}>
+                          Clear All Filters
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -1652,24 +1663,35 @@ export const PurchaseLedgerPage = () => {
                         ₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
 
-                      {/* Actions */}
-                      <td style={{ textAlign: 'center' }} className="no-print">
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                      {/* Actions (Sticky Right Column) */}
+                      <td 
+                        style={{ 
+                          textAlign: 'center', 
+                          position: 'sticky', 
+                          right: 0, 
+                          zIndex: 10, 
+                          background: isSelected ? '#2d1537' : '#0f172a', 
+                          borderLeft: '1px solid rgba(255,255,255,0.1)', 
+                          boxShadow: '-2px 0 6px rgba(0,0,0,0.35)' 
+                        }} 
+                        className="no-print"
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
                           <button
                             onClick={() => handleOpenEditModal(l)}
                             className="btn btn-outline"
-                            style={{ padding: '0.3rem 0.5rem', color: '#f472b6', borderColor: 'rgba(236, 72, 153, 0.3)' }}
+                            style={{ padding: '0.35rem 0.55rem', color: '#f472b6', background: 'rgba(236, 72, 153, 0.15)', borderColor: 'rgba(236, 72, 153, 0.4)' }}
                             title="Edit Entry & Payment Details"
                           >
-                            <Edit3 size={13} />
+                            <Edit3 size={14} />
                           </button>
                           <button
                             onClick={() => handleDelete(l)}
                             className="btn btn-outline"
-                            style={{ padding: '0.3rem 0.5rem', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                            style={{ padding: '0.35rem 0.55rem', color: '#f87171', background: 'rgba(239, 68, 68, 0.2)', borderColor: 'rgba(239, 68, 68, 0.5)' }}
                             title="Delete Entry"
                           >
-                            <Trash2 size={13} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </td>
@@ -1708,7 +1730,7 @@ export const PurchaseLedgerPage = () => {
                   <td style={{ textAlign: 'right', color: totals.balanceAmount > 0 ? '#fbbf24' : '#34d399', fontSize: '0.95rem', background: '#0f172a' }}>
                     ₹{totals.balanceAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
-                  <td className="no-print" style={{ background: '#0f172a' }}></td>
+                  <td className="no-print" style={{ background: '#0f172a', position: 'sticky', right: 0, zIndex: 14, borderLeft: '1px solid rgba(255,255,255,0.1)' }}></td>
                 </tr>
               </tfoot>
             )}

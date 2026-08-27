@@ -548,14 +548,16 @@ export const SalesLedgerPage = () => {
 
   // Delete Entry
   const handleDelete = async (item) => {
-    if (!window.confirm(`Are you sure you want to delete Sales Ledger entry for Invoice: ${item.invoiceNo}?`)) {
+    const inv = item.invoiceNo && item.invoiceNo !== '-' ? `Invoice "${item.invoiceNo}"` : `entry for "${item.billedTo || 'this customer'}"`;
+    if (!window.confirm(`Are you sure you want to delete Sales Ledger ${inv}?`)) {
       return;
     }
     try {
-      if (typeof item.id === 'number') {
+      if (item.id) {
         await deleteSalesLedger(item.id);
       }
-      setToast({ message: `Sales Ledger entry for ${item.invoiceNo} deleted.`, type: 'success' });
+      setLedgerEntries(prev => prev.filter(p => p.id !== item.id && String(p.id) !== String(item.id)));
+      setToast({ message: `Sales Ledger entry deleted successfully!`, type: 'success' });
       loadAllSalesLedgerData();
     } catch (err) {
       setToast({ message: 'Failed to delete: ' + err.message, type: 'error' });
