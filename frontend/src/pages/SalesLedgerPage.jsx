@@ -771,17 +771,18 @@ export const SalesLedgerPage = () => {
       baseOpening = Number(customerOpenings['DEFAULT']) || 0;
     }
 
-    const cutoffDate = getActiveFinancialYearStartIso();
+    const cutoffDate = fromDate || getActiveFinancialYearStartIso();
 
     // 2. Sum unpaid balances from prior invoices (dated before cutoffDate e.g. 01/04/2026, or previous FY /25-26)
     let priorUnpaid = 0;
     ledgerEntries.forEach(item => {
       const matchesCust = !targetCust || (item.billedTo && (item.billedTo.toUpperCase().includes(targetCust) || targetCust.includes(item.billedTo.toUpperCase())));
       if (matchesCust) {
+        const itemDate = item.invoiceDate || item.passedDate;
         let isPrior = false;
-        if (item.invoiceDate && item.invoiceDate < cutoffDate) {
+        if (itemDate && itemDate < cutoffDate) {
           isPrior = true;
-        } else if (!item.invoiceDate && item.invoiceNo && (item.invoiceNo.includes('/25-26') || item.invoiceNo.includes('/24-25'))) {
+        } else if (!itemDate && item.invoiceNo && (item.invoiceNo.includes('/25-26') || item.invoiceNo.includes('/24-25')) && cutoffDate >= '2026-04-01') {
           isPrior = true;
         }
 
@@ -794,7 +795,7 @@ export const SalesLedgerPage = () => {
     });
 
     return baseOpening + priorUnpaid;
-  }, [customerOpenings, filterCustomer, resolvedCustomerName, ledgerEntries]);
+  }, [customerOpenings, filterCustomer, resolvedCustomerName, fromDate, ledgerEntries]);
 
   // Handler to set/save Opening Balance for current customer
   const handleSaveOpeningBalance = (newAmount) => {

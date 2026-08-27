@@ -553,7 +553,7 @@ export const PurchaseLedgerPage = () => {
       baseOpening = Number(dealerOpenings['DEFAULT']) || 0;
     }
 
-    const cutoffDate = getActiveFinancialYearStartIso();
+    const cutoffDate = fromDate || getActiveFinancialYearStartIso();
 
     // 2. Sum unpaid balances from prior purchases (dated before cutoffDate e.g. 01/04/2026, or previous FY /25-26)
     let priorUnpaid = 0;
@@ -561,10 +561,11 @@ export const PurchaseLedgerPage = () => {
       const dealer = (item.dealerStoreName || item.supplierRemarks || '').toUpperCase();
       const matchesDealer = !targetDealer || dealer.includes(targetDealer) || targetDealer.includes(dealer);
       if (matchesDealer) {
+        const itemDate = item.invoiceDate || item.paymentDate || item.passedDate;
         let isPrior = false;
-        if (item.invoiceDate && item.invoiceDate < cutoffDate) {
+        if (itemDate && itemDate < cutoffDate) {
           isPrior = true;
-        } else if (!item.invoiceDate && item.invoiceNo && (item.invoiceNo.includes('/25-26') || item.invoiceNo.includes('/24-25'))) {
+        } else if (!itemDate && item.invoiceNo && (item.invoiceNo.includes('/25-26') || item.invoiceNo.includes('/24-25')) && cutoffDate >= '2026-04-01') {
           isPrior = true;
         }
 
@@ -578,7 +579,7 @@ export const PurchaseLedgerPage = () => {
     });
 
     return baseOpening + priorUnpaid;
-  }, [dealerOpenings, filterDealer, resolvedDealerName, purchaseEntries]);
+  }, [dealerOpenings, filterDealer, resolvedDealerName, fromDate, purchaseEntries]);
 
   // Handler to set/save Opening Balance for current dealer
   const handleSaveOpeningBalance = (newAmount) => {
