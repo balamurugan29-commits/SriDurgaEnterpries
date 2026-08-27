@@ -144,9 +144,12 @@ export const PurchaseLedgerPage = () => {
     totalAmount: '',
     paidAmount: '',
     paymentDate: '',
-    modeOfPayment: 'NEFT',
+    modeOfPayment: '',
     balanceAmount: ''
   });
+
+  // Tax Rate State for Calculator (18, 12, 5, 28, 0, 'CUSTOM')
+  const [taxRate, setTaxRate] = useState(18);
 
   // Filter States
   const [showFilters, setShowFilters] = useState(false);
@@ -185,17 +188,47 @@ export const PurchaseLedgerPage = () => {
     loadPurchaseData();
   }, []);
 
+  // Tax Rate Selector Handler
+  const handleTaxRateSelect = (rate) => {
+    setTaxRate(rate);
+    if (rate === 'CUSTOM') return;
+    const numRate = parseFloat(rate);
+    const taxable = parseFloat(formData.taxableAmount) || 0;
+    const tax = taxable > 0 ? (taxable * numRate / 100) : 0;
+    const total = taxable + tax;
+    const paid = parseFloat(formData.paidAmount) || 0;
+    const balance = total > 0 ? Math.max(0, total - paid) : 0;
+
+    setFormData(prev => ({
+      ...prev,
+      taxAmount: tax > 0 ? tax.toFixed(2) : (numRate === 0 && taxable > 0 ? '0.00' : ''),
+      totalAmount: total > 0 ? total.toFixed(2) : '',
+      balanceAmount: total > 0 ? balance.toFixed(2) : '0.00'
+    }));
+  };
+
   // Form Field Change with Real-Time Calculations
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => {
       const updated = { ...prev, [name]: value };
 
-      // Auto-compute Total Amount and Balance Amount
       const taxable = parseFloat(name === 'taxableAmount' ? value : prev.taxableAmount) || 0;
-      const tax = parseFloat(name === 'taxAmount' ? value : prev.taxAmount) || 0;
-      let total = parseFloat(name === 'totalAmount' ? value : prev.totalAmount);
+      let tax = parseFloat(name === 'taxAmount' ? value : prev.taxAmount) || 0;
 
+      // Auto-compute tax if taxableAmount changed and a tax rate preset is active
+      if (name === 'taxableAmount' && taxRate !== 'CUSTOM' && taxRate !== '') {
+        const numRate = parseFloat(taxRate);
+        tax = taxable > 0 ? (taxable * numRate / 100) : 0;
+        updated.taxAmount = tax > 0 ? tax.toFixed(2) : (numRate === 0 && taxable > 0 ? '0.00' : '');
+      }
+
+      // If taxAmount was edited manually by user, switch taxRate to CUSTOM
+      if (name === 'taxAmount') {
+        setTaxRate('CUSTOM');
+      }
+
+      let total = parseFloat(name === 'totalAmount' ? value : prev.totalAmount);
       if (['taxableAmount', 'taxAmount'].includes(name)) {
         total = taxable + tax;
         updated.totalAmount = total > 0 ? total.toFixed(2) : '';
@@ -203,8 +236,8 @@ export const PurchaseLedgerPage = () => {
 
       const currentTotal = total || 0;
       const paid = parseFloat(name === 'paidAmount' ? value : prev.paidAmount) || 0;
-      const balance = Math.max(0, currentTotal - paid);
-      updated.balanceAmount = balance.toFixed(2);
+      const balance = currentTotal > 0 ? Math.max(0, currentTotal - paid) : 0;
+      updated.balanceAmount = currentTotal > 0 ? balance.toFixed(2) : '0.00';
 
       return updated;
     });
@@ -213,6 +246,7 @@ export const PurchaseLedgerPage = () => {
   // Open Modal for New Manual Entry
   const handleOpenNewModal = () => {
     setEditingItem(null);
+    setTaxRate(18); // Default 18% GST
     setFormData({
       dealerStoreName: '',
       invoiceNo: '',
@@ -233,16 +267,27 @@ export const PurchaseLedgerPage = () => {
     setEditingItem(item);
     const total = Number(item.totalAmount) || 0;
     const paid = Number(item.paidAmount || item.passedAmount) || 0;
-    const balance = item.balanceAmount !== undefined && item.balanceAmount !== null ? Number(item.balanceAmount) : Math.max(0, total - paid);
+    const balance = total > 0 ? Math.max(0, total - paid) : 0;
+    const taxable = Number(item.taxableAmount) || 0;
+    const tax = Number(item.taxAmount) || 0;
+
+    let inferredRate = 'CUSTOM';
+    if (taxable > 0 && tax > 0) {
+      const ratio = Math.round((tax / taxable) * 100);
+      if ([18, 12, 5, 28, 0].includes(ratio)) inferredRate = ratio;
+    } else if (taxable > 0 && tax === 0) {
+      inferredRate = 0;
+    }
+    setTaxRate(inferredRate);
 
     setFormData({
       dealerStoreName: item.dealerStoreName || item.supplierRemarks || '',
       invoiceNo: item.invoiceNo || '',
       invoiceDate: item.invoiceDate || '',
-      taxableAmount: item.taxableAmount !== undefined ? String(item.taxableAmount) : '',
-      taxAmount: item.taxAmount !== undefined ? String(item.taxAmount) : '',
-      totalAmount: item.totalAmount !== undefined ? String(item.totalAmount) : '',
-      paidAmount: (item.paidAmount !== undefined && item.paidAmount !== null) ? String(item.paidAmount) : (item.passedAmount !== undefined ? String(item.passedAmount) : ''),
+      taxableAmount: item.taxableAmount !== undefined && item.taxableAmount !== null && Number(item.taxableAmount) > 0 ? String(item.taxableAmount) : '',
+      taxAmount: item.taxAmount !== undefined && item.taxAmount !== null && Number(item.taxAmount) > 0 ? String(item.taxAmount) : '',
+      totalAmount: item.totalAmount !== undefined && item.totalAmount !== null && Number(item.totalAmount) > 0 ? String(item.totalAmount) : '',
+      paidAmount: (item.paidAmount !== undefined && item.paidAmount !== null && Number(item.paidAmount) > 0) ? String(item.paidAmount) : ((item.passedAmount !== undefined && item.passedAmount !== null && Number(item.passedAmount) > 0) ? String(item.passedAmount) : ''),
       paymentDate: item.paymentDate || item.passedDate || '',
       modeOfPayment: item.modeOfPayment || (paid > 0 ? 'NEFT' : ''),
       balanceAmount: String(balance.toFixed(2))
@@ -1934,11 +1979,18 @@ export const PurchaseLedgerPage = () => {
                       type="text"
                       name="dealerStoreName"
                       required
-                      placeholder="e.g. Sri Lakshmi Hardwares / Standard Tools & Spares"
+                      list="dealerStoreOptionsList"
+                      placeholder="Select from list or type new dealer..."
                       className="form-input"
                       value={formData.dealerStoreName}
                       onChange={handleInputChange}
+                      autoComplete="off"
                     />
+                    <datalist id="dealerStoreOptionsList">
+                      {uniqueDealerOptions.map(d => (
+                        <option key={d} value={d} />
+                      ))}
+                    </datalist>
                   </div>
                   <div>
                     <label className="form-label" style={{ fontSize: '0.75rem' }}>Invoice No. <span style={{ color: '#f87171' }}>*</span></label>
@@ -1946,7 +1998,7 @@ export const PurchaseLedgerPage = () => {
                       type="text"
                       name="invoiceNo"
                       required
-                      placeholder="e.g. INV-2026/410"
+                      placeholder="e.g. INV-2026/410 (or - for payment)"
                       className="form-input"
                       value={formData.invoiceNo}
                       onChange={handleInputChange}
@@ -1966,10 +2018,50 @@ export const PurchaseLedgerPage = () => {
                 </div>
               </div>
 
-              {/* Section 2: Amounts & Tax */}
+              {/* Section 2: Amounts & Tax (With GST Rate Calculator) */}
               <div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
-                  2. Valuation & Tax
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    2. Valuation & Tax
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>GST Rate:</span>
+                    {[18, 12, 5, 28, 0].map(rate => (
+                      <button
+                        key={rate}
+                        type="button"
+                        onClick={() => handleTaxRateSelect(rate)}
+                        className={`btn ${taxRate === rate ? 'btn-primary' : 'btn-outline'}`}
+                        style={{ 
+                          padding: '0.18rem 0.5rem', 
+                          fontSize: '0.72rem', 
+                          fontWeight: 700, 
+                          borderRadius: '6px',
+                          borderColor: taxRate === rate ? 'transparent' : 'rgba(56, 189, 248, 0.3)',
+                          color: taxRate === rate ? '#ffffff' : '#38bdf8',
+                          background: taxRate === rate ? 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)' : 'rgba(56, 189, 248, 0.08)'
+                        }}
+                      >
+                        {rate}%
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => handleTaxRateSelect('CUSTOM')}
+                      className={`btn ${taxRate === 'CUSTOM' ? 'btn-primary' : 'btn-outline'}`}
+                      style={{ 
+                        padding: '0.18rem 0.5rem', 
+                        fontSize: '0.72rem', 
+                        fontWeight: 700, 
+                        borderRadius: '6px',
+                        borderColor: taxRate === 'CUSTOM' ? 'transparent' : 'rgba(255, 255, 255, 0.2)',
+                        color: taxRate === 'CUSTOM' ? '#ffffff' : 'var(--text-muted)',
+                        background: taxRate === 'CUSTOM' ? '#475569' : 'transparent'
+                      }}
+                    >
+                      Custom
+                    </button>
+                  </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
                   <div>
@@ -1986,7 +2078,9 @@ export const PurchaseLedgerPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Tax (₹)</label>
+                    <label className="form-label" style={{ fontSize: '0.75rem' }}>
+                      Tax (₹) {taxRate !== 'CUSTOM' && taxRate !== '' ? `(${taxRate}%)` : ''}
+                    </label>
                     <input
                       type="number"
                       step="0.01"
