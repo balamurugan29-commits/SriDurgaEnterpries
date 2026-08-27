@@ -2536,12 +2536,20 @@ export const SalesLedgerPage = () => {
                 {/* 3. Dynamic Columns Statement Table */}
                 {(() => {
                   const activeStatementCols = SALES_EXPORT_COLUMNS.filter(col => exportSelectedCols[col.key]);
+                  const cutoffDate = fromDate || getActiveFinancialYearStartIso();
 
-                  // When no fromDate is specified, include all matching customer entries in full!
+                  // Filter out invoices that belong to prior financial years because they are already rolled into Opening Balance!
                   const rawEntries = exportScope === 'ALL' ? ledgerEntries : filteredLedgers;
-                  const statementEntries = fromDate 
-                    ? rawEntries.filter(item => !item.invoiceDate || item.invoiceDate >= fromDate)
-                    : rawEntries;
+                  const statementEntries = rawEntries.filter(item => {
+                    const itemDate = item.invoiceDate || item.passedDate;
+                    if (itemDate && itemDate < cutoffDate) {
+                      return false;
+                    }
+                    if (!itemDate && item.invoiceNo && (item.invoiceNo.includes('/25-26') || item.invoiceNo.includes('/24-25')) && cutoffDate >= '2026-04-01') {
+                      return false;
+                    }
+                    return true;
+                  });
 
                   let sumTaxable = 0, sumIgst = 0, sumSgst = 0, sumUgst = 0, sumTax = 0, sumTotal = 0, sumItTds = 0, sumGstTds = 0, sumPassed = 0;
                   statementEntries.forEach(item => {
