@@ -347,7 +347,7 @@ export const SalesLedgerPage = () => {
       gstTds: '',
       passedAmount: '',
       passedDate: '',
-      modeOfPayment: 'NEFT',
+      modeOfPayment: '',
       remarks: ''
     });
     setIsModalOpen(true);
@@ -356,6 +356,7 @@ export const SalesLedgerPage = () => {
   // Open Modal for Editing an Existing Entry
   const handleOpenEditModal = (item) => {
     setEditingItem(item);
+    const passed = Number(item.passedAmount) || 0;
     setFormData({
       invoiceNo: item.invoiceNo || '',
       invoiceDate: item.invoiceDate || '',
@@ -370,7 +371,7 @@ export const SalesLedgerPage = () => {
       gstTds: item.gstTds !== undefined ? String(item.gstTds) : '',
       passedAmount: item.passedAmount !== undefined ? String(item.passedAmount) : '',
       passedDate: item.passedDate || '',
-      modeOfPayment: item.modeOfPayment || 'NEFT',
+      modeOfPayment: item.modeOfPayment || (passed > 0 ? 'NEFT' : ''),
       remarks: item.remarks || ''
     });
     setIsModalOpen(true);
@@ -1564,16 +1565,20 @@ export const SalesLedgerPage = () => {
 
                       {/* Mode of Payment */}
                       <td style={{ textAlign: 'center' }}>
-                        <span style={{ 
-                          fontSize: '0.72rem', 
-                          fontWeight: 700, 
-                          background: 'rgba(255,255,255,0.06)', 
-                          padding: '2px 6px', 
-                          borderRadius: '4px',
-                          color: '#e2e8f0'
-                        }}>
-                          {l.modeOfPayment || 'NEFT'}
-                        </span>
+                        {passedAmount > 0 && l.modeOfPayment && l.modeOfPayment !== '-' && l.modeOfPayment !== 'N/A' ? (
+                          <span style={{ 
+                            fontSize: '0.72rem', 
+                            fontWeight: 700, 
+                            background: 'rgba(255,255,255,0.06)', 
+                            padding: '2px 6px', 
+                            borderRadius: '4px',
+                            color: '#e2e8f0'
+                          }}>
+                            {l.modeOfPayment}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-subtle)', fontSize: '0.78rem' }}>-</span>
+                        )}
                       </td>
 
                       {/* Remarks (Editable input directly on row) */}
@@ -2081,9 +2086,10 @@ export const SalesLedgerPage = () => {
                     <select
                       name="modeOfPayment"
                       className="form-input"
-                      value={formData.modeOfPayment}
+                      value={formData.modeOfPayment || ''}
                       onChange={handleInputChange}
                     >
+                      <option value="">-- None / Unpaid --</option>
                       {PAYMENT_MODES.map(m => (
                         <option key={m} value={m}>{m}</option>
                       ))}
@@ -2648,7 +2654,10 @@ export const SalesLedgerPage = () => {
                                 if (col.key === 'gstTds') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px' }}>{gstTdsAmt > 0 ? gstTdsAmt.toFixed(2) : '-'}</td>;
                                 if (col.key === 'passedAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px', color: passedAmt > 0 ? '#1e40af' : '#9ca3af', fontWeight: passedAmt > 0 ? 700 : 400 }}>{passedAmt > 0 ? passedAmt.toFixed(2) : '-'}</td>;
                                 if (col.key === 'passedDate') return <td key={col.key} style={{ textAlign: 'center', padding: '5px 4px', color: '#4b5563' }}>{formatStDate(l.passedDate)}</td>;
-                                if (col.key === 'modeOfPayment') return <td key={col.key} style={{ padding: '5px 4px', color: '#4b5563' }}>{l.modeOfPayment || '-'}</td>;
+                                if (col.key === 'modeOfPayment') {
+                                  const hasPayment = passedAmt > 0 && l.modeOfPayment && l.modeOfPayment !== '-' && l.modeOfPayment !== 'N/A';
+                                  return <td key={col.key} style={{ textAlign: 'center', padding: '5px 4px' }}>{hasPayment ? l.modeOfPayment : '-'}</td>;
+                                }
                                 if (col.key === 'remarks') return <td key={col.key} style={{ padding: '5px 4px', color: '#4b5563' }}>{l.remarks || '-'}</td>;
                                 return <td key={col.key} style={{ padding: '5px 4px' }}>-</td>;
                               })}

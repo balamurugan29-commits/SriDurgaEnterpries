@@ -222,7 +222,7 @@ export const PurchaseLedgerPage = () => {
       totalAmount: '',
       paidAmount: '',
       paymentDate: '',
-      modeOfPayment: 'NEFT',
+      modeOfPayment: '',
       balanceAmount: ''
     });
     setIsModalOpen(true);
@@ -244,7 +244,7 @@ export const PurchaseLedgerPage = () => {
       totalAmount: item.totalAmount !== undefined ? String(item.totalAmount) : '',
       paidAmount: (item.paidAmount !== undefined && item.paidAmount !== null) ? String(item.paidAmount) : (item.passedAmount !== undefined ? String(item.passedAmount) : ''),
       paymentDate: item.paymentDate || item.passedDate || '',
-      modeOfPayment: item.modeOfPayment || 'NEFT',
+      modeOfPayment: item.modeOfPayment || (paid > 0 ? 'NEFT' : ''),
       balanceAmount: String(balance.toFixed(2))
     });
     setIsModalOpen(true);
@@ -1629,16 +1629,20 @@ export const PurchaseLedgerPage = () => {
 
                       {/* Mode of Payment */}
                       <td style={{ textAlign: 'center' }}>
-                        <span style={{ 
-                          fontSize: '0.72rem', 
-                          fontWeight: 700, 
-                          background: 'rgba(255,255,255,0.06)', 
-                          padding: '2px 6px', 
-                          borderRadius: '4px',
-                          color: '#e2e8f0'
-                        }}>
-                          {l.modeOfPayment || 'NEFT'}
-                        </span>
+                        {paid > 0 && l.modeOfPayment && l.modeOfPayment !== '-' && l.modeOfPayment !== 'N/A' ? (
+                          <span style={{ 
+                            fontSize: '0.72rem', 
+                            fontWeight: 700, 
+                            background: 'rgba(255,255,255,0.06)', 
+                            padding: '2px 6px', 
+                            borderRadius: '4px',
+                            color: '#e2e8f0'
+                          }}>
+                            {l.modeOfPayment}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-subtle)', fontSize: '0.78rem' }}>-</span>
+                        )}
                       </td>
 
                       {/* Balance Amount */}
@@ -2003,9 +2007,10 @@ export const PurchaseLedgerPage = () => {
                     <select
                       name="modeOfPayment"
                       className="form-input"
-                      value={formData.modeOfPayment}
+                      value={formData.modeOfPayment || ''}
                       onChange={handleInputChange}
                     >
+                      <option value="">-- None / Unpaid --</option>
                       {PAYMENT_MODES.map(m => (
                         <option key={m} value={m}>{m}</option>
                       ))}
@@ -2578,7 +2583,8 @@ export const PurchaseLedgerPage = () => {
                                   return <td key={col.key} style={{ textAlign: 'center', padding: '5px 4px', color: '#4b5563' }}>{formatStDate(l.paymentDate)}</td>;
                                 }
                                 if (col.key === 'modeOfPayment') {
-                                  return <td key={col.key} style={{ padding: '5px 4px', color: '#4b5563' }}>{l.modeOfPayment || '-'}</td>;
+                                  const hasPayment = paidAmt > 0 && l.modeOfPayment && l.modeOfPayment !== '-' && l.modeOfPayment !== 'N/A';
+                                  return <td key={col.key} style={{ textAlign: 'center', padding: '5px 4px' }}>{hasPayment ? l.modeOfPayment : '-'}</td>;
                                 }
                                 if (col.key === 'balanceAmount') {
                                   return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px', fontWeight: 700, color: balAmt > 0 ? '#dc2626' : '#16a34a' }}>{balAmt.toFixed(2)}</td>;
