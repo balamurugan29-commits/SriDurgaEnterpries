@@ -610,95 +610,9 @@ export const SalesLedgerPage = () => {
     setPeriodPreset('ALL');
   };
 
-  // Pre-calculate FIFO chronological payment allocation per customer across all sales entries
-  const salesEntriesWithAllocation = useMemo(() => {
-    const custMap = {};
-    ledgerEntries.forEach(item => {
-      const cName = (item.billedTo || item.billedToRemarks || 'UNKNOWN').trim().toUpperCase();
-      if (!custMap[cName]) custMap[cName] = [];
-      custMap[cName].push(item);
-    });
-
-    const result = [];
-
-    Object.entries(custMap).forEach(([custUpper, items]) => {
-      let baseOpening = 0;
-      for (const [k, val] of Object.entries(customerOpenings)) {
-        const cleanK = k.trim().toUpperCase();
-        if (cleanK === custUpper || cleanK.includes(custUpper) || custUpper.includes(cleanK)) {
-          baseOpening = Number(val) || 0;
-          break;
-        }
-      }
-
-      let totalCustomerPayments = items.reduce((sum, it) => sum + (Number(it.passedAmount) || 0), 0);
-      let paymentPool = Math.max(0, totalCustomerPayments - baseOpening);
-
-      const sortedBills = items
-        .filter(it => (Number(it.totalAmount) || 0) > 0)
-        .sort((a, b) => {
-          const dateA = a.invoiceDate || a.passedDate || '';
-          const dateB = b.invoiceDate || b.passedDate || '';
-          if (dateA && dateB && dateA !== dateB) return dateA.localeCompare(dateB);
-          if (!dateA && dateB) return 1;
-          if (dateA && !dateB) return -1;
-          return (a.id || 0) - (b.id || 0);
-        });
-
-      const billAllocationMap = new Map();
-      sortedBills.forEach(bill => {
-        const billTotal = Number(bill.totalAmount) || 0;
-        const billAllocatedPassed = Math.min(billTotal, paymentPool);
-        paymentPool -= billAllocatedPassed;
-        const billAllocatedBalance = Math.max(0, billTotal - billAllocatedPassed);
-
-        let billStatus = 'PENDING';
-        if (billAllocatedBalance === 0) {
-          billStatus = 'PASSED';
-        } else if (billAllocatedPassed > 0) {
-          billStatus = 'PARTIAL';
-        }
-
-        billAllocationMap.set(bill.id || bill, {
-          allocatedPassed: billAllocatedPassed,
-          allocatedBalance: billAllocatedBalance,
-          allocatedStatus: billStatus
-        });
-      });
-
-      items.forEach(it => {
-        const total = Number(it.totalAmount) || 0;
-        const directPassed = Number(it.passedAmount) || 0;
-
-        if (total > 0) {
-          const alloc = billAllocationMap.get(it.id || it) || {
-            allocatedPassed: directPassed,
-            allocatedBalance: Math.max(0, total - directPassed),
-            allocatedStatus: directPassed >= total ? 'PASSED' : (directPassed > 0 ? 'PARTIAL' : 'PENDING')
-          };
-          result.push({
-            ...it,
-            allocatedPassed: alloc.allocatedPassed,
-            allocatedBalance: alloc.allocatedBalance,
-            allocatedStatus: alloc.allocatedStatus
-          });
-        } else {
-          result.push({
-            ...it,
-            allocatedPassed: directPassed,
-            allocatedBalance: 0,
-            allocatedStatus: 'PASSED'
-          });
-        }
-      });
-    });
-
-    return result;
-  }, [ledgerEntries, customerOpenings]);
-
   // Filtered List
   const filteredLedgers = useMemo(() => {
-    return salesEntriesWithAllocation.filter(item => {
+    return ledgerEntries.filter(item => {
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch = !q ||
         (item.invoiceNo && item.invoiceNo.toLowerCase().includes(q)) ||
@@ -709,29 +623,27 @@ export const SalesLedgerPage = () => {
       const custQ = filterCustomer.toLowerCase().trim();
       const matchesCust = !custQ || (item.billedTo && item.billedTo.toLowerCase().includes(custQ));
 
-      // Payment Status using true FIFO allocation
+      // Payment Status (Passed vs Pending)
       let matchesStatus = true;
-      if (filterPaymentStatus === 'PASSED') matchesStatus = item.allocatedStatus === 'PASSED';
-      if (filterPaymentStatus === 'PARTIAL') matchesStatus = item.allocatedStatus === 'PARTIAL';
-      if (filterPaymentStatus === 'PENDING') matchesStatus = item.allocatedStatus === 'PENDING';
+      const isPassed = Number(item.passedAmount) > 0 || (item.passedDate && item.passedDate.trim() !== '');
+      if (filterPaymentStatus === 'PASSED') matchesStatus = isPassed;
+      if (filterPaymentStatus === 'PENDING') matchesStatus = !isPassed;
 
       // Mode
-      let matchesMode = true;
-      if (filterMode !== 'ALL') {
-        const itemMode = (item.modeOfPayment || '').toUpperCase().trim();
-        const selectedMode = filterMode.toUpperCase().trim();
-        matchesMode = itemMode === selectedMode || itemMode.includes(selectedMode);
-      }
+      const matchesMode = filterMode === 'ALL' || item.modeOfPayment === filterMode;
 
       // Date
-      const itemDate = item.invoiceDate || item.passedDate;
       let matchesDate = true;
-      if (fromDate && itemDate && itemDate < fromDate) matchesDate = false;
-      if (toDate && itemDate && itemDate > toDate) matchesDate = false;
+      if (item.invoiceDate) {
+        if (fromDate && item.invoiceDate < fromDate) matchesDate = false;
+        if (toDate && item.invoiceDate > toDate) matchesDate = false;
+      } else if (fromDate || toDate) {
+        matchesDate = false;
+      }
 
       return matchesSearch && matchesCust && matchesStatus && matchesMode && matchesDate;
     });
-  }, [salesEntriesWithAllocation, searchQuery, filterCustomer, filterPaymentStatus, filterMode, fromDate, toDate]);
+  }, [ledgerEntries, searchQuery, filterCustomer, filterPaymentStatus, filterMode, fromDate, toDate]);
 
   // Pagination Slice Calculation
   const totalPages = pageSize === 'ALL' ? 1 : Math.max(1, Math.ceil(filteredLedgers.length / (Number(pageSize) || 50)));
@@ -2680,13 +2592,13 @@ export const SalesLedgerPage = () => {
                 {/* 2. Top Double Black Border Line */}
                 <div style={{ borderTop: '2px solid #000000', borderBottom: '1px solid #000000', height: '3px', marginBottom: '0.5rem' }}></div>
 
-                {/* 3. Dynamic Columns Statement Table */}
+                {/* 3. Dynamic Statement Table: Consolidated Summary for ALL Customers OR Detailed FIFO for Single Customer */}
                 {(() => {
                   const activeStatementCols = SALES_EXPORT_COLUMNS.filter(col => exportSelectedCols[col.key]);
                   const cutoffDate = fromDate || getActiveFinancialYearStartIso();
+                  const isAllCustomersMode = !filterCustomer || !filterCustomer.trim();
 
                   // Bills prior to cutoffDate (e.g. up to 31/03/2026) roll into Opening Balance on 01/04/2026
-                  // Only bills for the current period (>= cutoffDate e.g. 01/04/2026 onwards) appear in table rows!
                   const rawEntries = exportScope === 'ALL' ? ledgerEntries : filteredLedgers;
                   const statementEntries = rawEntries.filter(item => {
                     const itemDate = item.invoiceDate || item.passedDate;
@@ -2699,7 +2611,147 @@ export const SalesLedgerPage = () => {
                     return true;
                   });
 
-                  // Sort in ascending chronological order (oldest -> newest) for true running ledger statement
+                  const formatStDate = (val) => {
+                    if (!val || val === '-' || val === '--') return '-';
+                    const d = new Date(val);
+                    return isNaN(d.getTime()) ? String(val) : d.toLocaleDateString('en-GB');
+                  };
+
+                  // =========================================================================
+                  // MODE A: ALL CUSTOMERS CONSOLIDATED SUMMARY (1 ROW PER CUSTOMER)
+                  // =========================================================================
+                  if (isAllCustomersMode) {
+                    const partyMap = {};
+
+                    statementEntries.forEach(item => {
+                      const cName = (item.billedTo || item.billedToRemarks || 'UNKNOWN').trim();
+                      const cUpper = cName.toUpperCase();
+                      if (!partyMap[cUpper]) {
+                        partyMap[cUpper] = {
+                          customerName: cName,
+                          totalAmount: 0,
+                          passedAmount: 0,
+                          taxableAmount: 0,
+                          taxAmount: 0,
+                          billCount: 0
+                        };
+                      }
+                      const taxable = Number(item.taxableAmount) || 0;
+                      const tax = Number(item.taxAmount) || 0;
+                      const total = Number(item.totalAmount) || (taxable + tax);
+                      const passed = Number(item.passedAmount) || 0;
+
+                      partyMap[cUpper].taxableAmount += taxable;
+                      partyMap[cUpper].taxAmount += tax;
+                      partyMap[cUpper].totalAmount += total;
+                      partyMap[cUpper].passedAmount += passed;
+                      if (total > 0) partyMap[cUpper].billCount += 1;
+                    });
+
+                    // Include any customers with saved opening balances that had no bills in this period
+                    Object.entries(customerOpenings).forEach(([k, val]) => {
+                      const cleanK = k.trim();
+                      const cleanUpper = cleanK.toUpperCase();
+                      if (cleanK && cleanK !== 'DEFAULT' && !partyMap[cleanUpper]) {
+                        partyMap[cleanUpper] = {
+                          customerName: cleanK,
+                          totalAmount: 0,
+                          passedAmount: 0,
+                          taxableAmount: 0,
+                          taxAmount: 0,
+                          billCount: 0
+                        };
+                      }
+                    });
+
+                    let totalOpeningSum = 0;
+                    let totalSalesSum = 0;
+                    let totalPassedSum = 0;
+                    let totalNetBalanceSum = 0;
+
+                    const consolidatedCustomers = Object.values(partyMap).map(c => {
+                      const upper = c.customerName.toUpperCase();
+                      let opBal = 0;
+                      for (const [k, val] of Object.entries(customerOpenings)) {
+                        const cleanK = k.trim().toUpperCase();
+                        if (cleanK === upper || cleanK.includes(upper) || upper.includes(cleanK)) {
+                          opBal = Number(val) || 0;
+                          break;
+                        }
+                      }
+                      const netBal = (opBal + c.totalAmount) - c.passedAmount;
+
+                      totalOpeningSum += opBal;
+                      totalSalesSum += c.totalAmount;
+                      totalPassedSum += c.passedAmount;
+                      if (netBal > 0) totalNetBalanceSum += netBal;
+
+                      return {
+                        ...c,
+                        openingBalance: opBal,
+                        netBalance: netBal
+                      };
+                    }).sort((a, b) => a.customerName.localeCompare(b.customerName));
+
+                    return (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1.5px solid #000000', color: '#000000', fontWeight: 800 }}>
+                            <th style={{ textAlign: 'center', padding: '8px 4px', width: '50px' }}>Sl. No.</th>
+                            <th style={{ textAlign: 'left', padding: '8px 6px' }}>Customer / Client Name</th>
+                            <th style={{ textAlign: 'right', padding: '8px 6px' }}>Opening Balance</th>
+                            <th style={{ textAlign: 'right', padding: '8px 6px' }}>Total Sales</th>
+                            <th style={{ textAlign: 'right', padding: '8px 6px' }}>Passed Amount</th>
+                            <th style={{ textAlign: 'right', padding: '8px 6px' }}>Balance Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {consolidatedCustomers.map((cust, idx) => (
+                            <tr key={idx} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                              <td style={{ textAlign: 'center', padding: '6px 4px', fontWeight: 700 }}>{idx + 1}</td>
+                              <td style={{ padding: '6px 6px', fontWeight: 700, color: '#111827' }}>{cust.customerName}</td>
+                              <td style={{ textAlign: 'right', padding: '6px 6px', color: cust.openingBalance > 0 ? '#16a34a' : '#9ca3af' }}>
+                                {cust.openingBalance !== 0 ? cust.openingBalance.toFixed(2) : '-'}
+                              </td>
+                              <td style={{ textAlign: 'right', padding: '6px 6px', fontWeight: 700 }}>
+                                {cust.totalAmount > 0 ? cust.totalAmount.toFixed(2) : '-'}
+                              </td>
+                              <td style={{ textAlign: 'right', padding: '6px 6px', color: cust.passedAmount > 0 ? '#1e40af' : '#9ca3af', fontWeight: cust.passedAmount > 0 ? 700 : 400 }}>
+                                {cust.passedAmount > 0 ? cust.passedAmount.toFixed(2) : '-'}
+                              </td>
+                              <td style={{ 
+                                textAlign: 'right', 
+                                padding: '6px 6px', 
+                                fontWeight: 800, 
+                                color: cust.netBalance > 0 ? '#dc2626' : (cust.netBalance < 0 ? '#1e40af' : '#16a34a') 
+                              }}>
+                                {cust.netBalance.toFixed(2)}
+                              </td>
+                            </tr>
+                          ))}
+
+                          {/* Grand Totals Summary Row */}
+                          {exportIncludeTotals && (
+                            <tr style={{ borderTop: '2px solid #000000', borderBottom: '2px solid #000000', fontWeight: 900, fontSize: '0.925rem' }}>
+                              <td colSpan={2} style={{ padding: '8px 6px', fontWeight: 900, textTransform: 'uppercase' }}>
+                                GRAND TOTAL :
+                              </td>
+                              <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalOpeningSum.toFixed(2)}</td>
+                              <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalSalesSum.toFixed(2)}</td>
+                              <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalPassedSum.toFixed(2)}</td>
+                              <td style={{ textAlign: 'right', padding: '8px 6px', color: totalNetBalanceSum > 0 ? '#dc2626' : '#16a34a' }}>
+                                {totalNetBalanceSum.toFixed(2)}
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    );
+                  }
+
+                  // =========================================================================
+                  // MODE B: SINGLE CUSTOMER DETAILED CHRONOLOGICAL FIFO STATEMENT
+                  // =========================================================================
                   const sortedStatementEntries = [...statementEntries].sort((a, b) => {
                     const dateA = a.invoiceDate || a.passedDate || '';
                     const dateB = b.invoiceDate || b.passedDate || '';
@@ -2733,12 +2785,6 @@ export const SalesLedgerPage = () => {
                     sumPassed += parseFloat(item.passedAmount) || 0;
                   });
                   const sumBalance = (openingBalance + sumTotal) - sumPassed;
-
-                  const formatStDate = (val) => {
-                    if (!val || val === '-' || val === '--') return '-';
-                    const d = new Date(val);
-                    return isNaN(d.getTime()) ? String(val) : d.toLocaleDateString('en-GB');
-                  };
 
                   return (
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}>

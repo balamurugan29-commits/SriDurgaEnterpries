@@ -39,23 +39,11 @@ export const LoginPage = () => {
         
         {/* Brand Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ 
-            width: '68px', 
-            height: '68px', 
-            borderRadius: '16px', 
-            background: '#ffffff', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            margin: '0 auto 1.25rem auto', 
-            boxShadow: '0 8px 25px rgba(99, 102, 241, 0.4)',
-            overflow: 'hidden',
-            padding: '6px'
-          }}>
-            <img src="/logo.jpg" alt="Sri Durga Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'linear-gradient(135deg, #4f46e5 0%, #10b981 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', boxShadow: '0 8px 24px rgba(79, 70, 229, 0.4)' }}>
+            <Factory size={32} color="white" />
           </div>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.025em', color: 'white', marginBottom: '0.25rem' }}>
-            SRI DURGA ENTERPRISES
+            SRI DURGA
           </h1>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
             Enterprise Inventory & Delivery Challan Portal

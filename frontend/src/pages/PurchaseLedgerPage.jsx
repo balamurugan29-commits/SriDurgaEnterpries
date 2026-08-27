@@ -469,153 +469,44 @@ export const PurchaseLedgerPage = () => {
     setPeriodPreset('ALL');
   };
 
-  // Pre-calculate FIFO chronological payment allocation per dealer across all purchase entries
-  const purchaseEntriesWithAllocation = useMemo(() => {
-    // 1. Group records by normalized dealer name
-    const dealerMap = {};
-    purchaseEntries.forEach(item => {
-      const dName = (item.dealerStoreName || item.supplierRemarks || 'UNKNOWN').trim().toUpperCase();
-      if (!dealerMap[dName]) dealerMap[dName] = [];
-      dealerMap[dName].push(item);
-    });
-
-    const result = [];
-
-    // 2. Allocate payments FIFO per dealer
-    Object.entries(dealerMap).forEach(([dealerUpper, items]) => {
-      // Find dealer opening balance
-      let baseOpening = 0;
-      for (const [k, val] of Object.entries(dealerOpenings)) {
-        const cleanK = k.trim().toUpperCase();
-        if (cleanK === dealerUpper || cleanK.includes(dealerUpper) || dealerUpper.includes(cleanK)) {
-          baseOpening = Number(val) || 0;
-          break;
-        }
-      }
-
-      // Calculate total payments made to this dealer
-      let totalDealerPayments = items.reduce((sum, it) => sum + (Number(it.paidAmount || it.passedAmount) || 0), 0);
-
-      // Payments first clear the opening balance
-      let paymentPool = Math.max(0, totalDealerPayments - baseOpening);
-
-      // Sort bills chronologically (oldest -> newest)
-      const sortedBills = items
-        .filter(it => (Number(it.totalAmount) || 0) > 0)
-        .sort((a, b) => {
-          const dateA = a.invoiceDate || a.paymentDate || '';
-          const dateB = b.invoiceDate || b.paymentDate || '';
-          if (dateA && dateB && dateA !== dateB) return dateA.localeCompare(dateB);
-          if (!dateA && dateB) return 1;
-          if (dateA && !dateB) return -1;
-          return (a.id || 0) - (b.id || 0);
-        });
-
-      // Map of bill ID/ref to allocated payment and balance
-      const billAllocationMap = new Map();
-      sortedBills.forEach(bill => {
-        const billTotal = Number(bill.totalAmount) || 0;
-        const billAllocatedPaid = Math.min(billTotal, paymentPool);
-        paymentPool -= billAllocatedPaid;
-        const billAllocatedBalance = Math.max(0, billTotal - billAllocatedPaid);
-
-        let billStatus = 'PENDING';
-        if (billAllocatedBalance === 0) {
-          billStatus = 'PAID';
-        } else if (billAllocatedPaid > 0) {
-          billStatus = 'PARTIAL';
-        }
-
-        billAllocationMap.set(bill.id || bill, {
-          allocatedPaid: billAllocatedPaid,
-          allocatedBalance: billAllocatedBalance,
-          allocatedStatus: billStatus
-        });
-      });
-
-      // Attach allocated payment information to each original item
-      items.forEach(it => {
-        const total = Number(it.totalAmount) || 0;
-        const directPaid = Number(it.paidAmount || it.passedAmount) || 0;
-
-        if (total > 0) {
-          const alloc = billAllocationMap.get(it.id || it) || {
-            allocatedPaid: directPaid,
-            allocatedBalance: Math.max(0, total - directPaid),
-            allocatedStatus: directPaid >= total ? 'PAID' : (directPaid > 0 ? 'PARTIAL' : 'PENDING')
-          };
-          result.push({
-            ...it,
-            allocatedPaid: alloc.allocatedPaid,
-            allocatedBalance: alloc.allocatedBalance,
-            allocatedStatus: alloc.allocatedStatus
-          });
-        } else {
-          // Payment voucher record (total === 0, paid > 0)
-          result.push({
-            ...it,
-            allocatedPaid: directPaid,
-            allocatedBalance: 0,
-            allocatedStatus: 'PAID'
-          });
-        }
-      });
-    });
-
-    return result;
-  }, [purchaseEntries, dealerOpenings]);
-
   // Filtered List
   const filteredPurchases = useMemo(() => {
-    return purchaseEntriesWithAllocation.filter(item => {
+    return purchaseEntries.filter(item => {
       const dealer = (item.dealerStoreName || item.supplierRemarks || '').toLowerCase();
       const invNo = (item.invoiceNo || '').toLowerCase();
       const mode = (item.modeOfPayment || '').toLowerCase();
-      const remarks = (item.remarks || '').toLowerCase();
-      const invDate = (item.invoiceDate || '').toLowerCase();
-      const payDate = (item.paymentDate || item.passedDate || '').toLowerCase();
 
-      // Search Keywords (Invoice No, Dealer Name, Mode, Remarks, Dates)
       const q = searchQuery.toLowerCase().trim();
-      const matchesSearch = !q || 
-        invNo.includes(q) || 
-        dealer.includes(q) || 
-        mode.includes(q) || 
-        remarks.includes(q) ||
-        invDate.includes(q) ||
-        payDate.includes(q);
+      const matchesSearch = !q || dealer.includes(q) || invNo.includes(q) || mode.includes(q);
 
-      // Dealer Filter
       const dealerQ = filterDealer.toLowerCase().trim();
       const matchesDealer = !dealerQ || dealer.includes(dealerQ);
 
-      // Payment Status (PAID / PARTIAL / PENDING) using true FIFO allocation
+      // Payment Status
+      const total = Number(item.totalAmount) || 0;
+      const paid = Number(item.paidAmount || item.passedAmount) || 0;
+      const balance = item.balanceAmount !== undefined && item.balanceAmount !== null ? Number(item.balanceAmount) : Math.max(0, total - paid);
+
       let matchesStatus = true;
-      if (filterPaymentStatus === 'PAID') {
-        matchesStatus = item.allocatedStatus === 'PAID';
-      } else if (filterPaymentStatus === 'PARTIAL') {
-        matchesStatus = item.allocatedStatus === 'PARTIAL';
-      } else if (filterPaymentStatus === 'PENDING') {
-        matchesStatus = item.allocatedStatus === 'PENDING';
-      }
+      if (filterPaymentStatus === 'PAID') matchesStatus = (total > 0 && balance === 0);
+      if (filterPaymentStatus === 'PARTIAL') matchesStatus = (paid > 0 && balance > 0);
+      if (filterPaymentStatus === 'PENDING') matchesStatus = (paid === 0 && total > 0);
 
-      // Mode of Payment (NEFT, RTGS, CHEQUE, CASH, UPI, etc.)
-      let matchesMode = true;
-      if (filterMode !== 'ALL') {
-        const itemMode = (item.modeOfPayment || '').toUpperCase().trim();
-        const selectedMode = filterMode.toUpperCase().trim();
-        matchesMode = itemMode === selectedMode || itemMode.includes(selectedMode);
-      }
+      // Mode
+      const matchesMode = filterMode === 'ALL' || item.modeOfPayment === filterMode;
 
-      // Date Range Filter
-      const itemDate = item.invoiceDate || item.paymentDate || item.passedDate;
+      // Date
       let matchesDate = true;
-      if (fromDate && itemDate && itemDate < fromDate) matchesDate = false;
-      if (toDate && itemDate && itemDate > toDate) matchesDate = false;
+      if (item.invoiceDate) {
+        if (fromDate && item.invoiceDate < fromDate) matchesDate = false;
+        if (toDate && item.invoiceDate > toDate) matchesDate = false;
+      } else if (fromDate || toDate) {
+        matchesDate = false;
+      }
 
       return matchesSearch && matchesDealer && matchesStatus && matchesMode && matchesDate;
     });
-  }, [purchaseEntriesWithAllocation, searchQuery, filterDealer, filterPaymentStatus, filterMode, fromDate, toDate]);
+  }, [purchaseEntries, searchQuery, filterDealer, filterPaymentStatus, filterMode, fromDate, toDate]);
 
   // Pagination Slice Calculation
   const totalPages = pageSize === 'ALL' ? 1 : Math.max(1, Math.ceil(filteredPurchases.length / (Number(pageSize) || 50)));
@@ -722,7 +613,7 @@ export const PurchaseLedgerPage = () => {
       const taxable = Number(item.taxableAmount) || 0;
       const tax = Number(item.taxAmount) || 0;
       const total = Number(item.totalAmount) || (taxable + tax);
-      const paid = Number(item.allocatedPaid !== undefined ? item.allocatedPaid : (item.paidAmount || item.passedAmount)) || 0;
+      const paid = Number(item.paidAmount || item.passedAmount) || 0;
 
       acc.taxableAmount += taxable;
       acc.taxAmount += tax;
@@ -736,14 +627,7 @@ export const PurchaseLedgerPage = () => {
       paidAmount: 0
     });
 
-    if (filterPaymentStatus === 'PENDING') {
-      // If filtering exclusively by Pending (Unpaid), the balance is the exact sum of remaining pending balances
-      const pendingSum = filteredPurchases.reduce((sum, it) => sum + (it.allocatedBalance !== undefined ? it.allocatedBalance : (Number(it.totalAmount) || 0)), 0);
-      agg.paidAmount = 0;
-      agg.balanceAmount = pendingSum;
-    } else if (filterPaymentStatus === 'PAID') {
-      agg.balanceAmount = 0;
-    } else if (filterDealer && filterDealer.trim()) {
+    if (filterDealer && filterDealer.trim()) {
       // For a specific dealer: Opening Balance + Total Purchases - Total Paid
       agg.balanceAmount = Math.max(0, (openingBalance + agg.totalAmount) - agg.paidAmount);
     } else {
@@ -788,7 +672,7 @@ export const PurchaseLedgerPage = () => {
       agg.balanceAmount = totalAllPartiesBalance;
     }
     return agg;
-  }, [filteredPurchases, openingBalance, filterDealer, filterPaymentStatus, dealerOpenings]);
+  }, [filteredPurchases, openingBalance, filterDealer, dealerOpenings]);
 
   // Handler to set/save Opening Balance for current dealer
   const handleSaveOpeningBalance = (newAmount) => {
@@ -1779,8 +1663,8 @@ export const PurchaseLedgerPage = () => {
                   const taxable = Number(l.taxableAmount) || 0;
                   const tax = Number(l.taxAmount) || 0;
                   const total = Number(l.totalAmount) || (taxable + tax);
-                  const paid = l.allocatedPaid !== undefined ? Number(l.allocatedPaid) : (Number(l.paidAmount || l.passedAmount) || 0);
-                  const billBalance = l.allocatedBalance !== undefined ? Number(l.allocatedBalance) : (total > 0 ? Math.max(0, total - paid) : 0);
+                  const paid = Number(l.paidAmount || l.passedAmount) || 0;
+                  const billBalance = total > 0 ? Math.max(0, total - paid) : 0;
                   const isSelected = selectedItemIds.includes(l.id);
 
                   return (
@@ -2729,13 +2613,13 @@ export const PurchaseLedgerPage = () => {
                 {/* 2. Top Double Black Border Line */}
                 <div style={{ borderTop: '2px solid #000000', borderBottom: '1px solid #000000', height: '3px', marginBottom: '0.5rem' }}></div>
 
-                {/* 3. Dynamic Columns Statement Table */}
+                {/* 3. Dynamic Statement Table: Consolidated Summary for ALL Suppliers OR Detailed FIFO for Single Supplier */}
                 {(() => {
                   const activeStatementCols = PURCHASE_EXPORT_COLUMNS.filter(col => exportSelectedCols[col.key]);
                   const cutoffDate = fromDate || getActiveFinancialYearStartIso();
+                  const isAllSuppliersMode = !filterDealer || !filterDealer.trim();
                   
                   // Bills prior to cutoffDate (e.g. up to 31/03/2026) roll into Opening Balance on 01/04/2026
-                  // Only bills for the current period (>= cutoffDate e.g. 01/04/2026 onwards) appear in table rows!
                   const rawEntries = exportScope === 'ALL' ? purchaseEntries : filteredPurchases;
                   const statementEntries = rawEntries.filter(item => {
                     const itemDate = item.invoiceDate || item.paymentDate || item.passedDate;
@@ -2748,7 +2632,147 @@ export const PurchaseLedgerPage = () => {
                     return true;
                   });
 
-                  // Sort in ascending chronological order (oldest -> newest) for true running ledger statement
+                  const formatStDate = (val) => {
+                    if (!val || val === '-' || val === '--') return '-';
+                    const d = new Date(val);
+                    return isNaN(d.getTime()) ? String(val) : d.toLocaleDateString('en-GB');
+                  };
+
+                  // =========================================================================
+                  // MODE A: ALL SUPPLIERS & DEALERS CONSOLIDATED SUMMARY (1 ROW PER SUPPLIER)
+                  // =========================================================================
+                  if (isAllSuppliersMode) {
+                    const partyMap = {};
+
+                    statementEntries.forEach(item => {
+                      const dName = (item.dealerStoreName || item.supplierRemarks || 'UNKNOWN').trim();
+                      const dUpper = dName.toUpperCase();
+                      if (!partyMap[dUpper]) {
+                        partyMap[dUpper] = {
+                          dealerName: dName,
+                          totalAmount: 0,
+                          paidAmount: 0,
+                          taxableAmount: 0,
+                          taxAmount: 0,
+                          billCount: 0
+                        };
+                      }
+                      const taxable = Number(item.taxableAmount) || 0;
+                      const tax = Number(item.taxAmount) || 0;
+                      const total = Number(item.totalAmount) || (taxable + tax);
+                      const paid = Number(item.paidAmount || item.passedAmount) || 0;
+
+                      partyMap[dUpper].taxableAmount += taxable;
+                      partyMap[dUpper].taxAmount += tax;
+                      partyMap[dUpper].totalAmount += total;
+                      partyMap[dUpper].paidAmount += paid;
+                      if (total > 0) partyMap[dUpper].billCount += 1;
+                    });
+
+                    // Include any dealers with saved opening balances that had no bills in this period
+                    Object.entries(dealerOpenings).forEach(([k, val]) => {
+                      const cleanK = k.trim();
+                      const cleanUpper = cleanK.toUpperCase();
+                      if (cleanK && cleanK !== 'DEFAULT' && !partyMap[cleanUpper]) {
+                        partyMap[cleanUpper] = {
+                          dealerName: cleanK,
+                          totalAmount: 0,
+                          paidAmount: 0,
+                          taxableAmount: 0,
+                          taxAmount: 0,
+                          billCount: 0
+                        };
+                      }
+                    });
+
+                    let totalOpeningSum = 0;
+                    let totalPurchasesSum = 0;
+                    let totalPaidSum = 0;
+                    let totalNetBalanceSum = 0;
+
+                    const consolidatedSuppliers = Object.values(partyMap).map(d => {
+                      const upper = d.dealerName.toUpperCase();
+                      let opBal = 0;
+                      for (const [k, val] of Object.entries(dealerOpenings)) {
+                        const cleanK = k.trim().toUpperCase();
+                        if (cleanK === upper || cleanK.includes(upper) || upper.includes(cleanK)) {
+                          opBal = Number(val) || 0;
+                          break;
+                        }
+                      }
+                      const netBal = (opBal + d.totalAmount) - d.paidAmount;
+
+                      totalOpeningSum += opBal;
+                      totalPurchasesSum += d.totalAmount;
+                      totalPaidSum += d.paidAmount;
+                      if (netBal > 0) totalNetBalanceSum += netBal;
+
+                      return {
+                        ...d,
+                        openingBalance: opBal,
+                        netBalance: netBal
+                      };
+                    }).sort((a, b) => a.dealerName.localeCompare(b.dealerName));
+
+                    return (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1.5px solid #000000', color: '#000000', fontWeight: 800 }}>
+                            <th style={{ textAlign: 'center', padding: '8px 4px', width: '50px' }}>Sl. No.</th>
+                            <th style={{ textAlign: 'left', padding: '8px 6px' }}>Name of Dealer / Supplier</th>
+                            <th style={{ textAlign: 'right', padding: '8px 6px' }}>Opening Balance</th>
+                            <th style={{ textAlign: 'right', padding: '8px 6px' }}>Total Purchase</th>
+                            <th style={{ textAlign: 'right', padding: '8px 6px' }}>Paid Amount</th>
+                            <th style={{ textAlign: 'right', padding: '8px 6px' }}>Balance Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {consolidatedSuppliers.map((sup, idx) => (
+                            <tr key={idx} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                              <td style={{ textAlign: 'center', padding: '6px 4px', fontWeight: 700 }}>{idx + 1}</td>
+                              <td style={{ padding: '6px 6px', fontWeight: 700, color: '#111827' }}>{sup.dealerName}</td>
+                              <td style={{ textAlign: 'right', padding: '6px 6px', color: sup.openingBalance > 0 ? '#16a34a' : '#9ca3af' }}>
+                                {sup.openingBalance !== 0 ? sup.openingBalance.toFixed(2) : '-'}
+                              </td>
+                              <td style={{ textAlign: 'right', padding: '6px 6px', fontWeight: 700 }}>
+                                {sup.totalAmount > 0 ? sup.totalAmount.toFixed(2) : '-'}
+                              </td>
+                              <td style={{ textAlign: 'right', padding: '6px 6px', color: sup.paidAmount > 0 ? '#1e40af' : '#9ca3af', fontWeight: sup.paidAmount > 0 ? 700 : 400 }}>
+                                {sup.paidAmount > 0 ? sup.paidAmount.toFixed(2) : '-'}
+                              </td>
+                              <td style={{ 
+                                textAlign: 'right', 
+                                padding: '6px 6px', 
+                                fontWeight: 800, 
+                                color: sup.netBalance > 0 ? '#dc2626' : (sup.netBalance < 0 ? '#1e40af' : '#16a34a') 
+                              }}>
+                                {sup.netBalance.toFixed(2)}
+                              </td>
+                            </tr>
+                          ))}
+
+                          {/* Grand Totals Summary Row */}
+                          {exportIncludeTotals && (
+                            <tr style={{ borderTop: '2px solid #000000', borderBottom: '2px solid #000000', fontWeight: 900, fontSize: '0.925rem' }}>
+                              <td colSpan={2} style={{ padding: '8px 6px', fontWeight: 900, textTransform: 'uppercase' }}>
+                                GRAND TOTAL :
+                              </td>
+                              <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalOpeningSum.toFixed(2)}</td>
+                              <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalPurchasesSum.toFixed(2)}</td>
+                              <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalPaidSum.toFixed(2)}</td>
+                              <td style={{ textAlign: 'right', padding: '8px 6px', color: totalNetBalanceSum > 0 ? '#dc2626' : '#16a34a' }}>
+                                {totalNetBalanceSum.toFixed(2)}
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    );
+                  }
+
+                  // =========================================================================
+                  // MODE B: SINGLE SUPPLIER DETAILED CHRONOLOGICAL FIFO STATEMENT
+                  // =========================================================================
                   const sortedStatementEntries = [...statementEntries].sort((a, b) => {
                     const dateA = a.invoiceDate || a.paymentDate || a.passedDate || '';
                     const dateB = b.invoiceDate || b.paymentDate || b.passedDate || '';
@@ -2777,12 +2801,6 @@ export const PurchaseLedgerPage = () => {
                     sumPaid += parseFloat(item.paidAmount || item.passedAmount) || 0;
                   });
                   const sumBalance = (openingBalance + sumTotal) - sumPaid;
-
-                  const formatStDate = (val) => {
-                    if (!val || val === '-' || val === '--') return '-';
-                    const d = new Date(val);
-                    return isNaN(d.getTime()) ? String(val) : d.toLocaleDateString('en-GB');
-                  };
 
                   return (
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}>
