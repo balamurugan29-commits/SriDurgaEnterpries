@@ -582,11 +582,25 @@ export const PurchaseLedgerPage = () => {
       paidAmount: 0
     });
 
-    // Exact formula: (Opening Balance as of From Date + Purchases in Period) - Payments in Period
-    const effectiveOpening = (filterDealer || fromDate) ? openingBalance : 0;
-    agg.balanceAmount = Math.max(0, (effectiveOpening + agg.totalAmount) - agg.paidAmount);
+    if (filterDealer && filterDealer.trim()) {
+      // For a specific dealer: Opening Balance + Total Purchases - Total Paid
+      agg.balanceAmount = Math.max(0, (openingBalance + agg.totalAmount) - agg.paidAmount);
+    } else {
+      // For ALL parties: Sum of individual pending unpaid bills + active dealer opening balances
+      let totalAllOpenings = 0;
+      Object.values(dealerOpenings).forEach(val => {
+        totalAllOpenings += Number(val) || 0;
+      });
+      const sumBillBalances = filteredPurchases.reduce((sum, item) => {
+        const total = Number(item.totalAmount) || ((Number(item.taxableAmount) || 0) + (Number(item.taxAmount) || 0));
+        const paid = Number(item.paidAmount || item.passedAmount) || 0;
+        return sum + (total > 0 ? Math.max(0, total - paid) : 0);
+      }, 0);
+
+      agg.balanceAmount = sumBillBalances + (fromDate ? 0 : totalAllOpenings);
+    }
     return agg;
-  }, [filteredPurchases, openingBalance, filterDealer, fromDate]);
+  }, [filteredPurchases, openingBalance, filterDealer, dealerOpenings, fromDate]);
 
   // Handler to set/save Opening Balance for current dealer
   const handleSaveOpeningBalance = (newAmount) => {
@@ -1578,7 +1592,7 @@ export const PurchaseLedgerPage = () => {
                   const tax = Number(l.taxAmount) || 0;
                   const total = Number(l.totalAmount) || (taxable + tax);
                   const paid = Number(l.paidAmount || l.passedAmount) || 0;
-                  const balance = l.balanceAmount !== undefined && l.balanceAmount !== null ? Number(l.balanceAmount) : Math.max(0, total - paid);
+                  const billBalance = total > 0 ? Math.max(0, total - paid) : 0;
                   const isSelected = selectedItemIds.includes(l.id);
 
                   return (
@@ -1659,8 +1673,8 @@ export const PurchaseLedgerPage = () => {
                       </td>
 
                       {/* Balance Amount */}
-                      <td style={{ textAlign: 'right', fontWeight: 800, color: balance > 0 ? '#fbbf24' : '#34d399' }}>
-                        ₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <td style={{ textAlign: 'right', fontWeight: 800, color: billBalance > 0 ? '#fbbf24' : '#34d399' }}>
+                        {total > 0 ? `₹${billBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
                       </td>
 
                       {/* Actions (Sticky Right Column) */}

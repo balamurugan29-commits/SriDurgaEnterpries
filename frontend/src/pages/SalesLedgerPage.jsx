@@ -809,10 +809,25 @@ export const SalesLedgerPage = () => {
       passedAmount: 0
     });
 
-    const effectiveOpening = (filterCustomer || fromDate) ? openingBalance : 0;
-    agg.balanceAmount = Math.max(0, (effectiveOpening + agg.totalAmount) - agg.passedAmount);
+    if (filterCustomer && filterCustomer.trim()) {
+      // For a specific customer: Opening Balance + Total Invoiced - Total Passed
+      agg.balanceAmount = Math.max(0, (openingBalance + agg.totalAmount) - agg.passedAmount);
+    } else {
+      // For ALL customers: Sum of individual pending unpaid invoices + active customer opening balances
+      let totalAllOpenings = 0;
+      Object.values(customerOpenings).forEach(val => {
+        totalAllOpenings += Number(val) || 0;
+      });
+      const sumBillBalances = filteredLedgers.reduce((sum, item) => {
+        const total = Number(item.totalAmount) || 0;
+        const passed = Number(item.passedAmount) || 0;
+        return sum + (total > 0 ? Math.max(0, total - passed) : 0);
+      }, 0);
+
+      agg.balanceAmount = sumBillBalances + (fromDate ? 0 : totalAllOpenings);
+    }
     return agg;
-  }, [filteredLedgers, openingBalance, filterCustomer, fromDate]);
+  }, [filteredLedgers, openingBalance, filterCustomer, customerOpenings, fromDate]);
 
   // Handler to set/save Opening Balance for current customer
   const handleSaveOpeningBalance = (newAmount) => {
