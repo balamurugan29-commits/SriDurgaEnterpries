@@ -843,12 +843,39 @@ export const deleteGatePass = async (id) => {
 // ==========================================
 // Sales Ledger API & Persistent Storage
 // ==========================================
+// Sales Ledger API & Persistent Storage
+// ==========================================
 export const fetchSalesLedgers = async () => {
   try {
     const res = await api.get('/sales-ledger');
-    return res.data || [];
+    const dbList = res.data || [];
+    const local = localStorage.getItem('sri_durga_sales_ledger');
+    const localList = local ? JSON.parse(local) : [];
+
+    // Auto-sync localStorage to MS SQL Server if database has no rows
+    if (dbList.length === 0 && localList.length > 0) {
+      try {
+        console.log(`Auto-syncing ${localList.length} sales ledger records to MS SQL Server database...`);
+        for (const item of localList) {
+          await api.post('/sales-ledger', item);
+        }
+        const updated = await api.get('/sales-ledger');
+        if (updated.data && updated.data.length > 0) {
+          localStorage.setItem('sri_durga_sales_ledger', JSON.stringify(updated.data));
+          return updated.data;
+        }
+      } catch (syncErr) {
+        console.error('Auto-sync sales to DB failed:', syncErr);
+      }
+      return localList;
+    }
+
+    if (dbList.length > 0) {
+      localStorage.setItem('sri_durga_sales_ledger', JSON.stringify(dbList));
+    }
+    return dbList;
   } catch (err) {
-    console.warn('Backend unavailable, using client storage fallback for fetchSalesLedgers');
+    console.warn('Backend unavailable, using client storage fallback for fetchSalesLedgers:', err);
     const local = localStorage.getItem('sri_durga_sales_ledger');
     return local ? JSON.parse(local) : [];
   }
@@ -912,9 +939,31 @@ export const deleteSalesLedger = async (id) => {
 export const fetchPurchaseLedgers = async () => {
   try {
     const res = await api.get('/purchase-ledger');
-    return res.data || [];
+    const dbList = res.data || [];
+    const local = localStorage.getItem('sri_durga_purchase_ledger');
+    const localList = local ? JSON.parse(local) : [];
+
+    // Auto-sync localStorage to MS SQL Server if database has no rows
+    if (dbList.length === 0 && localList.length > 0) {
+      try {
+        console.log(`Auto-syncing ${localList.length} purchase ledger records to MS SQL Server database...`);
+        const synced = await api.post('/purchase-ledger/bulk', localList);
+        if (synced.data && synced.data.length > 0) {
+          localStorage.setItem('sri_durga_purchase_ledger', JSON.stringify(synced.data));
+          return synced.data;
+        }
+      } catch (syncErr) {
+        console.error('Auto-sync purchase to DB failed:', syncErr);
+      }
+      return localList;
+    }
+
+    if (dbList.length > 0) {
+      localStorage.setItem('sri_durga_purchase_ledger', JSON.stringify(dbList));
+    }
+    return dbList;
   } catch (err) {
-    console.warn('Backend unavailable, using client storage fallback for fetchPurchaseLedgers');
+    console.warn('Backend unavailable, using client storage fallback for fetchPurchaseLedgers:', err);
     const local = localStorage.getItem('sri_durga_purchase_ledger');
     return local ? JSON.parse(local) : [];
   }
