@@ -1089,11 +1089,8 @@ export const SalesLedgerPage = () => {
             .individual-party-page {
               page-break-after: always !important;
               break-after: page !important;
-              min-height: 98vh;
-              display: flex;
-              flex-direction: column;
-              justify-content: space-between;
-              padding: 0 0 20px 0;
+              page-break-inside: avoid !important;
+              padding: 25px 0 !important;
             }
             .individual-party-page:last-child {
               page-break-after: auto !important;
@@ -3052,105 +3049,104 @@ export const SalesLedgerPage = () => {
                                 pageBreakAfter: pIdx === consolidatedCustomers.length - 1 ? 'auto' : 'always', 
                                 breakAfter: pIdx === consolidatedCustomers.length - 1 ? 'auto' : 'page',
                                 borderBottom: pIdx === consolidatedCustomers.length - 1 ? 'none' : '2px dashed #cbd5e1',
-                                paddingBottom: '2rem'
+                                padding: '2rem 1.5rem 3rem 1.5rem',
+                                maxWidth: '780px',
+                                margin: '0 auto'
                               }}
                             >
                               {/* 1. Page Header */}
-                              <div style={{ textAlign: 'center', marginBottom: '1.25rem', borderBottom: '2px solid #000000', paddingBottom: '0.65rem' }}>
-                                <h1 style={{ color: '#000000', fontSize: '1.45rem', fontWeight: 900, letterSpacing: '0.05em', margin: '0 0 0.25rem 0', textTransform: 'uppercase' }}>
+                              <div style={{ textAlign: 'center', marginBottom: '1.5rem', borderBottom: '2px solid #000000', paddingBottom: '0.75rem' }}>
+                                <h1 style={{ color: '#000000', fontSize: '1.55rem', fontWeight: 900, letterSpacing: '0.05em', margin: '0 0 0.25rem 0', textTransform: 'uppercase' }}>
                                   SRI DURGA ENTERPRISES, KARAIKAL.
                                 </h1>
-                                <div style={{ fontSize: '0.825rem', color: '#334155', fontWeight: 600 }}>
+                                <div style={{ fontSize: '0.875rem', color: '#334155', fontWeight: 600 }}>
                                   No. 14, Main Road, Karaikal - 609602 | GSTIN: 34AAVFS0000A1Z5
                                 </div>
-                                <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#000000', marginTop: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#000000', marginTop: '0.45rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                                   CUSTOMER STATEMENT OF ACCOUNT
                                 </div>
                               </div>
 
-                              {/* 2. Customer & Statement Meta Info Box */}
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', margin: '0.75rem 0 1.25rem 0', padding: '0.85rem 1rem', border: '1.5px solid #000000', borderRadius: '4px', background: '#f8fafc' }}>
-                                <div>
-                                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Billed To / Customer:</div>
-                                  <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#000000', marginTop: '2px' }}>{cust.customerName}</div>
-                                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>Customer Sl. No: #{pIdx + 1} of {consolidatedCustomers.length}</div>
-                                </div>
-                                <div style={{ textAlign: 'right', fontSize: '0.85rem' }}>
-                                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Statement Period:</div>
-                                  <div style={{ fontWeight: 800, color: '#000000', marginTop: '2px' }}>
-                                    {fromDate ? new Date(fromDate).toLocaleDateString('en-GB') : getActiveFinancialYearStartDate()} To {toDate ? new Date(toDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}
+                              {/* 2. ONE Unified Combined Centered Statement Card */}
+                              <div style={{ border: '2px solid #000000', borderRadius: '8px', overflow: 'hidden', margin: '1.5rem 0', background: '#ffffff', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+                                
+                                {/* Top Header Row: Customer Name & Period */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', padding: '1rem 1.25rem', background: '#f8fafc', borderBottom: '1.5px solid #000000' }}>
+                                  <div>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Billed To / Customer:</div>
+                                    <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#000000', marginTop: '2px' }}>{cust.customerName}</div>
+                                  </div>
+                                  <div style={{ textAlign: 'right', fontSize: '0.875rem' }}>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Statement Period:</div>
+                                    <div style={{ fontWeight: 800, color: '#000000', marginTop: '2px' }}>
+                                      {fromDate ? new Date(fromDate).toLocaleDateString('en-GB') : getActiveFinancialYearStartDate()} To {toDate ? new Date(toDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
 
-                              {/* 3. Clean Financial Summary Table (Total, Received, Opening Balance - No individual bill rows) */}
-                              <div style={{ margin: '1rem 0 1.5rem 0', border: '1.5px solid #000000', borderRadius: '4px', overflow: 'hidden' }}>
-                                <div style={{ background: '#f1f5f9', padding: '0.65rem 1rem', borderBottom: '1.5px solid #000000', fontWeight: 800, fontSize: '0.85rem', textTransform: 'uppercase', color: '#0f172a' }}>
-                                  Account Balance Summary
-                                </div>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}>
+                                {/* Middle Rows: Summary Numbers Table */}
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.95rem', fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}>
                                   <tbody>
                                     {cust.openingBalance !== 0 && (
                                       <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                        <td style={{ padding: '8px 12px', fontWeight: 700, color: '#475569' }}>Opening Balance</td>
-                                        <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#16a34a' }}>
+                                        <td style={{ padding: '12px 18px', fontWeight: 700, color: '#334155' }}>Opening Balance</td>
+                                        <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: 800, color: '#16a34a', fontSize: '1.05rem' }}>
                                           ₹{cust.openingBalance.toFixed(2)}
                                         </td>
                                       </tr>
                                     )}
                                     <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                      <td style={{ padding: '8px 12px', fontWeight: 700, color: '#475569' }}>Total Sales / Invoices</td>
-                                      <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>
+                                      <td style={{ padding: '12px 18px', fontWeight: 700, color: '#334155' }}>Total Sales / Invoices</td>
+                                      <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: 800, color: '#0f172a', fontSize: '1.05rem' }}>
                                         ₹{cust.totalAmount.toFixed(2)}
                                       </td>
                                     </tr>
-                                    <tr style={{ borderBottom: '1.5px solid #000000' }}>
-                                      <td style={{ padding: '8px 12px', fontWeight: 700, color: '#475569' }}>Total Received Amount</td>
-                                      <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800, color: '#1e40af' }}>
+                                    <tr style={{ borderBottom: '2px solid #000000' }}>
+                                      <td style={{ padding: '12px 18px', fontWeight: 700, color: '#334155' }}>Total Received Amount</td>
+                                      <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: 800, color: '#1e40af', fontSize: '1.05rem' }}>
                                         ₹{cust.passedAmount.toFixed(2)}
                                       </td>
                                     </tr>
                                   </tbody>
                                 </table>
-                              </div>
 
-                              {/* 4. Formal Dues / Advance Status Notice Box */}
-                              <div style={{ 
-                                margin: '1rem 0 1.5rem 0', 
-                                padding: '1rem 1.25rem', 
-                                border: cust.netBalance > 0 ? '1.5px solid #dc2626' : (cust.netBalance < 0 ? '1.5px solid #1e40af' : '1.5px solid #16a34a'),
-                                borderRadius: '6px',
-                                background: cust.netBalance > 0 ? '#fef2f2' : (cust.netBalance < 0 ? '#eff6ff' : '#f0fdf4'),
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between'
-                              }}>
-                                <div>
-                                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>
-                                    Statement Closing Status
+                                {/* Bottom Highlight Row: Closing Status & Amount */}
+                                <div style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'space-between', 
+                                  padding: '1.25rem 1.5rem', 
+                                  background: cust.netBalance > 0 ? '#fef2f2' : (cust.netBalance < 0 ? '#eff6ff' : '#f0fdf4'),
+                                  borderTop: '1px solid rgba(0,0,0,0.08)'
+                                }}>
+                                  <div>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                      Statement Closing Status
+                                    </div>
+                                    <div style={{ fontSize: '1.05rem', fontWeight: 900, color: cust.netBalance > 0 ? '#991b1b' : (cust.netBalance < 0 ? '#1e40af' : '#166534'), marginTop: '3px' }}>
+                                      {cust.netBalance > 0 
+                                        ? 'Outstanding Balance Pending to be Received'
+                                        : cust.netBalance < 0 
+                                          ? 'Advance / Extra Amount Paid by Customer'
+                                          : 'Account Fully Settled & Cleared'}
+                                    </div>
                                   </div>
-                                  <div style={{ fontSize: '0.95rem', fontWeight: 800, color: cust.netBalance > 0 ? '#991b1b' : (cust.netBalance < 0 ? '#1e40af' : '#166534'), marginTop: '2px' }}>
-                                    {cust.netBalance > 0 
-                                      ? `Outstanding Balance Pending to be Received`
-                                      : cust.netBalance < 0 
-                                        ? `Advance / Extra Amount Paid by Customer`
-                                        : `Account Fully Settled & Cleared`}
+                                  <div style={{ textAlign: 'right' }}>
+                                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: cust.netBalance > 0 ? '#dc2626' : (cust.netBalance < 0 ? '#1e40af' : '#16a34a') }}>
+                                      ₹{Math.abs(cust.netBalance).toFixed(2)}
+                                    </div>
+                                    {cust.netBalance < 0 && (
+                                      <span style={{ fontSize: '0.75rem', fontWeight: 800, background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: '4px' }}>
+                                        EXTRA / ADVANCE
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
-                                <div style={{ textAlign: 'right' }}>
-                                  <div style={{ fontSize: '1.45rem', fontWeight: 900, color: cust.netBalance > 0 ? '#dc2626' : (cust.netBalance < 0 ? '#1e40af' : '#16a34a') }}>
-                                    ₹{Math.abs(cust.netBalance).toFixed(2)}
-                                  </div>
-                                  {cust.netBalance < 0 && (
-                                    <span style={{ fontSize: '0.72rem', fontWeight: 800, background: '#dbeafe', color: '#1e40af', padding: '1px 6px', borderRadius: '4px' }}>
-                                      EXTRA / ADVANCE
-                                    </span>
-                                  )}
-                                </div>
+
                               </div>
 
-                              {/* 5. Formal Authorisation Signatures */}
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2.5rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0', fontSize: '0.85rem', fontWeight: 800 }}>
+                              {/* 3. Formal Authorisation Signatures */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '3rem', paddingTop: '1.25rem', borderTop: '1px solid #e2e8f0', fontSize: '0.875rem', fontWeight: 800 }}>
                                 <div>Prepared & Verified By</div>
                                 <div style={{ textAlign: 'center' }}>
                                   <div>For SRI DURGA ENTERPRISES</div>
