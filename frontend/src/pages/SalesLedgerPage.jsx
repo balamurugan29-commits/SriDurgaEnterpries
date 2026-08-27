@@ -1785,7 +1785,7 @@ export const SalesLedgerPage = () => {
             display: 'flex', 
             alignItems: 'flex-start', 
             justifyContent: 'center', 
-            padding: '4.75rem 1rem 3rem 1rem',
+            padding: '6.5rem 1rem 3rem 1rem',
             overflowY: 'auto'
           }}
           onClick={(e) => {
@@ -1803,7 +1803,7 @@ export const SalesLedgerPage = () => {
               boxShadow: '0 25px 60px rgba(0, 0, 0, 0.9)',
               display: 'flex',
               flexDirection: 'column',
-              maxHeight: 'calc(100vh - 6rem)',
+              maxHeight: 'calc(100vh - 8rem)',
               overflow: 'hidden'
             }}
           >
@@ -1815,7 +1815,8 @@ export const SalesLedgerPage = () => {
                 justifyContent: 'space-between', 
                 padding: '1rem 1.5rem', 
                 background: 'rgba(30, 41, 59, 0.95)', 
-                borderBottom: '1px solid rgba(255, 255, 255, 0.1)' 
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                flexShrink: 0
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
@@ -2117,7 +2118,7 @@ export const SalesLedgerPage = () => {
             display: 'flex', 
             alignItems: 'flex-start', 
             justifyContent: 'center', 
-            padding: '4.75rem 1rem 3rem 1rem',
+            padding: '6.5rem 1rem 3rem 1rem',
             overflowY: 'auto'
           }}
           onClick={(e) => {
@@ -2132,10 +2133,10 @@ export const SalesLedgerPage = () => {
               background: '#0f172a', 
               border: '1.5px solid rgba(16, 185, 129, 0.4)', 
               borderRadius: '16px', 
-              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.9)',
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.95)',
               display: 'flex',
               flexDirection: 'column',
-              maxHeight: 'calc(100vh - 6rem)',
+              maxHeight: 'calc(100vh - 8rem)',
               overflow: 'hidden'
             }}
           >
@@ -2147,7 +2148,8 @@ export const SalesLedgerPage = () => {
                 justifyContent: 'space-between', 
                 padding: '1.15rem 1.5rem', 
                 background: 'rgba(30, 41, 59, 0.95)', 
-                borderBottom: '1px solid rgba(255, 255, 255, 0.1)' 
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                flexShrink: 0
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
@@ -2368,7 +2370,7 @@ export const SalesLedgerPage = () => {
             display: 'flex', 
             alignItems: 'flex-start', 
             justifyContent: 'center', 
-            padding: '4.75rem 1rem 3rem 1rem',
+            padding: '6.5rem 1rem 3rem 1rem',
             overflowY: 'auto'
           }}
           onClick={(e) => {

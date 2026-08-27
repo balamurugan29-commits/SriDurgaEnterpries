@@ -1810,7 +1810,7 @@ export const PurchaseLedgerPage = () => {
             display: 'flex', 
             alignItems: 'flex-start', 
             justifyContent: 'center', 
-            padding: '4.75rem 1rem 3rem 1rem',
+            padding: '6.5rem 1rem 3rem 1rem',
             overflowY: 'auto'
           }}
           onClick={(e) => {
@@ -1821,14 +1821,14 @@ export const PurchaseLedgerPage = () => {
             className="glass-panel animate-modal-entry"
             style={{ 
               width: '100%', 
-              maxWidth: '700px', 
+              maxWidth: '750px', 
               background: '#0f172a', 
               border: '1.5px solid rgba(236, 72, 153, 0.4)', 
               borderRadius: '16px', 
               boxShadow: '0 25px 60px rgba(0, 0, 0, 0.9)',
               display: 'flex',
               flexDirection: 'column',
-              maxHeight: 'calc(100vh - 6rem)',
+              maxHeight: 'calc(100vh - 8rem)',
               overflow: 'hidden'
             }}
           >
@@ -1840,7 +1840,8 @@ export const PurchaseLedgerPage = () => {
                 justifyContent: 'space-between', 
                 padding: '1rem 1.5rem', 
                 background: 'rgba(30, 41, 59, 0.95)', 
-                borderBottom: '1px solid rgba(255, 255, 255, 0.1)' 
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                flexShrink: 0
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
@@ -2055,7 +2056,7 @@ export const PurchaseLedgerPage = () => {
             display: 'flex', 
             alignItems: 'flex-start', 
             justifyContent: 'center', 
-            padding: '4.75rem 1rem 3rem 1rem',
+            padding: '6.5rem 1rem 3rem 1rem',
             overflowY: 'auto'
           }}
           onClick={(e) => {
@@ -2068,12 +2069,12 @@ export const PurchaseLedgerPage = () => {
               width: '100%', 
               maxWidth: '650px', 
               background: '#0f172a', 
-              border: '1.5px solid rgba(16, 185, 129, 0.4)', 
+              border: '1.5px solid rgba(139, 92, 246, 0.4)', 
               borderRadius: '16px', 
-              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.9)',
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.95)',
               display: 'flex',
               flexDirection: 'column',
-              maxHeight: 'calc(100vh - 6rem)',
+              maxHeight: 'calc(100vh - 8rem)',
               overflow: 'hidden'
             }}
           >
@@ -2085,7 +2086,8 @@ export const PurchaseLedgerPage = () => {
                 justifyContent: 'space-between', 
                 padding: '1.15rem 1.5rem', 
                 background: 'rgba(30, 41, 59, 0.95)', 
-                borderBottom: '1px solid rgba(255, 255, 255, 0.1)' 
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                flexShrink: 0 
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
@@ -2306,7 +2308,7 @@ export const PurchaseLedgerPage = () => {
             display: 'flex', 
             alignItems: 'flex-start', 
             justifyContent: 'center', 
-            padding: '4.75rem 1rem 3rem 1rem',
+            padding: '6.5rem 1rem 3rem 1rem',
             overflowY: 'auto'
           }}
           onClick={(e) => {
@@ -2714,7 +2716,7 @@ export const PurchaseLedgerPage = () => {
             display: 'flex', 
             alignItems: 'flex-start', 
             justifyContent: 'center', 
-            padding: '4.75rem 1rem 3rem 1rem',
+            padding: '6.5rem 1rem 3rem 1rem',
             overflowY: 'auto'
           }}
           onClick={(e) => {
@@ -2731,12 +2733,12 @@ export const PurchaseLedgerPage = () => {
               boxShadow: '0 25px 60px rgba(0, 0, 0, 0.95)',
               display: 'flex',
               flexDirection: 'column',
-              maxHeight: 'calc(100vh - 6rem)',
+              maxHeight: 'calc(100vh - 8rem)',
               overflow: 'hidden'
             }}
           >
             {/* Modal Header */}
-            <div style={{ padding: '1rem 1.5rem', background: 'rgba(30, 41, 59, 0.95)', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ padding: '1rem 1.5rem', background: 'rgba(30, 41, 59, 0.95)', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
                 <UploadCloud size={22} color="#38bdf8" />
                 <div>
@@ -2980,7 +2982,7 @@ export const PurchaseLedgerPage = () => {
             display: 'flex', 
             alignItems: 'flex-start', 
             justifyContent: 'center', 
-            padding: '4.75rem 1rem 3rem 1rem',
+            padding: '6.5rem 1rem 3rem 1rem',
             overflowY: 'auto'
           }}
           onClick={(e) => {
@@ -2997,12 +2999,12 @@ export const PurchaseLedgerPage = () => {
               boxShadow: '0 25px 60px rgba(0, 0, 0, 0.98)',
               display: 'flex',
               flexDirection: 'column',
-              maxHeight: 'calc(100vh - 6rem)',
+              maxHeight: 'calc(100vh - 8rem)',
               overflow: 'hidden'
             }}
           >
             {/* Modal Header */}
-            <div style={{ padding: '1rem 1.5rem', background: 'rgba(30, 41, 59, 0.95)', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ padding: '1rem 1.5rem', background: 'rgba(30, 41, 59, 0.95)', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
                 <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171' }}>
                   <AlertCircle size={22} />
