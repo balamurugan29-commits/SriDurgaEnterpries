@@ -2518,7 +2518,7 @@ export const SalesLedgerPage = () => {
                     Customer Sales Ledger for: <span style={{ textDecoration: 'underline' }}>{filterCustomer && filterCustomer.trim() ? resolvedCustomerName.toUpperCase() : 'ALL CUSTOMERS'}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#000000', fontSize: '0.9rem', fontWeight: 800, padding: '0 1rem' }}>
-                    <span>From: &nbsp; {fromDate ? new Date(fromDate).toLocaleDateString('en-GB') : (statementEntries.length > 0 && statementEntries[statementEntries.length - 1].invoiceDate ? new Date(statementEntries[statementEntries.length - 1].invoiceDate).toLocaleDateString('en-GB') : getActiveFinancialYearStartDate())} &nbsp; To: &nbsp; {toDate ? new Date(toDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}</span>
+                    <span>From: &nbsp; {fromDate ? new Date(fromDate).toLocaleDateString('en-GB') : getActiveFinancialYearStartDate()} &nbsp; To: &nbsp; {toDate ? new Date(toDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}</span>
                     <span>Page No &nbsp; 1</span>
                   </div>
                 </div>
