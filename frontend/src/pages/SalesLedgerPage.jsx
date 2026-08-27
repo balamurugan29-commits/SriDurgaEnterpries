@@ -58,7 +58,7 @@ const SALES_EXPORT_COLUMNS = [
   { key: 'remarks', label: 'Remarks', default: true }
 ];
 
-// Helper: Calculate Financial Year Start Date (e.g. 01/04/2026, 01/04/2027 etc.)
+// Helper: Calculate Financial Year Start Date formatted (e.g. 01/04/2026, 01/04/2027 etc.)
 const getFinancialYearStartDate = (fromDate) => {
   if (fromDate) {
     return new Date(fromDate).toLocaleDateString('en-GB');
@@ -68,6 +68,18 @@ const getFinancialYearStartDate = (fromDate) => {
   const currentYear = today.getFullYear();
   const fyStartYear = currentMonth >= 3 ? currentYear : currentYear - 1;
   return `01/04/${fyStartYear}`;
+};
+
+// Helper: Get ISO Date for start of Financial Year (e.g. '2026-04-01', '2027-04-01')
+const getFinancialYearStartIso = (fromDate) => {
+  if (fromDate) {
+    return fromDate;
+  }
+  const today = new Date();
+  const currentMonth = today.getMonth(); // 0 = Jan, 3 = Apr
+  const currentYear = today.getFullYear();
+  const fyStartYear = currentMonth >= 3 ? currentYear : currentYear - 1;
+  return `${fyStartYear}-04-01`;
 };
 
 const PAYMENT_MODES = [
@@ -727,6 +739,7 @@ export const SalesLedgerPage = () => {
   }, [filteredLedgers]);
 
   // Calculate Dynamic Opening Balance for current Customer & Date Filter
+  // Auto-fetches all unpaid balances dated BEFORE the current Financial Year start date (e.g. 01/04/2026, 01/04/2027)
   const openingBalance = useMemo(() => {
     const targetCust = (resolvedCustomerName && resolvedCustomerName !== 'SRI DURGA ENTERPRISES, KARAIKAL.') 
       ? resolvedCustomerName.trim().toUpperCase() 
@@ -747,15 +760,17 @@ export const SalesLedgerPage = () => {
       baseOpening = Number(customerOpenings['DEFAULT']) || 0;
     }
 
-    // 2. Sum unpaid balances from prior invoices (dated before fromDate or from previous FY 25-26)
+    const cutoffDate = getFinancialYearStartIso(fromDate);
+
+    // 2. Sum unpaid balances from prior invoices (dated before cutoffDate e.g. 01/04/2026, or previous FY /25-26)
     let priorUnpaid = 0;
     ledgerEntries.forEach(item => {
       const matchesCust = !targetCust || (item.billedTo && (item.billedTo.toUpperCase().includes(targetCust) || targetCust.includes(item.billedTo.toUpperCase())));
       if (matchesCust) {
         let isPrior = false;
-        if (fromDate && item.invoiceDate && item.invoiceDate < fromDate) {
+        if (item.invoiceDate && item.invoiceDate < cutoffDate) {
           isPrior = true;
-        } else if (!fromDate && item.invoiceNo && item.invoiceNo.includes('/25-26')) {
+        } else if (!item.invoiceDate && item.invoiceNo && (item.invoiceNo.includes('/25-26') || item.invoiceNo.includes('/24-25'))) {
           isPrior = true;
         }
 
@@ -2549,7 +2564,19 @@ export const SalesLedgerPage = () => {
                 {/* 3. Dynamic Columns Statement Table */}
                 {(() => {
                   const activeStatementCols = SALES_EXPORT_COLUMNS.filter(col => exportSelectedCols[col.key]);
-                  const statementEntries = exportScope === 'ALL' ? ledgerEntries : filteredLedgers;
+                  const cutoffDate = getFinancialYearStartIso(fromDate);
+
+                  // Filter out invoices that belong to prior years because they are already rolled into Opening Balance!
+                  const rawEntries = exportScope === 'ALL' ? ledgerEntries : filteredLedgers;
+                  const statementEntries = rawEntries.filter(item => {
+                    if (item.invoiceDate && item.invoiceDate < cutoffDate) {
+                      return false;
+                    }
+                    if (!item.invoiceDate && item.invoiceNo && (item.invoiceNo.includes('/25-26') || item.invoiceNo.includes('/24-25')) && !fromDate) {
+                      return false;
+                    }
+                    return true;
+                  });
 
                   let sumTaxable = 0, sumIgst = 0, sumSgst = 0, sumUgst = 0, sumTax = 0, sumTotal = 0, sumItTds = 0, sumGstTds = 0, sumPassed = 0;
                   statementEntries.forEach(item => {
