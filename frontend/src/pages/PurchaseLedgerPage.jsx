@@ -447,25 +447,8 @@ export const PurchaseLedgerPage = () => {
       if (filterPaymentStatus === 'PARTIAL') matchesStatus = (paid > 0 && balance > 0);
       if (filterPaymentStatus === 'PENDING') matchesStatus = (paid === 0 && total > 0);
 
-      // Mode of Payment (Only rows where payment was actually made (paid > 0) match specific modes like NEFT, CASH, etc.)
-      const rawMode = (item.modeOfPayment || '').trim().toUpperCase();
-      const effectiveMode = (paid > 0 && rawMode && rawMode !== '-' && rawMode !== '--' && rawMode !== 'N/A') 
-        ? rawMode 
-        : '';
-
-      let matchesMode = true;
-      if (filterMode !== 'ALL') {
-        const targetMode = filterMode.trim().toUpperCase();
-        if (targetMode === 'UNPAID' || targetMode === 'NONE' || targetMode === '-') {
-          matchesMode = !effectiveMode;
-        } else {
-          matchesMode = Boolean(effectiveMode) && (
-            effectiveMode === targetMode || 
-            effectiveMode.includes(targetMode) || 
-            targetMode.includes(effectiveMode)
-          );
-        }
-      }
+      // Mode
+      const matchesMode = filterMode === 'ALL' || item.modeOfPayment === filterMode;
 
       // Date
       let matchesDate = true;
@@ -599,10 +582,11 @@ export const PurchaseLedgerPage = () => {
       paidAmount: 0
     });
 
-    // Exact formula: Total Purchase Amount - Total Paid Amount
-    agg.balanceAmount = Math.max(0, agg.totalAmount - agg.paidAmount);
+    // Exact formula: (Opening Balance as of From Date + Purchases in Period) - Payments in Period
+    const effectiveOpening = (filterDealer || fromDate) ? openingBalance : 0;
+    agg.balanceAmount = Math.max(0, (effectiveOpening + agg.totalAmount) - agg.paidAmount);
     return agg;
-  }, [filteredPurchases]);
+  }, [filteredPurchases, openingBalance, filterDealer, fromDate]);
 
   // Handler to set/save Opening Balance for current dealer
   const handleSaveOpeningBalance = (newAmount) => {
@@ -2513,6 +2497,27 @@ export const PurchaseLedgerPage = () => {
                     return true;
                   });
 
+                  // Sort in ascending chronological order (oldest -> newest) for true running ledger statement
+                  const sortedStatementEntries = [...statementEntries].sort((a, b) => {
+                    const dateA = a.invoiceDate || a.paymentDate || a.passedDate || '';
+                    const dateB = b.invoiceDate || b.paymentDate || b.passedDate || '';
+                    if (dateA && dateB && dateA !== dateB) return dateA.localeCompare(dateB);
+                    if (!dateA && dateB) return 1;
+                    if (dateA && !dateB) return -1;
+                    return (a.id || 0) - (b.id || 0);
+                  });
+
+                  let runningBalance = openingBalance;
+                  const entriesWithRunningBalance = sortedStatementEntries.map(item => {
+                    const totalAmt = Number(item.totalAmount) || 0;
+                    const paidAmt = Number(item.paidAmount || item.passedAmount) || 0;
+                    runningBalance = (runningBalance + totalAmt) - paidAmt;
+                    return {
+                      ...item,
+                      currentRunningBalance: runningBalance
+                    };
+                  });
+
                   let sumTaxable = 0, sumTax = 0, sumTotal = 0, sumPaid = 0;
                   statementEntries.forEach(item => {
                     sumTaxable += parseFloat(item.taxableAmount) || 0;
@@ -2520,7 +2525,7 @@ export const PurchaseLedgerPage = () => {
                     sumTotal += parseFloat(item.totalAmount) || 0;
                     sumPaid += parseFloat(item.paidAmount || item.passedAmount) || 0;
                   });
-                  const sumBalance = Math.max(0, (openingBalance + sumTotal) - sumPaid);
+                  const sumBalance = (openingBalance + sumTotal) - sumPaid;
 
                   const formatStDate = (val) => {
                     if (!val || val === '-' || val === '--') return '-';
@@ -2575,13 +2580,7 @@ export const PurchaseLedgerPage = () => {
                             }
 
                             // Amount Column to hold the opening balance amount
-                            const isAmtCol = (
-                              col.key === 'totalAmount' ||
-                              (!activeStatementCols.some(c => c.key === 'totalAmount') && col.key === 'balanceAmount') ||
-                              (!activeStatementCols.some(c => ['totalAmount', 'balanceAmount'].includes(c.key)) && col.key === 'taxableAmount')
-                            );
-
-                            if (isAmtCol) {
+                            if (col.key === 'totalAmount' || col.key === 'balanceAmount') {
                               return (
                                 <td key={col.key} style={{ textAlign: 'right', padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>
                                   {openingBalance.toFixed(2)}
@@ -2593,13 +2592,13 @@ export const PurchaseLedgerPage = () => {
                           })}
                         </tr>
 
-                        {/* Transaction Rows */}
-                        {statementEntries.map((l, idx) => {
+                        {/* Transaction Rows with Running Balance */}
+                        {entriesWithRunningBalance.map((l, idx) => {
                           const taxableAmt = Number(l.taxableAmount) || 0;
                           const taxAmt = Number(l.taxAmount) || 0;
                           const totalAmt = Number(l.totalAmount) || 0;
                           const paidAmt = Number(l.paidAmount || l.passedAmount) || 0;
-                          const balAmt = l.balanceAmount !== undefined ? Number(l.balanceAmount) : Math.max(0, totalAmt - paidAmt);
+                          const runningBal = l.currentRunningBalance !== undefined ? l.currentRunningBalance : ((openingBalance + totalAmt) - paidAmt);
 
                           return (
                             <tr key={idx} style={{ borderBottom: '1px solid #f3f4f6' }}>
@@ -2614,7 +2613,7 @@ export const PurchaseLedgerPage = () => {
                                   return <td key={col.key} style={{ padding: '5px 4px', fontWeight: 700 }}>{l.invoiceNo || '-'}</td>;
                                 }
                                 if (col.key === 'invoiceDate') {
-                                  return <td key={col.key} style={{ textAlign: 'center', padding: '5px 4px' }}>{formatStDate(l.invoiceDate)}</td>;
+                                  return <td key={col.key} style={{ textAlign: 'center', padding: '5px 4px' }}>{formatStDate(l.invoiceDate || l.paymentDate)}</td>;
                                 }
                                 if (col.key === 'taxableAmount') {
                                   return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px' }}>{taxableAmt > 0 ? taxableAmt.toFixed(2) : '-'}</td>;
@@ -2623,7 +2622,7 @@ export const PurchaseLedgerPage = () => {
                                   return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px' }}>{taxAmt > 0 ? taxAmt.toFixed(2) : '-'}</td>;
                                 }
                                 if (col.key === 'totalAmount') {
-                                  return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px', fontWeight: 700 }}>{totalAmt.toFixed(2)}</td>;
+                                  return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px', fontWeight: 700 }}>{totalAmt > 0 ? totalAmt.toFixed(2) : (paidAmt > 0 ? '0.00' : '-')}</td>;
                                 }
                                 if (col.key === 'paidAmount') {
                                   return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px', color: paidAmt > 0 ? '#1e40af' : '#9ca3af', fontWeight: paidAmt > 0 ? 700 : 400 }}>{paidAmt > 0 ? paidAmt.toFixed(2) : '-'}</td>;
@@ -2636,7 +2635,7 @@ export const PurchaseLedgerPage = () => {
                                   return <td key={col.key} style={{ textAlign: 'center', padding: '5px 4px' }}>{hasPayment ? l.modeOfPayment : '-'}</td>;
                                 }
                                 if (col.key === 'balanceAmount') {
-                                  return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px', fontWeight: 700, color: balAmt > 0 ? '#dc2626' : '#16a34a' }}>{balAmt.toFixed(2)}</td>;
+                                  return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px', fontWeight: 700, color: runningBal > 0 ? '#dc2626' : (runningBal < 0 ? '#1e40af' : '#16a34a') }}>{runningBal.toFixed(2)}</td>;
                                 }
                                 return <td key={col.key} style={{ padding: '5px 4px' }}>-</td>;
                               })}
@@ -2669,7 +2668,7 @@ export const PurchaseLedgerPage = () => {
                                   return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumPaid.toFixed(2)}</td>;
                                 }
                                 if (col.key === 'balanceAmount') {
-                                  return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px', color: '#16a34a' }}>{sumBalance.toFixed(2)}</td>;
+                                  return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px', color: sumBalance > 0 ? '#dc2626' : '#16a34a' }}>{sumBalance.toFixed(2)}</td>;
                                 }
                                 return <td key={col.key} style={{ padding: '8px 4px' }}></td>;
                               })}

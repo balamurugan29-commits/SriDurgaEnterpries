@@ -55,6 +55,7 @@ const SALES_EXPORT_COLUMNS = [
   { key: 'passedAmount', label: 'Passed Amount', default: true },
   { key: 'passedDate', label: 'Passed Date', default: true },
   { key: 'modeOfPayment', label: 'Mode of Payment', default: true },
+  { key: 'balanceAmount', label: 'Balance Amount', default: true },
   { key: 'remarks', label: 'Remarks', default: true }
 ];
 
@@ -624,30 +625,12 @@ export const SalesLedgerPage = () => {
 
       // Payment Status (Passed vs Pending)
       let matchesStatus = true;
-      const passed = Number(item.passedAmount) || 0;
-      const isPassed = passed > 0 || (item.passedDate && item.passedDate.trim() !== '');
+      const isPassed = Number(item.passedAmount) > 0 || (item.passedDate && item.passedDate.trim() !== '');
       if (filterPaymentStatus === 'PASSED') matchesStatus = isPassed;
       if (filterPaymentStatus === 'PENDING') matchesStatus = !isPassed;
 
-      // Mode of Payment (Only invoices with realized/passed payment match specific modes)
-      const rawMode = (item.modeOfPayment || '').trim().toUpperCase();
-      const effectiveMode = (passed > 0 && rawMode && rawMode !== '-' && rawMode !== '--' && rawMode !== 'N/A') 
-        ? rawMode 
-        : '';
-
-      let matchesMode = true;
-      if (filterMode !== 'ALL') {
-        const targetMode = filterMode.trim().toUpperCase();
-        if (targetMode === 'UNPAID' || targetMode === 'NONE' || targetMode === '-') {
-          matchesMode = !effectiveMode;
-        } else {
-          matchesMode = Boolean(effectiveMode) && (
-            effectiveMode === targetMode || 
-            effectiveMode.includes(targetMode) || 
-            targetMode.includes(effectiveMode)
-          );
-        }
-      }
+      // Mode
+      const matchesMode = filterMode === 'ALL' || item.modeOfPayment === filterMode;
 
       // Date
       let matchesDate = true;
@@ -826,10 +809,10 @@ export const SalesLedgerPage = () => {
       passedAmount: 0
     });
 
-    // Exact formula: Total Invoiced Amount - Total Passed Amount
-    agg.balanceAmount = Math.max(0, agg.totalAmount - agg.passedAmount);
+    const effectiveOpening = (filterCustomer || fromDate) ? openingBalance : 0;
+    agg.balanceAmount = Math.max(0, (effectiveOpening + agg.totalAmount) - agg.passedAmount);
     return agg;
-  }, [filteredLedgers]);
+  }, [filteredLedgers, openingBalance, filterCustomer, fromDate]);
 
   // Handler to set/save Opening Balance for current customer
   const handleSaveOpeningBalance = (newAmount) => {
@@ -2586,6 +2569,27 @@ export const SalesLedgerPage = () => {
                     return true;
                   });
 
+                  // Sort in ascending chronological order (oldest -> newest) for true running ledger statement
+                  const sortedStatementEntries = [...statementEntries].sort((a, b) => {
+                    const dateA = a.invoiceDate || a.passedDate || '';
+                    const dateB = b.invoiceDate || b.passedDate || '';
+                    if (dateA && dateB && dateA !== dateB) return dateA.localeCompare(dateB);
+                    if (!dateA && dateB) return 1;
+                    if (dateA && !dateB) return -1;
+                    return (a.id || 0) - (b.id || 0);
+                  });
+
+                  let runningBalance = openingBalance;
+                  const entriesWithRunningBalance = sortedStatementEntries.map(item => {
+                    const totalAmt = Number(item.totalAmount) || 0;
+                    const passedAmt = Number(item.passedAmount) || 0;
+                    runningBalance = (runningBalance + totalAmt) - passedAmt;
+                    return {
+                      ...item,
+                      currentRunningBalance: runningBalance
+                    };
+                  });
+
                   let sumTaxable = 0, sumIgst = 0, sumSgst = 0, sumUgst = 0, sumTax = 0, sumTotal = 0, sumItTds = 0, sumGstTds = 0, sumPassed = 0;
                   statementEntries.forEach(item => {
                     sumTaxable += parseFloat(item.taxableAmount) || 0;
@@ -2598,6 +2602,7 @@ export const SalesLedgerPage = () => {
                     sumGstTds += parseFloat(item.gstTds) || 0;
                     sumPassed += parseFloat(item.passedAmount) || 0;
                   });
+                  const sumBalance = (openingBalance + sumTotal) - sumPassed;
 
                   const formatStDate = (val) => {
                     if (!val || val === '-' || val === '--') return '-';
@@ -2612,7 +2617,7 @@ export const SalesLedgerPage = () => {
                           {activeStatementCols.map(col => {
                             let textAlign = 'left';
                             if (['slNo', 'invoiceDate', 'passedDate'].includes(col.key)) textAlign = 'center';
-                            if (['taxableAmount', 'igst', 'sgst', 'ugst', 'taxAmount', 'totalAmount', 'itTds', 'gstTds', 'passedAmount'].includes(col.key)) textAlign = 'right';
+                            if (['taxableAmount', 'igst', 'sgst', 'ugst', 'taxAmount', 'totalAmount', 'itTds', 'gstTds', 'passedAmount', 'balanceAmount'].includes(col.key)) textAlign = 'right';
 
                             return (
                               <th key={col.key} style={{ textAlign, padding: '6px 4px' }}>
@@ -2652,12 +2657,7 @@ export const SalesLedgerPage = () => {
                             }
 
                             // Amount Column to hold the opening balance amount
-                            const isAmtCol = (
-                              col.key === 'totalAmount' ||
-                              (!activeStatementCols.some(c => c.key === 'totalAmount') && col.key === 'taxableAmount')
-                            );
-
-                            if (isAmtCol) {
+                            if (col.key === 'totalAmount' || col.key === 'balanceAmount') {
                               return (
                                 <td key={col.key} style={{ textAlign: 'right', padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>
                                   {openingBalance.toFixed(2)}
@@ -2669,8 +2669,8 @@ export const SalesLedgerPage = () => {
                           })}
                         </tr>
 
-                        {/* Transaction Rows */}
-                        {statementEntries.map((l, idx) => {
+                        {/* Transaction Rows with Running Balance */}
+                        {entriesWithRunningBalance.map((l, idx) => {
                           const taxableAmt = Number(l.taxableAmount) || 0;
                           const igstAmt = Number(l.igst) || 0;
                           const sgstAmt = Number(l.sgst) || 0;
@@ -2680,6 +2680,7 @@ export const SalesLedgerPage = () => {
                           const itTdsAmt = Number(l.itTds) || 0;
                           const gstTdsAmt = Number(l.gstTds) || 0;
                           const passedAmt = Number(l.passedAmount) || 0;
+                          const runningBal = l.currentRunningBalance !== undefined ? l.currentRunningBalance : ((openingBalance + totalAmt) - passedAmt);
 
                           return (
                             <tr key={idx} style={{ borderBottom: '1px solid #f3f4f6' }}>
@@ -2687,13 +2688,13 @@ export const SalesLedgerPage = () => {
                                 if (col.key === 'slNo') return <td key={col.key} style={{ textAlign: 'center', padding: '5px 4px', fontWeight: 700 }}>{idx + 1}</td>;
                                 if (col.key === 'billedTo') return <td key={col.key} style={{ padding: '5px 4px', fontWeight: 700, color: '#111827' }}>{l.billedTo || l.billedToRemarks || '-'}</td>;
                                 if (col.key === 'invoiceNo') return <td key={col.key} style={{ padding: '5px 4px', fontWeight: 700 }}>{l.invoiceNo || '-'}</td>;
-                                if (col.key === 'invoiceDate') return <td key={col.key} style={{ textAlign: 'center', padding: '5px 4px' }}>{formatStDate(l.invoiceDate)}</td>;
+                                if (col.key === 'invoiceDate') return <td key={col.key} style={{ textAlign: 'center', padding: '5px 4px' }}>{formatStDate(l.invoiceDate || l.passedDate)}</td>;
                                 if (col.key === 'taxableAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px' }}>{taxableAmt > 0 ? taxableAmt.toFixed(2) : '-'}</td>;
                                 if (col.key === 'igst') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px' }}>{igstAmt > 0 ? igstAmt.toFixed(2) : '-'}</td>;
                                 if (col.key === 'sgst') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px' }}>{sgstAmt > 0 ? sgstAmt.toFixed(2) : '-'}</td>;
                                 if (col.key === 'ugst') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px' }}>{ugstAmt > 0 ? ugstAmt.toFixed(2) : '-'}</td>;
                                 if (col.key === 'taxAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px' }}>{taxAmt > 0 ? taxAmt.toFixed(2) : '-'}</td>;
-                                if (col.key === 'totalAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px', fontWeight: 700 }}>{totalAmt.toFixed(2)}</td>;
+                                if (col.key === 'totalAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px', fontWeight: 700 }}>{totalAmt > 0 ? totalAmt.toFixed(2) : (passedAmt > 0 ? '0.00' : '-')}</td>;
                                 if (col.key === 'itTds') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px' }}>{itTdsAmt > 0 ? itTdsAmt.toFixed(2) : '-'}</td>;
                                 if (col.key === 'gstTds') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px' }}>{gstTdsAmt > 0 ? gstTdsAmt.toFixed(2) : '-'}</td>;
                                 if (col.key === 'passedAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px', color: passedAmt > 0 ? '#1e40af' : '#9ca3af', fontWeight: passedAmt > 0 ? 700 : 400 }}>{passedAmt > 0 ? passedAmt.toFixed(2) : '-'}</td>;
@@ -2701,6 +2702,9 @@ export const SalesLedgerPage = () => {
                                 if (col.key === 'modeOfPayment') {
                                   const hasPayment = passedAmt > 0 && l.modeOfPayment && l.modeOfPayment !== '-' && l.modeOfPayment !== 'N/A';
                                   return <td key={col.key} style={{ textAlign: 'center', padding: '5px 4px' }}>{hasPayment ? l.modeOfPayment : '-'}</td>;
+                                }
+                                if (col.key === 'balanceAmount') {
+                                  return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px', fontWeight: 700, color: runningBal > 0 ? '#dc2626' : (runningBal < 0 ? '#1e40af' : '#16a34a') }}>{runningBal.toFixed(2)}</td>;
                                 }
                                 if (col.key === 'remarks') return <td key={col.key} style={{ padding: '5px 4px', color: '#4b5563' }}>{l.remarks || '-'}</td>;
                                 return <td key={col.key} style={{ padding: '5px 4px' }}>-</td>;
@@ -2730,6 +2734,7 @@ export const SalesLedgerPage = () => {
                                 if (col.key === 'itTds') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumItTds.toFixed(2)}</td>;
                                 if (col.key === 'gstTds') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumGstTds.toFixed(2)}</td>;
                                 if (col.key === 'passedAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumPassed.toFixed(2)}</td>;
+                                if (col.key === 'balanceAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px', color: sumBalance > 0 ? '#dc2626' : '#16a34a' }}>{sumBalance.toFixed(2)}</td>;
                                 return <td key={col.key} style={{ padding: '8px 4px' }}></td>;
                               })}
                             </tr>
