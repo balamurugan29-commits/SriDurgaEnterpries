@@ -2411,11 +2411,11 @@ export const SalesLedgerPage = () => {
               >
                 {/* 1. Statement Header */}
                 <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
-                  <h1 style={{ color: '#000000', fontSize: '1.45rem', fontWeight: 900, letterSpacing: '0.05em', margin: '0 0 0.35rem 0', textTransform: 'uppercase' }}>
-                    SRI DURGA ENTERPRISES
+                  <h1 style={{ color: '#000000', fontSize: '1.5rem', fontWeight: 900, letterSpacing: '0.05em', margin: '0 0 0.35rem 0', textTransform: 'uppercase' }}>
+                    SRI DURGA ENTERPRISES, KARAIKAL.
                   </h1>
                   <div style={{ color: '#000000', fontSize: '1.05rem', fontWeight: 800, marginBottom: '0.5rem' }}>
-                    Customer Ledger for {resolvedCustomerName.toUpperCase()}
+                    Customer Sales Ledger for: <span style={{ textDecoration: 'underline' }}>{filterCustomer && filterCustomer.trim() ? resolvedCustomerName.toUpperCase() : 'ALL CUSTOMERS'}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#000000', fontSize: '0.9rem', fontWeight: 800, padding: '0 1rem' }}>
                     <span>From: &nbsp; {getFinancialYearStartDate(fromDate)} &nbsp; To: &nbsp; {toDate ? new Date(toDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}</span>
@@ -2426,118 +2426,131 @@ export const SalesLedgerPage = () => {
                 {/* 2. Top Double Black Border Line */}
                 <div style={{ borderTop: '2px solid #000000', borderBottom: '1px solid #000000', height: '3px', marginBottom: '0.5rem' }}></div>
 
-                {/* 3. Ledger Table */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem', fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1.5px solid #000000', color: '#000000', fontWeight: 800 }}>
-                      <th style={{ textAlign: 'center', padding: '6px 4px', width: '6%' }}>S.No</th>
-                      <th style={{ textAlign: 'left', padding: '6px 4px', width: '24%' }}>Billed To / Customer Name</th>
-                      <th style={{ textAlign: 'left', padding: '6px 4px', width: '16%' }}>Invoice No</th>
-                      <th style={{ textAlign: 'center', padding: '6px 4px', width: '13%' }}>Date</th>
-                      <th style={{ textAlign: 'left', padding: '6px 4px', width: '17%' }}>Mode of Payment</th>
-                      <th style={{ textAlign: 'right', padding: '6px 4px', width: '12%' }}>Debit (₹)</th>
-                      <th style={{ textAlign: 'right', padding: '6px 4px', width: '12%' }}>Credit (₹)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* Subheader Opening Balance Row */}
-                    <tr style={{ borderBottom: '1px solid #e5e7eb', fontWeight: 800 }}>
-                      <td style={{ textAlign: 'center', padding: '6px 4px', color: '#9ca3af' }}>-</td>
-                      <td style={{ padding: '6px 4px', color: '#9ca3af' }}>-</td>
-                      <td style={{ padding: '6px 4px', color: '#9ca3af' }}>-</td>
-                      <td style={{ textAlign: 'center', padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>
-                        {getFinancialYearStartDate(fromDate)}
-                      </td>
-                      <td style={{ padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>
-                        Opening Balance
-                      </td>
-                      <td style={{ textAlign: 'right', padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>
-                        {openingBalance.toFixed(2)}
-                      </td>
-                      <td style={{ textAlign: 'right', padding: '6px 4px', color: '#9ca3af' }}>-</td>
-                    </tr>
+                {/* 3. Dynamic Columns Statement Table */}
+                {(() => {
+                  const activeStatementCols = SALES_EXPORT_COLUMNS.filter(col => exportSelectedCols[col.key]);
+                  const statementEntries = exportScope === 'ALL' ? ledgerEntries : filteredLedgers;
 
-                    {/* Transaction Rows */}
-                    {filteredLedgers.map((l, idx) => {
-                      const totalAmt = Number(l.totalAmount) || 0;
-                      const passedAmt = Number(l.passedAmount) || 0;
-                      const hasPayment = passedAmt > 0 || (l.passedDate && l.passedDate.trim() !== '');
+                  let sumTaxable = 0, sumIgst = 0, sumSgst = 0, sumUgst = 0, sumTax = 0, sumTotal = 0, sumItTds = 0, sumGstTds = 0, sumPassed = 0;
+                  statementEntries.forEach(item => {
+                    sumTaxable += parseFloat(item.taxableAmount) || 0;
+                    sumIgst += parseFloat(item.igst) || 0;
+                    sumSgst += parseFloat(item.sgst) || 0;
+                    sumUgst += parseFloat(item.ugst) || 0;
+                    sumTax += parseFloat(item.taxAmount) || 0;
+                    sumTotal += parseFloat(item.totalAmount) || 0;
+                    sumItTds += parseFloat(item.itTds) || 0;
+                    sumGstTds += parseFloat(item.gstTds) || 0;
+                    sumPassed += parseFloat(item.passedAmount) || 0;
+                  });
 
-                      const formatStDate = (val) => {
-                        if (!val || val === '-' || val === '--') return '-';
-                        const d = new Date(val);
-                        return isNaN(d.getTime()) ? String(val) : d.toLocaleDateString('en-GB');
-                      };
+                  const formatStDate = (val) => {
+                    if (!val || val === '-' || val === '--') return '-';
+                    const d = new Date(val);
+                    return isNaN(d.getTime()) ? String(val) : d.toLocaleDateString('en-GB');
+                  };
 
-                      return (
-                        <React.Fragment key={idx}>
-                          {/* Invoice Row (Debit) */}
-                          <tr style={{ borderBottom: hasPayment ? 'none' : '1px solid #f3f4f6' }}>
-                            <td style={{ textAlign: 'center', padding: '5px 4px', fontWeight: 700 }}>{idx + 1}</td>
-                            <td style={{ padding: '5px 4px', fontWeight: 700, color: '#111827' }}>
-                              {l.billedTo || l.billedToRemarks || '-'}
-                            </td>
-                            <td style={{ padding: '5px 4px', fontWeight: 700 }}>{l.invoiceNo || '-'}</td>
-                            <td style={{ textAlign: 'center', padding: '5px 4px' }}>
-                              {formatStDate(l.invoiceDate)}
-                            </td>
-                            <td style={{ padding: '5px 4px', color: '#6b7280' }}>
-                              -
-                            </td>
-                            <td style={{ textAlign: 'right', padding: '5px 4px', fontWeight: 700 }}>
-                              {totalAmt.toFixed(2)}
-                            </td>
-                            <td style={{ textAlign: 'right', padding: '5px 4px', color: '#9ca3af' }}>-</td>
+                  return (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1.5px solid #000000', color: '#000000', fontWeight: 800 }}>
+                          {activeStatementCols.map(col => {
+                            let textAlign = 'left';
+                            if (['slNo', 'invoiceDate', 'passedDate'].includes(col.key)) textAlign = 'center';
+                            if (['taxableAmount', 'igst', 'sgst', 'ugst', 'taxAmount', 'totalAmount', 'itTds', 'gstTds', 'passedAmount'].includes(col.key)) textAlign = 'right';
+
+                            return (
+                              <th key={col.key} style={{ textAlign, padding: '6px 4px' }}>
+                                {col.label}
+                              </th>
+                            );
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {/* Subheader Opening Balance Row */}
+                        {openingBalance > 0 && (
+                          <tr style={{ borderBottom: '1px solid #e5e7eb', fontWeight: 800 }}>
+                            {activeStatementCols.map((col, cIdx) => {
+                              if (col.key === 'slNo') return <td key={col.key} style={{ textAlign: 'center', padding: '6px 4px', color: '#9ca3af' }}>-</td>;
+                              if (col.key === 'invoiceDate') return <td key={col.key} style={{ textAlign: 'center', padding: '6px 4px', color: '#16a34a' }}>{getFinancialYearStartDate(fromDate)}</td>;
+                              if (col.key === 'billedTo' || col.key === 'invoiceNo' || col.key === 'modeOfPayment') {
+                                if (cIdx === 1) return <td key={col.key} style={{ padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>Opening Balance</td>;
+                                return <td key={col.key} style={{ padding: '6px 4px', color: '#9ca3af' }}>-</td>;
+                              }
+                              if (['totalAmount'].includes(col.key)) {
+                                return <td key={col.key} style={{ textAlign: 'right', padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>{openingBalance.toFixed(2)}</td>;
+                              }
+                              return <td key={col.key} style={{ textAlign: 'right', padding: '6px 4px', color: '#9ca3af' }}>-</td>;
+                            })}
                           </tr>
+                        )}
 
-                          {/* Payment / Realization Row (Credit) */}
-                          {hasPayment && (
-                            <tr style={{ borderBottom: '1px solid #f3f4f6' }}>
-                              <td style={{ textAlign: 'center', padding: '5px 4px', color: '#9ca3af' }}>-</td>
-                              <td style={{ padding: '5px 4px', color: '#4b5563', fontSize: '0.82rem' }}>
-                                {l.billedTo || l.billedToRemarks || '-'}
-                              </td>
-                              <td style={{ padding: '5px 4px', color: '#4b5563', fontWeight: 600 }}>{l.invoiceNo || '-'}</td>
-                              <td style={{ textAlign: 'center', padding: '5px 4px', color: '#4b5563' }}>
-                                {formatStDate(l.passedDate || l.invoiceDate)}
-                              </td>
-                              <td style={{ padding: '5px 4px', fontWeight: 700, color: '#1e40af' }}>
-                                {l.modeOfPayment || 'NEFT'} {l.remarks ? `(${l.remarks})` : ''}
-                              </td>
-                              <td style={{ textAlign: 'right', padding: '5px 4px', color: '#9ca3af' }}>-</td>
-                              <td style={{ textAlign: 'right', padding: '5px 4px', fontWeight: 700, color: '#1e40af' }}>
-                                {passedAmt.toFixed(2)}
-                              </td>
+                        {/* Transaction Rows */}
+                        {statementEntries.map((l, idx) => {
+                          const taxableAmt = Number(l.taxableAmount) || 0;
+                          const igstAmt = Number(l.igst) || 0;
+                          const sgstAmt = Number(l.sgst) || 0;
+                          const ugstAmt = Number(l.ugst) || 0;
+                          const taxAmt = Number(l.taxAmount) || 0;
+                          const totalAmt = Number(l.totalAmount) || 0;
+                          const itTdsAmt = Number(l.itTds) || 0;
+                          const gstTdsAmt = Number(l.gstTds) || 0;
+                          const passedAmt = Number(l.passedAmount) || 0;
+
+                          return (
+                            <tr key={idx} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                              {activeStatementCols.map(col => {
+                                if (col.key === 'slNo') return <td key={col.key} style={{ textAlign: 'center', padding: '5px 4px', fontWeight: 700 }}>{idx + 1}</td>;
+                                if (col.key === 'billedTo') return <td key={col.key} style={{ padding: '5px 4px', fontWeight: 700, color: '#111827' }}>{l.billedTo || l.billedToRemarks || '-'}</td>;
+                                if (col.key === 'invoiceNo') return <td key={col.key} style={{ padding: '5px 4px', fontWeight: 700 }}>{l.invoiceNo || '-'}</td>;
+                                if (col.key === 'invoiceDate') return <td key={col.key} style={{ textAlign: 'center', padding: '5px 4px' }}>{formatStDate(l.invoiceDate)}</td>;
+                                if (col.key === 'taxableAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px' }}>{taxableAmt > 0 ? taxableAmt.toFixed(2) : '-'}</td>;
+                                if (col.key === 'igst') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px' }}>{igstAmt > 0 ? igstAmt.toFixed(2) : '-'}</td>;
+                                if (col.key === 'sgst') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px' }}>{sgstAmt > 0 ? sgstAmt.toFixed(2) : '-'}</td>;
+                                if (col.key === 'ugst') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px' }}>{ugstAmt > 0 ? ugstAmt.toFixed(2) : '-'}</td>;
+                                if (col.key === 'taxAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px' }}>{taxAmt > 0 ? taxAmt.toFixed(2) : '-'}</td>;
+                                if (col.key === 'totalAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px', fontWeight: 700 }}>{totalAmt.toFixed(2)}</td>;
+                                if (col.key === 'itTds') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px' }}>{itTdsAmt > 0 ? itTdsAmt.toFixed(2) : '-'}</td>;
+                                if (col.key === 'gstTds') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px' }}>{gstTdsAmt > 0 ? gstTdsAmt.toFixed(2) : '-'}</td>;
+                                if (col.key === 'passedAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px', color: passedAmt > 0 ? '#1e40af' : '#9ca3af', fontWeight: passedAmt > 0 ? 700 : 400 }}>{passedAmt > 0 ? passedAmt.toFixed(2) : '-'}</td>;
+                                if (col.key === 'passedDate') return <td key={col.key} style={{ textAlign: 'center', padding: '5px 4px', color: '#4b5563' }}>{formatStDate(l.passedDate)}</td>;
+                                if (col.key === 'modeOfPayment') return <td key={col.key} style={{ padding: '5px 4px', color: '#4b5563' }}>{l.modeOfPayment || '-'}</td>;
+                                if (col.key === 'remarks') return <td key={col.key} style={{ padding: '5px 4px', color: '#4b5563' }}>{l.remarks || '-'}</td>;
+                                return <td key={col.key} style={{ padding: '5px 4px' }}>-</td>;
+                              })}
                             </tr>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
+                          );
+                        })}
 
-                    {/* Total Summary Rows matching user diagram */}
-                    <tr style={{ borderTop: '2px solid #000000', fontWeight: 900, fontSize: '0.925rem' }}>
-                      <td colSpan={5} style={{ textAlign: 'right', padding: '8px 4px' }}>
-                        Total :
-                      </td>
-                      <td style={{ textAlign: 'right', padding: '8px 4px', borderBottom: '1px solid #000000' }}>
-                        {(openingBalance + totals.totalAmount).toFixed(2)}
-                      </td>
-                      <td style={{ textAlign: 'right', padding: '8px 4px', borderBottom: '1px solid #000000' }}>
-                        {totals.passedAmount.toFixed(2)}
-                      </td>
-                    </tr>
-
-                    <tr style={{ fontWeight: 900, fontSize: '0.95rem' }}>
-                      <td colSpan={5} style={{ textAlign: 'right', padding: '8px 4px' }}>
-                        Closing Balance
-                      </td>
-                      <td style={{ textAlign: 'right', padding: '8px 4px', borderBottom: '3px double #000000', color: '#16a34a' }}>
-                        {Math.max(0, (openingBalance + totals.totalAmount) - totals.passedAmount).toFixed(2)}
-                      </td>
-                      <td style={{ borderBottom: '3px double #000000' }}></td>
-                    </tr>
-                  </tbody>
-                </table>
+                        {/* Grand Totals Summary Row */}
+                        {exportIncludeTotals && (
+                          <tr style={{ borderTop: '2px solid #000000', borderBottom: '1px solid #000000', fontWeight: 900, fontSize: '0.925rem' }}>
+                            {activeStatementCols.map((col, cIdx) => {
+                              if (cIdx === 0) {
+                                return (
+                                  <td key={col.key} style={{ padding: '8px 4px', fontWeight: 900, textTransform: 'uppercase' }}>
+                                    TOTAL :
+                                  </td>
+                                );
+                              }
+                              if (col.key === 'taxableAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumTaxable.toFixed(2)}</td>;
+                              if (col.key === 'igst') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumIgst.toFixed(2)}</td>;
+                              if (col.key === 'sgst') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumSgst.toFixed(2)}</td>;
+                              if (col.key === 'ugst') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumUgst.toFixed(2)}</td>;
+                              if (col.key === 'taxAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumTax.toFixed(2)}</td>;
+                              if (col.key === 'totalAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{(openingBalance + sumTotal).toFixed(2)}</td>;
+                              if (col.key === 'itTds') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumItTds.toFixed(2)}</td>;
+                              if (col.key === 'gstTds') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumGstTds.toFixed(2)}</td>;
+                              if (col.key === 'passedAmount') return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumPassed.toFixed(2)}</td>;
+                              return <td key={col.key} style={{ padding: '8px 4px' }}></td>;
+                            })}
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  );
+                })()}
               </div>
             </div>
 

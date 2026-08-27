@@ -2329,11 +2329,11 @@ export const PurchaseLedgerPage = () => {
               >
                 {/* 1. Statement Header */}
                 <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
-                  <h1 style={{ color: '#000000', fontSize: '1.45rem', fontWeight: 900, letterSpacing: '0.05em', margin: '0 0 0.35rem 0', textTransform: 'uppercase' }}>
-                    {resolvedDealerName.toUpperCase()}
+                  <h1 style={{ color: '#000000', fontSize: '1.5rem', fontWeight: 900, letterSpacing: '0.05em', margin: '0 0 0.35rem 0', textTransform: 'uppercase' }}>
+                    SRI DURGA ENTERPRISES, KARAIKAL.
                   </h1>
                   <div style={{ color: '#000000', fontSize: '1.05rem', fontWeight: 800, marginBottom: '0.5rem' }}>
-                    Supplier / Dealer Ledger for {resolvedDealerName.toUpperCase()}
+                    Supplier / Dealer Ledger for: <span style={{ textDecoration: 'underline' }}>{filterDealer && filterDealer.trim() ? resolvedDealerName.toUpperCase() : 'ALL SUPPLIERS & DEALERS'}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#000000', fontSize: '0.9rem', fontWeight: 800, padding: '0 1rem' }}>
                     <span>From: &nbsp; {getFinancialYearStartDate(fromDate)} &nbsp; To: &nbsp; {toDate ? new Date(toDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}</span>
@@ -2344,118 +2344,146 @@ export const PurchaseLedgerPage = () => {
                 {/* 2. Top Double Black Border Line */}
                 <div style={{ borderTop: '2px solid #000000', borderBottom: '1px solid #000000', height: '3px', marginBottom: '0.5rem' }}></div>
 
-                {/* 3. Ledger Table */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem', fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1.5px solid #000000', color: '#000000', fontWeight: 800 }}>
-                      <th style={{ textAlign: 'center', padding: '6px 4px', width: '6%' }}>S.No</th>
-                      <th style={{ textAlign: 'left', padding: '6px 4px', width: '24%' }}>Name of Dealer/Store</th>
-                      <th style={{ textAlign: 'left', padding: '6px 4px', width: '16%' }}>Invoice No</th>
-                      <th style={{ textAlign: 'center', padding: '6px 4px', width: '13%' }}>Date</th>
-                      <th style={{ textAlign: 'left', padding: '6px 4px', width: '17%' }}>Mode of Payment</th>
-                      <th style={{ textAlign: 'right', padding: '6px 4px', width: '12%' }}>Debit (₹)</th>
-                      <th style={{ textAlign: 'right', padding: '6px 4px', width: '12%' }}>Credit (₹)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* Subheader Opening Balance Row */}
-                    <tr style={{ borderBottom: '1px solid #e5e7eb', fontWeight: 800 }}>
-                      <td style={{ textAlign: 'center', padding: '6px 4px', color: '#9ca3af' }}>-</td>
-                      <td style={{ padding: '6px 4px', color: '#9ca3af' }}>-</td>
-                      <td style={{ padding: '6px 4px', color: '#9ca3af' }}>-</td>
-                      <td style={{ textAlign: 'center', padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>
-                        {getFinancialYearStartDate(fromDate)}
-                      </td>
-                      <td style={{ padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>
-                        Opening Balance
-                      </td>
-                      <td style={{ textAlign: 'right', padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>
-                        {openingBalance.toFixed(2)}
-                      </td>
-                      <td style={{ textAlign: 'right', padding: '6px 4px', color: '#9ca3af' }}>-</td>
-                    </tr>
+                {/* 3. Dynamic Columns Statement Table */}
+                {(() => {
+                  const activeStatementCols = PURCHASE_EXPORT_COLUMNS.filter(col => exportSelectedCols[col.key]);
+                  const statementEntries = exportScope === 'ALL' ? purchaseEntries : filteredPurchases;
 
-                    {/* Transaction Rows */}
-                    {filteredPurchases.map((l, idx) => {
-                      const totalAmt = Number(l.totalAmount) || 0;
-                      const paidAmt = Number(l.paidAmount || l.passedAmount) || 0;
-                      const hasPayment = paidAmt > 0;
+                  let sumTaxable = 0, sumTax = 0, sumTotal = 0, sumPaid = 0;
+                  statementEntries.forEach(item => {
+                    sumTaxable += parseFloat(item.taxableAmount) || 0;
+                    sumTax += parseFloat(item.taxAmount) || 0;
+                    sumTotal += parseFloat(item.totalAmount) || 0;
+                    sumPaid += parseFloat(item.paidAmount || item.passedAmount) || 0;
+                  });
+                  const sumBalance = Math.max(0, (openingBalance + sumTotal) - sumPaid);
 
-                      const formatStDate = (val) => {
-                        if (!val || val === '-' || val === '--') return '-';
-                        const d = new Date(val);
-                        return isNaN(d.getTime()) ? String(val) : d.toLocaleDateString('en-GB');
-                      };
+                  const formatStDate = (val) => {
+                    if (!val || val === '-' || val === '--') return '-';
+                    const d = new Date(val);
+                    return isNaN(d.getTime()) ? String(val) : d.toLocaleDateString('en-GB');
+                  };
 
-                      return (
-                        <React.Fragment key={idx}>
-                          {/* Purchase Bill Row (Debit) */}
-                          <tr style={{ borderBottom: hasPayment ? 'none' : '1px solid #f3f4f6' }}>
-                            <td style={{ textAlign: 'center', padding: '5px 4px', fontWeight: 700 }}>{idx + 1}</td>
-                            <td style={{ padding: '5px 4px', fontWeight: 700, color: '#111827' }}>
-                              {l.dealerStoreName || l.supplierRemarks || '-'}
-                            </td>
-                            <td style={{ padding: '5px 4px', fontWeight: 700 }}>{l.invoiceNo || '-'}</td>
-                            <td style={{ textAlign: 'center', padding: '5px 4px' }}>
-                              {formatStDate(l.invoiceDate)}
-                            </td>
-                            <td style={{ padding: '5px 4px', color: '#6b7280' }}>
-                              -
-                            </td>
-                            <td style={{ textAlign: 'right', padding: '5px 4px', fontWeight: 700 }}>
-                              {totalAmt.toFixed(2)}
-                            </td>
-                            <td style={{ textAlign: 'right', padding: '5px 4px', color: '#9ca3af' }}>-</td>
+                  return (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1.5px solid #000000', color: '#000000', fontWeight: 800 }}>
+                          {activeStatementCols.map(col => {
+                            let textAlign = 'left';
+                            if (['slNo', 'invoiceDate', 'paymentDate'].includes(col.key)) textAlign = 'center';
+                            if (['taxableAmount', 'taxAmount', 'totalAmount', 'paidAmount', 'balanceAmount'].includes(col.key)) textAlign = 'right';
+
+                            return (
+                              <th key={col.key} style={{ textAlign, padding: '6px 4px' }}>
+                                {col.label}
+                              </th>
+                            );
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {/* Subheader Opening Balance Row */}
+                        {openingBalance > 0 && (
+                          <tr style={{ borderBottom: '1px solid #e5e7eb', fontWeight: 800 }}>
+                            {activeStatementCols.map((col, cIdx) => {
+                              if (col.key === 'slNo') return <td key={col.key} style={{ textAlign: 'center', padding: '6px 4px', color: '#9ca3af' }}>-</td>;
+                              if (col.key === 'invoiceDate') return <td key={col.key} style={{ textAlign: 'center', padding: '6px 4px', color: '#16a34a' }}>{getFinancialYearStartDate(fromDate)}</td>;
+                              if (col.key === 'dealerStoreName' || col.key === 'invoiceNo' || col.key === 'modeOfPayment') {
+                                if (cIdx === 1) return <td key={col.key} style={{ padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>Opening Balance</td>;
+                                return <td key={col.key} style={{ padding: '6px 4px', color: '#9ca3af' }}>-</td>;
+                              }
+                              if (['totalAmount', 'balanceAmount'].includes(col.key)) {
+                                return <td key={col.key} style={{ textAlign: 'right', padding: '6px 4px', color: '#16a34a', fontWeight: 800 }}>{openingBalance.toFixed(2)}</td>;
+                              }
+                              return <td key={col.key} style={{ textAlign: 'right', padding: '6px 4px', color: '#9ca3af' }}>-</td>;
+                            })}
                           </tr>
+                        )}
 
-                          {/* Payment Row (Credit) */}
-                          {hasPayment && (
-                            <tr style={{ borderBottom: '1px solid #f3f4f6' }}>
-                              <td style={{ textAlign: 'center', padding: '5px 4px', color: '#9ca3af' }}>-</td>
-                              <td style={{ padding: '5px 4px', color: '#4b5563', fontSize: '0.82rem' }}>
-                                {l.dealerStoreName || l.supplierRemarks || '-'}
-                              </td>
-                              <td style={{ padding: '5px 4px', color: '#4b5563', fontWeight: 600 }}>{l.invoiceNo || '-'}</td>
-                              <td style={{ textAlign: 'center', padding: '5px 4px', color: '#4b5563' }}>
-                                {formatStDate(l.paymentDate || l.invoiceDate)}
-                              </td>
-                              <td style={{ padding: '5px 4px', fontWeight: 700, color: '#1e40af' }}>
-                                {l.modeOfPayment || 'NEFT'}
-                              </td>
-                              <td style={{ textAlign: 'right', padding: '5px 4px', color: '#9ca3af' }}>-</td>
-                              <td style={{ textAlign: 'right', padding: '5px 4px', fontWeight: 700, color: '#1e40af' }}>
-                                {paidAmt.toFixed(2)}
-                              </td>
+                        {/* Transaction Rows */}
+                        {statementEntries.map((l, idx) => {
+                          const taxableAmt = Number(l.taxableAmount) || 0;
+                          const taxAmt = Number(l.taxAmount) || 0;
+                          const totalAmt = Number(l.totalAmount) || 0;
+                          const paidAmt = Number(l.paidAmount || l.passedAmount) || 0;
+                          const balAmt = l.balanceAmount !== undefined ? Number(l.balanceAmount) : Math.max(0, totalAmt - paidAmt);
+
+                          return (
+                            <tr key={idx} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                              {activeStatementCols.map(col => {
+                                if (col.key === 'slNo') {
+                                  return <td key={col.key} style={{ textAlign: 'center', padding: '5px 4px', fontWeight: 700 }}>{idx + 1}</td>;
+                                }
+                                if (col.key === 'dealerStoreName') {
+                                  return <td key={col.key} style={{ padding: '5px 4px', fontWeight: 700, color: '#111827' }}>{l.dealerStoreName || l.supplierRemarks || '-'}</td>;
+                                }
+                                if (col.key === 'invoiceNo') {
+                                  return <td key={col.key} style={{ padding: '5px 4px', fontWeight: 700 }}>{l.invoiceNo || '-'}</td>;
+                                }
+                                if (col.key === 'invoiceDate') {
+                                  return <td key={col.key} style={{ textAlign: 'center', padding: '5px 4px' }}>{formatStDate(l.invoiceDate)}</td>;
+                                }
+                                if (col.key === 'taxableAmount') {
+                                  return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px' }}>{taxableAmt > 0 ? taxableAmt.toFixed(2) : '-'}</td>;
+                                }
+                                if (col.key === 'taxAmount') {
+                                  return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px' }}>{taxAmt > 0 ? taxAmt.toFixed(2) : '-'}</td>;
+                                }
+                                if (col.key === 'totalAmount') {
+                                  return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px', fontWeight: 700 }}>{totalAmt.toFixed(2)}</td>;
+                                }
+                                if (col.key === 'paidAmount') {
+                                  return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px', color: paidAmt > 0 ? '#1e40af' : '#9ca3af', fontWeight: paidAmt > 0 ? 700 : 400 }}>{paidAmt > 0 ? paidAmt.toFixed(2) : '-'}</td>;
+                                }
+                                if (col.key === 'paymentDate') {
+                                  return <td key={col.key} style={{ textAlign: 'center', padding: '5px 4px', color: '#4b5563' }}>{formatStDate(l.paymentDate)}</td>;
+                                }
+                                if (col.key === 'modeOfPayment') {
+                                  return <td key={col.key} style={{ padding: '5px 4px', color: '#4b5563' }}>{l.modeOfPayment || '-'}</td>;
+                                }
+                                if (col.key === 'balanceAmount') {
+                                  return <td key={col.key} style={{ textAlign: 'right', padding: '5px 4px', fontWeight: 700, color: balAmt > 0 ? '#dc2626' : '#16a34a' }}>{balAmt.toFixed(2)}</td>;
+                                }
+                                return <td key={col.key} style={{ padding: '5px 4px' }}>-</td>;
+                              })}
                             </tr>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
+                          );
+                        })}
 
-                    {/* Total Summary Rows matching user diagram */}
-                    <tr style={{ borderTop: '2px solid #000000', fontWeight: 900, fontSize: '0.925rem' }}>
-                      <td colSpan={5} style={{ textAlign: 'right', padding: '8px 4px' }}>
-                        Total :
-                      </td>
-                      <td style={{ textAlign: 'right', padding: '8px 4px', borderBottom: '1px solid #000000' }}>
-                        {(openingBalance + totals.totalAmount).toFixed(2)}
-                      </td>
-                      <td style={{ textAlign: 'right', padding: '8px 4px', borderBottom: '1px solid #000000' }}>
-                        {totals.paidAmount.toFixed(2)}
-                      </td>
-                    </tr>
-
-                    <tr style={{ fontWeight: 900, fontSize: '0.95rem' }}>
-                      <td colSpan={5} style={{ textAlign: 'right', padding: '8px 4px' }}>
-                        Closing Balance
-                      </td>
-                      <td style={{ textAlign: 'right', padding: '8px 4px', borderBottom: '3px double #000000', color: '#16a34a' }}>
-                        {Math.max(0, (openingBalance + totals.totalAmount) - totals.paidAmount).toFixed(2)}
-                      </td>
-                      <td style={{ borderBottom: '3px double #000000' }}></td>
-                    </tr>
-                  </tbody>
-                </table>
+                        {/* Grand Totals Summary Row */}
+                        {exportIncludeTotals && (
+                          <tr style={{ borderTop: '2px solid #000000', borderBottom: '1px solid #000000', fontWeight: 900, fontSize: '0.925rem' }}>
+                            {activeStatementCols.map((col, cIdx) => {
+                              if (cIdx === 0) {
+                                return (
+                                  <td key={col.key} style={{ padding: '8px 4px', fontWeight: 900, textTransform: 'uppercase' }}>
+                                    TOTAL :
+                                  </td>
+                                );
+                              }
+                              if (col.key === 'taxableAmount') {
+                                return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumTaxable.toFixed(2)}</td>;
+                              }
+                              if (col.key === 'taxAmount') {
+                                return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumTax.toFixed(2)}</td>;
+                              }
+                              if (col.key === 'totalAmount') {
+                                return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{(openingBalance + sumTotal).toFixed(2)}</td>;
+                              }
+                              if (col.key === 'paidAmount') {
+                                return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px' }}>{sumPaid.toFixed(2)}</td>;
+                              }
+                              if (col.key === 'balanceAmount') {
+                                return <td key={col.key} style={{ textAlign: 'right', padding: '8px 4px', color: '#16a34a' }}>{sumBalance.toFixed(2)}</td>;
+                              }
+                              return <td key={col.key} style={{ padding: '8px 4px' }}></td>;
+                            })}
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  );
+                })()}
               </div>
             </div>
 
