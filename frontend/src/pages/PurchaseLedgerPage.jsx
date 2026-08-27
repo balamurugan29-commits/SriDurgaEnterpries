@@ -2946,7 +2946,7 @@ export const PurchaseLedgerPage = () => {
                               {/* Extra / Advance Payment Total Row */}
                               <tr style={{ borderBottom: '1px solid #000000', fontWeight: 800, fontSize: '0.88rem', background: 'rgba(30, 64, 175, 0.04)' }}>
                                 <td colSpan={5} style={{ padding: '6px 6px', textAlign: 'right', color: '#1e40af', fontWeight: 800, textTransform: 'uppercase' }}>
-                                  EXTRA / ADVANCE AMOUNT PAID (முன்தொகை / அதிகப்பணம்) :
+                                  EXTRA / ADVANCE AMOUNT PAID :
                                 </td>
                                 <td style={{ textAlign: 'right', padding: '6px 6px', color: '#1e40af', fontWeight: 900 }}>
                                   {totalExtraAmount > 0 ? `₹${totalExtraAmount.toFixed(2)}` : '0.00'}
