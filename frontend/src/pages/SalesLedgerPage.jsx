@@ -723,34 +723,8 @@ export const SalesLedgerPage = () => {
     return filterCustomer.trim();
   }, [filterCustomer, uniqueCustomerOptions, filteredLedgers]);
 
-  // Aggregate Totals
-  const totals = useMemo(() => {
-    return filteredLedgers.reduce((acc, item) => {
-      acc.taxableAmount += Number(item.taxableAmount) || 0;
-      acc.igst += Number(item.igst) || 0;
-      acc.sgst += Number(item.sgst) || 0;
-      acc.ugst += Number(item.ugst) || 0;
-      acc.taxAmount += Number(item.taxAmount) || 0;
-      acc.totalAmount += Number(item.totalAmount) || 0;
-      acc.itTds += Number(item.itTds) || 0;
-      acc.gstTds += Number(item.gstTds) || 0;
-      acc.passedAmount += Number(item.passedAmount) || 0;
-      return acc;
-    }, {
-      taxableAmount: 0,
-      igst: 0,
-      sgst: 0,
-      ugst: 0,
-      taxAmount: 0,
-      totalAmount: 0,
-      itTds: 0,
-      gstTds: 0,
-      passedAmount: 0
-    });
-  }, [filteredLedgers]);
-
   // Calculate Dynamic Opening Balance for current Customer & Date Filter
-  // Auto-fetches all unpaid balances dated BEFORE the current Financial Year start date (e.g. 01/04/2026, 01/04/2027)
+  // Auto-fetches all unpaid balances dated BEFORE the current Financial Year / fromDate (e.g. 01/04/2025, 01/04/2026)
   const openingBalance = useMemo(() => {
     const targetCust = (resolvedCustomerName && resolvedCustomerName !== 'SRI DURGA ENTERPRISES, KARAIKAL.') 
       ? resolvedCustomerName.trim().toUpperCase() 
@@ -773,7 +747,7 @@ export const SalesLedgerPage = () => {
 
     const cutoffDate = fromDate || getActiveFinancialYearStartIso();
 
-    // 2. Sum unpaid balances from prior invoices (dated before cutoffDate e.g. 01/04/2026, or previous FY /25-26)
+    // 2. Sum unpaid balances from prior invoices (dated before cutoffDate e.g. 01/04/2025, 01/04/2026)
     let priorUnpaid = 0;
     ledgerEntries.forEach(item => {
       const matchesCust = !targetCust || (item.billedTo && (item.billedTo.toUpperCase().includes(targetCust) || targetCust.includes(item.billedTo.toUpperCase())));
@@ -796,6 +770,46 @@ export const SalesLedgerPage = () => {
 
     return baseOpening + priorUnpaid;
   }, [customerOpenings, filterCustomer, resolvedCustomerName, fromDate, ledgerEntries]);
+
+  // Aggregate Totals (Balance Amount = Opening Balance + Total Invoiced Amount - Total Passed Amount)
+  const totals = useMemo(() => {
+    const agg = filteredLedgers.reduce((acc, item) => {
+      const taxable = Number(item.taxableAmount) || 0;
+      const igst = Number(item.igst) || 0;
+      const sgst = Number(item.sgst) || 0;
+      const ugst = Number(item.ugst) || 0;
+      const tax = Number(item.taxAmount) || (igst + sgst + ugst);
+      const total = Number(item.totalAmount) || (taxable + tax);
+      const it = Number(item.itTds) || 0;
+      const gst = Number(item.gstTds) || 0;
+      const passed = Number(item.passedAmount) || 0;
+
+      acc.taxableAmount += taxable;
+      acc.igst += igst;
+      acc.sgst += sgst;
+      acc.ugst += ugst;
+      acc.taxAmount += tax;
+      acc.totalAmount += total;
+      acc.itTds += it;
+      acc.gstTds += gst;
+      acc.passedAmount += passed;
+      return acc;
+    }, {
+      taxableAmount: 0,
+      igst: 0,
+      sgst: 0,
+      ugst: 0,
+      taxAmount: 0,
+      totalAmount: 0,
+      itTds: 0,
+      gstTds: 0,
+      passedAmount: 0
+    });
+
+    const effectiveOpening = (filterCustomer || fromDate) ? openingBalance : 0;
+    agg.balanceAmount = Math.max(0, (effectiveOpening + agg.totalAmount) - agg.passedAmount);
+    return agg;
+  }, [filteredLedgers, openingBalance, filterCustomer, fromDate]);
 
   // Handler to set/save Opening Balance for current customer
   const handleSaveOpeningBalance = (newAmount) => {

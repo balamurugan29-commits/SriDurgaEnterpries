@@ -506,33 +506,8 @@ export const PurchaseLedgerPage = () => {
     return filterDealer.trim();
   }, [filterDealer, uniqueDealerOptions, filteredPurchases]);
 
-  // Aggregate Totals (Balance Amount = Total Purchase Amount - Total Paid Amount)
-  const totals = useMemo(() => {
-    const agg = filteredPurchases.reduce((acc, item) => {
-      const taxable = Number(item.taxableAmount) || 0;
-      const tax = Number(item.taxAmount) || 0;
-      const total = Number(item.totalAmount) || (taxable + tax);
-      const paid = Number(item.paidAmount || item.passedAmount) || 0;
-
-      acc.taxableAmount += taxable;
-      acc.taxAmount += tax;
-      acc.totalAmount += total;
-      acc.paidAmount += paid;
-      return acc;
-    }, {
-      taxableAmount: 0,
-      taxAmount: 0,
-      totalAmount: 0,
-      paidAmount: 0
-    });
-
-    // Exact formula: Total Purchase Amount - Total Paid Amount
-    agg.balanceAmount = Math.max(0, agg.totalAmount - agg.paidAmount);
-    return agg;
-  }, [filteredPurchases]);
-
   // Calculate Dynamic Opening Balance for current Dealer & Date Filter
-  // Auto-fetches all unpaid balances dated BEFORE the current Financial Year start date (e.g. 01/04/2026, 01/04/2027)
+  // Auto-fetches all unpaid balances dated BEFORE the current Financial Year / fromDate (e.g. 01/04/2025, 01/04/2026)
   const openingBalance = useMemo(() => {
     const targetDealer = (resolvedDealerName && resolvedDealerName !== 'SRI DURGA ENTERPRISES, KARAIKAL.') 
       ? resolvedDealerName.trim().toUpperCase() 
@@ -555,7 +530,7 @@ export const PurchaseLedgerPage = () => {
 
     const cutoffDate = fromDate || getActiveFinancialYearStartIso();
 
-    // 2. Sum unpaid balances from prior purchases (dated before cutoffDate e.g. 01/04/2026, or previous FY /25-26)
+    // 2. Sum unpaid balances from prior purchases (dated before cutoffDate e.g. 01/04/2025, 01/04/2026)
     let priorUnpaid = 0;
     purchaseEntries.forEach(item => {
       const dealer = (item.dealerStoreName || item.supplierRemarks || '').toUpperCase();
@@ -580,6 +555,32 @@ export const PurchaseLedgerPage = () => {
 
     return baseOpening + priorUnpaid;
   }, [dealerOpenings, filterDealer, resolvedDealerName, fromDate, purchaseEntries]);
+
+  // Aggregate Totals (Balance Amount = Opening Balance + Total Purchase Amount - Total Paid Amount)
+  const totals = useMemo(() => {
+    const agg = filteredPurchases.reduce((acc, item) => {
+      const taxable = Number(item.taxableAmount) || 0;
+      const tax = Number(item.taxAmount) || 0;
+      const total = Number(item.totalAmount) || (taxable + tax);
+      const paid = Number(item.paidAmount || item.passedAmount) || 0;
+
+      acc.taxableAmount += taxable;
+      acc.taxAmount += tax;
+      acc.totalAmount += total;
+      acc.paidAmount += paid;
+      return acc;
+    }, {
+      taxableAmount: 0,
+      taxAmount: 0,
+      totalAmount: 0,
+      paidAmount: 0
+    });
+
+    // Exact formula: (Opening Balance as of From Date + Purchases in Period) - Payments in Period
+    const effectiveOpening = (filterDealer || fromDate) ? openingBalance : 0;
+    agg.balanceAmount = Math.max(0, (effectiveOpening + agg.totalAmount) - agg.paidAmount);
+    return agg;
+  }, [filteredPurchases, openingBalance, filterDealer, fromDate]);
 
   // Handler to set/save Opening Balance for current dealer
   const handleSaveOpeningBalance = (newAmount) => {
