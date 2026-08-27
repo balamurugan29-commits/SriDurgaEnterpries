@@ -603,29 +603,29 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                         </table>
                       </div>
 
-                      {/* 2. BODY / LINE ITEMS SECTION (Grows to fill page) */}
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', margin: 0 }}>
+                      {/* 2. BODY / LINE ITEMS SECTION (Grows to fill page completely with continuous vertical lines) */}
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                        <table style={{ width: '100%', height: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left', margin: 0, display: 'table' }}>
                           <thead>
-                            <tr style={{ borderBottom: '1px solid #000', borderTop: 'none', background: '#ffffff' }}>
-                              <th style={{ width: '5%', padding: '4px 2px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}>
+                            <tr style={{ borderBottom: '1px solid #000', borderTop: 'none', background: '#ffffff', height: '26px' }}>
+                              <th style={{ width: '42px', padding: '4px 2px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}>
                                 Sl.No.
                               </th>
                               {hasAnyItemCode && (
-                                <th style={{ width: '10%', padding: '4px 4px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}>
+                                <th style={{ width: '75px', padding: '4px 4px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}>
                                   Item No.
                                 </th>
                               )}
-                              <th style={{ width: hasAnyItemCode ? '53%' : '63%', padding: '4px 6px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}>
+                              <th style={{ padding: '4px 6px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}>
                                 Description
                               </th>
-                              <th style={{ width: '10%', padding: '4px 4px', borderRight: '1px solid #000', textAlign: 'right', fontSize: '12px', fontWeight: 'bold' }}>
+                              <th style={{ width: '85px', padding: '4px 4px', borderRight: '1px solid #000', textAlign: 'right', fontSize: '12px', fontWeight: 'bold' }}>
                                 Rate
                               </th>
-                              <th style={{ width: '6%', padding: '4px 2px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}>
+                              <th style={{ width: '50px', padding: '4px 2px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}>
                                 Qty
                               </th>
-                              <th style={{ width: '16%', padding: '4px 6px', textAlign: 'right', fontSize: '12px', fontWeight: 'bold' }}>
+                              <th style={{ width: '105px', padding: '4px 6px', textAlign: 'right', fontSize: '12px', fontWeight: 'bold' }}>
                                 Amount
                               </th>
                             </tr>
@@ -633,7 +633,7 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                           <tbody>
                             {/* Page 2+: Show Amount Brought Forward at top */}
                             {!isFirstPage && (
-                              <tr style={{ borderBottom: '1px solid #000', background: '#f8fafc' }}>
+                              <tr style={{ borderBottom: '1px solid #000', background: '#f8fafc', height: '24px' }}>
                                 <td style={{ padding: '3px', borderRight: '1px solid #000', textAlign: 'center' }}>-</td>
                                 {hasAnyItemCode && <td style={{ padding: '3px', borderRight: '1px solid #000' }}>-</td>}
                                 <td style={{ padding: '3px 6px', borderRight: '1px solid #000', fontWeight: 'bold', fontSize: '12px' }}>
@@ -654,7 +654,7 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                               const amt = Number(item.amount) || (qty * rate);
 
                               return (
-                                <tr key={itemIdx} style={{ verticalAlign: 'top' }}>
+                                <tr key={itemIdx} style={{ verticalAlign: 'top', minHeight: '24px' }}>
                                   <td style={{ padding: '3px 2px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px' }}>
                                     {item.serialNumber || (itemIdx + 1)}
                                   </td>
@@ -678,6 +678,16 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                                 </tr>
                               );
                             })}
+
+                            {/* Stretcher row to ensure vertical border lines connect seamlessly all the way to the bottom footer */}
+                            <tr style={{ height: '100%' }}>
+                              <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>
+                              {hasAnyItemCode && <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>}
+                              <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>
+                              <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>
+                              <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>
+                              <td>&nbsp;</td>
+                            </tr>
                           </tbody>
                         </table>
                       </div>

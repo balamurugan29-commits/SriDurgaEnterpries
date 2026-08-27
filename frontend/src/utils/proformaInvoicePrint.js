@@ -254,6 +254,16 @@ export function generateProformaInvoicePrintHtml(proforma) {
                 `;
               }).join('')}
 
+              <!-- Stretcher row to ensure vertical border lines connect seamlessly all the way down to bottom footer -->
+              <tr style="height: 100%;">
+                <td style="border-right: 1px solid #000;">&nbsp;</td>
+                <td style="border-right: 1px solid #000;">&nbsp;</td>
+                <td style="border-right: 1px solid #000;">&nbsp;</td>
+                <td style="border-right: 1px solid #000;">&nbsp;</td>
+                <td style="border-right: 1px solid #000;">&nbsp;</td>
+                <td>&nbsp;</td>
+              </tr>
+
               ${!isLastPage ? `
                 <tr class="carried-over-row">
                   <td style="text-align: center;"></td>
@@ -450,6 +460,7 @@ export function generateProformaInvoicePrintHtml(proforma) {
         }
         .items-table {
           width: 100%;
+          height: 100%;
           border-collapse: collapse;
           font-size: 12px;
           flex: 1;
