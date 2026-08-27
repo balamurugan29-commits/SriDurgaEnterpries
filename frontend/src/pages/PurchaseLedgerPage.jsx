@@ -475,34 +475,50 @@ export const PurchaseLedgerPage = () => {
       const dealer = (item.dealerStoreName || item.supplierRemarks || '').toLowerCase();
       const invNo = (item.invoiceNo || '').toLowerCase();
       const mode = (item.modeOfPayment || '').toLowerCase();
+      const remarks = (item.remarks || '').toLowerCase();
+      const invDate = (item.invoiceDate || '').toLowerCase();
+      const payDate = (item.paymentDate || item.passedDate || '').toLowerCase();
 
+      // Search Keywords (Invoice No, Dealer Name, Mode, Remarks, Dates)
       const q = searchQuery.toLowerCase().trim();
-      const matchesSearch = !q || dealer.includes(q) || invNo.includes(q) || mode.includes(q);
+      const matchesSearch = !q || 
+        invNo.includes(q) || 
+        dealer.includes(q) || 
+        mode.includes(q) || 
+        remarks.includes(q) ||
+        invDate.includes(q) ||
+        payDate.includes(q);
 
+      // Dealer Filter
       const dealerQ = filterDealer.toLowerCase().trim();
       const matchesDealer = !dealerQ || dealer.includes(dealerQ);
 
-      // Payment Status
+      // Payment Status (PAID / PARTIAL / PENDING)
       const total = Number(item.totalAmount) || 0;
       const paid = Number(item.paidAmount || item.passedAmount) || 0;
-      const balance = item.balanceAmount !== undefined && item.balanceAmount !== null ? Number(item.balanceAmount) : Math.max(0, total - paid);
 
       let matchesStatus = true;
-      if (filterPaymentStatus === 'PAID') matchesStatus = (total > 0 && balance === 0);
-      if (filterPaymentStatus === 'PARTIAL') matchesStatus = (paid > 0 && balance > 0);
-      if (filterPaymentStatus === 'PENDING') matchesStatus = (paid === 0 && total > 0);
-
-      // Mode
-      const matchesMode = filterMode === 'ALL' || item.modeOfPayment === filterMode;
-
-      // Date
-      let matchesDate = true;
-      if (item.invoiceDate) {
-        if (fromDate && item.invoiceDate < fromDate) matchesDate = false;
-        if (toDate && item.invoiceDate > toDate) matchesDate = false;
-      } else if (fromDate || toDate) {
-        matchesDate = false;
+      if (filterPaymentStatus === 'PAID') {
+        matchesStatus = (total > 0 && paid >= total) || (total === 0 && paid > 0);
+      } else if (filterPaymentStatus === 'PARTIAL') {
+        matchesStatus = (total > 0 && paid > 0 && paid < total);
+      } else if (filterPaymentStatus === 'PENDING') {
+        matchesStatus = (total > 0 && paid === 0);
       }
+
+      // Mode of Payment (NEFT, RTGS, CHEQUE, CASH, UPI, etc.)
+      let matchesMode = true;
+      if (filterMode !== 'ALL') {
+        const itemMode = (item.modeOfPayment || '').toUpperCase().trim();
+        const selectedMode = filterMode.toUpperCase().trim();
+        matchesMode = itemMode === selectedMode || itemMode.includes(selectedMode);
+      }
+
+      // Date Range Filter
+      const itemDate = item.invoiceDate || item.paymentDate || item.passedDate;
+      let matchesDate = true;
+      if (fromDate && itemDate && itemDate < fromDate) matchesDate = false;
+      if (toDate && itemDate && itemDate > toDate) matchesDate = false;
 
       return matchesSearch && matchesDealer && matchesStatus && matchesMode && matchesDate;
     });
