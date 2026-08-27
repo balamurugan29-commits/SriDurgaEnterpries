@@ -2460,7 +2460,8 @@ export const PurchaseLedgerPage = () => {
                   const activeStatementCols = PURCHASE_EXPORT_COLUMNS.filter(col => exportSelectedCols[col.key]);
                   const cutoffDate = fromDate || getActiveFinancialYearStartIso();
                   
-                  // Filter out bills that belong to prior years because they are already rolled into Opening Balance!
+                  // Bills prior to cutoffDate (e.g. up to 31/03/2026) roll into Opening Balance on 01/04/2026
+                  // Only bills for the current period (>= cutoffDate e.g. 01/04/2026 onwards) appear in table rows!
                   const rawEntries = exportScope === 'ALL' ? purchaseEntries : filteredPurchases;
                   const statementEntries = rawEntries.filter(item => {
                     const itemDate = item.invoiceDate || item.paymentDate || item.passedDate;
