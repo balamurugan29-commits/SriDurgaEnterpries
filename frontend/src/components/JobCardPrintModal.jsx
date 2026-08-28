@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { X, Printer, FileText } from 'lucide-react';
+import { companyLogoBase64 } from '../assets/companyLogo';
 
 const formatPrintList = (val) => {
   if (!val) return '';
@@ -222,7 +223,7 @@ export const JobCardPrintModal = ({ isOpen, onClose, jobCard }) => {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', paddingBottom: '6px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '42px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                  <img src="/logo.jpg" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  <img src={companyLogoBase64} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </div>
 
                 <h1 style={{ fontSize: '26px', fontWeight: '900', color: '#000', margin: 0, letterSpacing: '0.5px', fontFamily: 'Georgia, serif' }}>

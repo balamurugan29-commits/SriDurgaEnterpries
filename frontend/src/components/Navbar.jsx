@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { UserManagementModal } from './UserManagementModal';
+import companyLogo from '../assets/companyLogo';
 import { 
   LogOut, 
   User as UserIcon, 
@@ -205,7 +206,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
               }}
             >
               <img 
-                src="/logo.jpg" 
+                src={companyLogo} 
                 alt="Sri Durga Logo" 
                 style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
               />

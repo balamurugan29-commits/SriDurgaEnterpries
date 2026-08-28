@@ -1,4 +1,5 @@
 // Utility for Direct Chrome Print & Proforma Invoice Generation matching exact Tax Invoice format
+import { companyLogoBase64 } from '../assets/companyLogo';
 
 export function numberToWordsINR(amount) {
   const num = Math.round(Number(amount) || 0);
@@ -139,7 +140,7 @@ export function generateProformaInvoicePrintHtml(proforma) {
           <!-- Company Header Section -->
           <div class="company-header-box">
             <div class="logo-box">
-              <img src="/logo.jpg" alt="Logo" style="width: 70px; height: 70px; object-fit: contain;" />
+              <img src="${companyLogoBase64}" alt="Logo" style="width: 70px; height: 70px; object-fit: contain;" />
             </div>
             <div class="company-info">
               <div class="company-name">SRI &nbsp; DURGA &nbsp; ENTERPRISES</div>

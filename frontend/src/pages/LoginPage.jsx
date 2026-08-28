@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import companyLogo from '../assets/companyLogo';
 import { Factory, Lock, User, KeyRound, AlertCircle, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export const LoginPage = () => {
@@ -55,7 +56,7 @@ export const LoginPage = () => {
             }}
           >
             <img 
-              src="/logo.jpg" 
+              src={companyLogo} 
               alt="Sri Durga Enterprises Logo" 
               style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
             />

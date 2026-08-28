@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Printer, CheckCircle, FileText } from 'lucide-react';
+import { companyLogoBase64 } from '../assets/companyLogo';
 
 // Utility to convert amount in numbers to Indian Rupee Words
 function numberToWordsINR(amount) {
@@ -417,7 +418,7 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                         <div style={{ display: 'flex', borderBottom: '1px solid #000', position: 'relative' }}>
                           {/* Left: Logo Box with Border */}
                           <div style={{ width: '85px', minWidth: '85px', borderRight: '1px solid #000', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <img src="/logo.jpg" alt="Logo" style={{ width: '70px', height: '70px', objectFit: 'contain' }} />
+                            <img src={companyLogoBase64} alt="Logo" style={{ width: '70px', height: '70px', objectFit: 'contain' }} />
                           </div>
 
                           {/* Center: Title & Company Info */}

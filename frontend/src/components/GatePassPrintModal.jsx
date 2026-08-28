@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { X, Printer, CheckCircle, ArrowLeftRight } from 'lucide-react';
+import { companyLogoBase64 } from '../assets/companyLogo';
 
 export const GatePassPrintModal = ({ isOpen, onClose, gatePass }) => {
   // Listen for Escape key to close modal
@@ -228,7 +229,7 @@ export const GatePassPrintModal = ({ isOpen, onClose, gatePass }) => {
               {/* Left: Logo directly below GSTIN */}
               <div style={{ width: '70px', minWidth: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'absolute', left: '0px', top: '50%', transform: 'translateY(-50%)' }}>
                 <img 
-                  src="/logo.jpg" 
+                  src={companyLogoBase64} 
                   alt="Sri Durga Logo" 
                   style={{ width: '65px', height: '65px', objectFit: 'contain' }} 
                 />
