@@ -37,16 +37,34 @@ export const LoginPage = () => {
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle at 50% 30%, rgba(79, 70, 229, 0.15) 0%, rgba(9, 13, 22, 1) 70%)', padding: '1.5rem' }}>
       <div className="glass-panel" style={{ width: '100%', maxWidth: '440px', padding: '2.5rem', border: '1px solid rgba(99, 102, 241, 0.35)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.7)' }}>
         
-        {/* Brand Header */}
+        {/* Brand Header with Company Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'linear-gradient(135deg, #4f46e5 0%, #10b981 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto', boxShadow: '0 8px 24px rgba(79, 70, 229, 0.4)' }}>
-            <Factory size={32} color="white" />
+          <div 
+            style={{ 
+              width: '72px', 
+              height: '72px', 
+              borderRadius: '18px', 
+              background: '#ffffff', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              margin: '0 auto 1.25rem auto', 
+              boxShadow: '0 8px 30px rgba(99, 102, 241, 0.4), 0 0 0 2px rgba(255, 255, 255, 0.2)',
+              overflow: 'hidden',
+              padding: '6px'
+            }}
+          >
+            <img 
+              src="/logo.jpg" 
+              alt="Sri Durga Enterprises Logo" 
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+            />
           </div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.025em', color: 'white', marginBottom: '0.25rem' }}>
-            SRI DURGA
+          <h1 style={{ fontSize: '1.65rem', fontWeight: 900, letterSpacing: '-0.025em', color: 'white', marginBottom: '0.35rem', textTransform: 'uppercase' }}>
+            SRI DURGA ENTERPRISES
           </h1>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            Enterprise Inventory & Delivery Challan Portal
+            Enterprise Inventory, Tax Invoicing & Compliance Portal
           </p>
         </div>
 
@@ -96,7 +114,7 @@ export const LoginPage = () => {
             disabled={loading}
             style={{ width: '100%', padding: '0.85rem', marginTop: '0.5rem', fontSize: '0.95rem' }}
           >
-            <span>{loading ? 'Authenticating...' : 'Sign In to Sri Durga'}</span>
+            <span>{loading ? 'Authenticating...' : 'Sign In to Sri Durga Enterprises'}</span>
             <ArrowRight size={18} />
           </button>
         </form>
