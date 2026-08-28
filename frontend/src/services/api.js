@@ -5,11 +5,14 @@ export const getServerApiUrl = () => {
   if (custom && custom.trim()) {
     return custom.trim().replace(/\/+$/, '');
   }
-  return import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8085/api';
+  if (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return `http://${window.location.hostname}:8085/api`;
+  }
+  return import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.39:8085/api';
 };
 
 export const setServerApiUrl = (url) => {
-  if (!url || !url.trim() || url.trim() === 'http://127.0.0.1:8085/api' || url.trim() === 'http://localhost:8085/api') {
+  if (!url || !url.trim()) {
     localStorage.removeItem('sri_durga_custom_api_url');
   } else {
     localStorage.setItem('sri_durga_custom_api_url', url.trim().replace(/\/+$/, ''));
