@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   fetchProformas, 
-  deleteProforma 
+  deleteProforma,
+  fetchNextChallanNumber,
+  createChallan,
+  formatUnitWithQty
 } from '../services/api';
 import { printProformaInvoiceDirect } from '../utils/proformaInvoicePrint';
 import { ProformaPrintModal } from '../components/ProformaPrintModal';
@@ -26,7 +29,11 @@ import {
   Download,
   Hash,
   User,
-  CreditCard
+  CreditCard,
+  ArrowRightLeft,
+  CheckCircle,
+  ExternalLink,
+  X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -58,6 +65,14 @@ export const ProformaInvoiceListPage = ({ onEditProforma }) => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [dateFilter, setDateFilter] = useState('ALL'); // 'ALL', 'THIS_MONTH', 'LAST_MONTH', 'THIS_FY'
+
+  // Transfer to Tax Invoice Modal States
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [proformasToTransfer, setProformasToTransfer] = useState([]);
+  const [transferDate, setTransferDate] = useState(new Date().toISOString().split('T')[0]);
+  const [nextTaxInvoiceNumber, setNextTaxInvoiceNumber] = useState('');
+  const [transferring, setTransferring] = useState(false);
+  const [transferSuccessData, setTransferSuccessData] = useState(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -228,6 +243,109 @@ export const ProformaInvoiceListPage = ({ onEditProforma }) => {
     }
   };
 
+  // Open Transfer Modal for Single or Multiple Proformas
+  const handleOpenTransferModal = async (itemsToTransfer) => {
+    try {
+      const nextNum = await fetchNextChallanNumber();
+      setNextTaxInvoiceNumber(nextNum || '01/26-27');
+    } catch (err) {
+      setNextTaxInvoiceNumber('01/26-27');
+    }
+    setTransferDate(new Date().toISOString().split('T')[0]);
+    setProformasToTransfer(itemsToTransfer);
+    setTransferSuccessData(null);
+    setTransferModalOpen(true);
+  };
+
+  // Bulk Transfer Handler
+  const handleBulkTransferSelected = () => {
+    const selectedList = filteredProformas.filter(p => selectedProformaIds.includes(p.id));
+    if (selectedList.length === 0) return;
+    handleOpenTransferModal(selectedList);
+  };
+
+  // Execute Transfer to Tax Invoice
+  const handleConfirmTransfer = async () => {
+    if (proformasToTransfer.length === 0) return;
+
+    setTransferring(true);
+    try {
+      const transferredTaxInvoices = [];
+
+      for (let i = 0; i < proformasToTransfer.length; i++) {
+        const p = proformasToTransfer[i];
+        
+        // Next sequential invoice number calculation
+        let targetInvoiceNumber = nextTaxInvoiceNumber;
+        if (i > 0) {
+          const parts = targetInvoiceNumber.split('/');
+          if (parts.length === 2 && !isNaN(parseInt(parts[0], 10))) {
+            const nextSeq = parseInt(parts[0], 10) + i;
+            targetInvoiceNumber = `${String(nextSeq).padStart(2, '0')}/${parts[1]}`;
+          }
+        }
+
+        const validItems = (p.items || []).map((it, idx) => ({
+          serialNumber: it.serialNumber || (idx + 1),
+          itemCode: it.itemCode || 'CUSTOM',
+          description: it.description || '',
+          quantity: Number(it.quantity) || 1,
+          unit: formatUnitWithQty(it.unit || 'No', it.quantity),
+          rate: Number(it.rate) || 0,
+          amount: Number(it.amount) || ((Number(it.quantity) || 1) * (Number(it.rate) || 0))
+        }));
+
+        const taxInvoicePayload = {
+          challanNumber: targetInvoiceNumber,
+          challanDate: transferDate,
+          customerName: p.customerName || '',
+          customerAddress: p.customerAddress || '',
+          customerPhone: p.customerPhone || '',
+          vendorCode: p.vendorCode || '840305',
+          contractNo: p.contractNo || '9010038288',
+          contractPeriod: p.contractPeriod || '01.05.2024 to 30.04.2027',
+          bgNo: p.bgNo || '8110IPEBG240001  Validity Upto : 30.09.2027',
+          poNumber: p.poNumber || '5060173862',
+          poDate: p.poDate || null,
+          epfCode: p.epfCode || 'PC 1758',
+          esiCode: p.esiCode || '55000426770000602',
+          gstin: p.gstin || '34ABDFS4476N1ZN',
+          pan: p.pan || 'ABDFS4476N',
+          stateCode: p.stateCode || 'Puducherry (34)',
+          customerPan: p.customerPan || '',
+          customerGstin: p.customerGstin || '',
+          customerStateCode: p.customerStateCode || 'PUDUCHERRY (34)',
+          sacCode: p.sacCode || '995469',
+          gstPercent: Number(p.gstPercent !== undefined ? p.gstPercent : 18),
+          equipmentHeader: p.equipmentHeader || '',
+          totalAmount: Number(p.totalAmount) || 0,
+          items: validItems
+        };
+
+        const createdChallan = await createChallan(taxInvoicePayload);
+        transferredTaxInvoices.push({
+          proformaNumber: p.proformaNumber,
+          taxInvoiceNumber: targetInvoiceNumber,
+          customerName: p.customerName,
+          totalAmount: p.totalAmount,
+          result: createdChallan
+        });
+      }
+
+      setTransferSuccessData(transferredTaxInvoices);
+      setToast({
+        message: `Successfully transferred ${proformasToTransfer.length} Proforma Invoice(s) to Tax Invoice History!`,
+        type: 'success'
+      });
+      setSelectedProformaIds([]);
+      await loadData();
+    } catch (err) {
+      setToast({ message: 'Transfer to Tax Invoice failed: ' + err.message, type: 'error' });
+    } finally {
+      setTransferring(false);
+    }
+  };
+
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       
@@ -245,7 +363,7 @@ export const ProformaInvoiceListPage = ({ onEditProforma }) => {
               Proforma Invoice History
             </h2>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
-              Search, filter, view estimates, print, or convert previous proforma records.
+              Search, filter, view estimates, print, or transfer approved records to Tax Invoice.
             </p>
           </div>
         </div>
@@ -288,6 +406,28 @@ export const ProformaInvoiceListPage = ({ onEditProforma }) => {
               </span>
             )}
           </button>
+
+          {/* BULK TRANSFER TO TAX INVOICE BUTTON */}
+          {selectedProformaIds.length > 0 && (
+            <button 
+              onClick={handleBulkTransferSelected} 
+              className="btn btn-secondary" 
+              style={{ 
+                fontSize: '0.85rem', 
+                padding: '0.55rem 1rem', 
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
+                color: '#ffffff', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.45rem',
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
+              }}
+              title="Transfer all selected Proforma Invoices to Tax Invoice History"
+            >
+              <ArrowRightLeft size={16} />
+              <span>Transfer to Tax Invoice ({selectedProformaIds.length})</span>
+            </button>
+          )}
 
           {/* Export Designer */}
           <button 
@@ -521,12 +661,12 @@ export const ProformaInvoiceListPage = ({ onEditProforma }) => {
                 />
               </th>
               <th style={{ padding: '10px', width: '40px', textAlign: 'center' }}>#</th>
-              <th style={{ padding: '10px', width: '14%', textAlign: 'left' }}>Proforma No</th>
-              <th style={{ padding: '10px', width: '11%', textAlign: 'center' }}>Date</th>
-              <th style={{ padding: '10px', width: '30%', textAlign: 'left' }}>Customer Name & Subject</th>
-              <th style={{ padding: '10px', width: '8%', textAlign: 'center' }}>Items</th>
-              <th style={{ padding: '10px', width: '14%', textAlign: 'right' }}>Total (₹)</th>
-              <th style={{ padding: '10px', width: '18%', textAlign: 'center' }}>Actions</th>
+              <th style={{ padding: '10px', width: '13%', textAlign: 'left' }}>Proforma No</th>
+              <th style={{ padding: '10px', width: '10%', textAlign: 'center' }}>Date</th>
+              <th style={{ padding: '10px', width: '28%', textAlign: 'left' }}>Customer Name & Subject</th>
+              <th style={{ padding: '10px', width: '7%', textAlign: 'center' }}>Items</th>
+              <th style={{ padding: '10px', width: '13%', textAlign: 'right' }}>Total (₹)</th>
+              <th style={{ padding: '10px', width: '23%', textAlign: 'center' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -581,7 +721,29 @@ export const ProformaInvoiceListPage = ({ onEditProforma }) => {
                       ₹{Number(p.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td style={{ padding: '10px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                        
+                        {/* TRANSFER TO TAX INVOICE BUTTON */}
+                        <button
+                          onClick={() => handleOpenTransferModal([p])}
+                          className="btn btn-outline"
+                          style={{ 
+                            padding: '0.35rem 0.6rem', 
+                            fontSize: '0.75rem', 
+                            borderColor: 'rgba(16, 185, 129, 0.45)', 
+                            background: 'rgba(16, 185, 129, 0.12)',
+                            color: '#34d399',
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.3rem'
+                          }}
+                          title="Transfer / Convert to Tax Invoice (Current Date)"
+                        >
+                          <ArrowRightLeft size={13} />
+                          <span>Transfer</span>
+                        </button>
+
                         <button
                           onClick={() => setSelectedProforma(p)}
                           className="btn btn-outline"
@@ -644,6 +806,211 @@ export const ProformaInvoiceListPage = ({ onEditProforma }) => {
         data={filteredProformas}
         availableColumns={PROFORMA_COLUMNS}
       />
+
+      {/* TRANSFER TO TAX INVOICE CONFIRMATION & EXECUTION MODAL */}
+      {transferModalOpen && (
+        <div 
+          style={{ 
+            position: 'fixed', 
+            inset: 0, 
+            zIndex: 99999, 
+            background: 'rgba(0,0,0,0.85)', 
+            backdropFilter: 'blur(8px)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            padding: '1rem' 
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget && !transferring) setTransferModalOpen(false); }}
+        >
+          <div 
+            className="glass-panel" 
+            style={{ 
+              width: '100%', 
+              maxWidth: '600px', 
+              background: 'var(--bg-card-solid)', 
+              border: '1.5px solid rgba(16, 185, 129, 0.4)', 
+              borderRadius: '16px', 
+              overflow: 'hidden',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.7)'
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{ padding: '1.25rem 1.5rem', background: 'rgba(16, 185, 129, 0.15)', borderBottom: '1px solid rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ArrowRightLeft size={20} color="#34d399" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                    Transfer to Tax Invoice
+                  </h3>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Convert approved proforma estimate into real Tax Invoice History
+                  </span>
+                </div>
+              </div>
+              {!transferring && (
+                <button onClick={() => setTransferModalOpen(false)} className="btn btn-outline" style={{ padding: '0.4rem' }}>
+                  <X size={18} />
+                </button>
+              )}
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
+              
+              {transferSuccessData ? (
+                /* SUCCESS STATE VIEW */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', textAlign: 'center', padding: '1rem 0' }}>
+                  <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+                    <CheckCircle size={32} color="#34d399" />
+                  </div>
+                  <div>
+                    <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#34d399', margin: 0 }}>
+                      Transfer Successful!
+                    </h4>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                      The following record(s) have been successfully saved into <strong>Tax Invoice History</strong>:
+                    </p>
+                  </div>
+
+                  <div style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '0.85rem', textAlign: 'left', maxHeight: '180px', overflowY: 'auto' }}>
+                    {transferSuccessData.map((item, idx) => (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0', borderBottom: idx < transferSuccessData.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none', fontSize: '0.825rem' }}>
+                        <div>
+                          <span style={{ color: '#38bdf8', fontWeight: 700 }}>{item.proformaNumber}</span>
+                          <span style={{ color: 'var(--text-muted)', margin: '0 0.5rem' }}>➡️</span>
+                          <span style={{ color: '#34d399', fontWeight: 800 }}>Tax Invoice: {item.taxInvoiceNumber}</span>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.customerName}</div>
+                        </div>
+                        <div style={{ fontWeight: 800, color: '#34d399' }}>
+                          ₹{Number(item.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '0.85rem', marginTop: '0.5rem' }}>
+                    <button
+                      onClick={() => {
+                        setTransferModalOpen(false);
+                        navigate('/challan-list');
+                      }}
+                      className="btn btn-primary"
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.5rem', 
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        padding: '0.65rem 1.25rem',
+                        fontSize: '0.875rem'
+                      }}
+                    >
+                      <ExternalLink size={16} />
+                      <span>Go to Tax Invoice History</span>
+                    </button>
+                    <button
+                      onClick={() => setTransferModalOpen(false)}
+                      className="btn btn-outline"
+                      style={{ fontSize: '0.875rem', padding: '0.65rem 1.15rem' }}
+                    >
+                      Stay Here
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* INPUT / CONFIRMATION VIEW */
+                <>
+                  {/* Selected Proformas Summary Box */}
+                  <div style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '0.85rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                      Proforma Invoice(s) Selected for Transfer ({proformasToTransfer.length}):
+                    </div>
+                    {proformasToTransfer.map((p, idx) => (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.35rem 0', fontSize: '0.825rem', borderBottom: idx < proformasToTransfer.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                        <div>
+                          <strong style={{ color: '#38bdf8' }}>{p.proformaNumber}</strong>
+                          <span style={{ color: 'var(--text-main)', marginLeft: '0.5rem' }}>{p.customerName}</span>
+                        </div>
+                        <div style={{ fontWeight: 800, color: '#34d399' }}>
+                          ₹{Number(p.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Transfer Form Controls */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Calendar size={14} color="#34d399" />
+                        <span>Tax Invoice Date (Current Date)</span>
+                      </label>
+                      <input
+                        type="date"
+                        className="form-input"
+                        value={transferDate}
+                        onChange={e => setTransferDate(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Hash size={14} color="#38bdf8" />
+                        <span>Tax Invoice Number</span>
+                      </label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        value={nextTaxInvoiceNumber}
+                        onChange={e => setNextTaxInvoiceNumber(e.target.value)}
+                        placeholder="e.g. 13/26-27"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '8px', padding: '0.75rem', fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.4 }}>
+                    ℹ️ Upon confirmation, a new verified <strong>Tax Invoice</strong> will be created in <strong>Tax Invoice History</strong> with current date and line item specifications. The original Proforma record will remain safely in history.
+                  </div>
+
+                  {/* Modal Footer Actions */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
+                    <button
+                      type="button"
+                      onClick={() => setTransferModalOpen(false)}
+                      className="btn btn-outline"
+                      disabled={transferring}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleConfirmTransfer}
+                      className="btn btn-secondary"
+                      style={{ 
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
+                        color: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.55rem 1.25rem'
+                      }}
+                      disabled={transferring}
+                    >
+                      <ArrowRightLeft size={16} className={transferring ? 'animate-spin' : ''} />
+                      <span>{transferring ? 'Transferring...' : 'Confirm & Transfer'}</span>
+                    </button>
+                  </div>
+                </>
+              )}
+
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
