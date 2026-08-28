@@ -447,188 +447,7 @@ export const Sidebar = ({ activePage, setActivePage }) => {
           )}
         </div>
 
-        {/* 3. Certificate (Dropdown / Group for Work Completed Certificate & History) */}
-        <div ref={certFlyoutRef} style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-          <button
-            onClick={handleCertClick}
-            className="has-tooltip"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: isCompact && !mobileMenuOpen ? 'center' : 'space-between',
-              width: '100%',
-              padding: isCompact && !mobileMenuOpen ? '0.7rem' : '0.7rem 0.9rem',
-              borderRadius: '10px',
-              border: isCertActive ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid transparent',
-              background: isCertActive ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-              color: isCertActive ? 'var(--text-main)' : 'var(--text-muted)',
-              fontWeight: isCertActive ? 600 : 400,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              textAlign: 'left'
-            }}
-            title={isCompact ? 'Certificate (Click to Open)' : ''}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <Award size={18} color={isCertActive ? '#34d399' : '#9ca3af'} />
-              {(!isCompact || mobileMenuOpen) && <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Certificate</span>}
-            </div>
-            {(!isCompact || mobileMenuOpen) && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <span style={{ fontSize: '0.625rem', background: 'rgba(16, 185, 129, 0.25)', color: '#34d399', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 700 }}>
-                  2
-                </span>
-                {certDropdownOpen ? <ChevronDown size={15} color="#34d399" /> : <ChevronRight size={15} color="#9ca3af" />}
-              </div>
-            )}
-            {isCompact && !mobileMenuOpen && !certIconFlyoutOpen && <span className="nav-tooltip">Certificate (Click to Open)</span>}
-          </button>
-
-          {/* FLYOUT POPOVER MENU FOR CERTIFICATE IN ICON-ONLY MODE */}
-          {isCompact && !mobileMenuOpen && certIconFlyoutOpen && (
-            <div 
-              style={{
-                position: 'absolute',
-                left: '100%',
-                top: 0,
-                marginLeft: '8px',
-                background: 'var(--bg-card-solid)',
-                border: '1.5px solid var(--border-color-accent)',
-                borderRadius: '14px',
-                padding: '0.6rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.35rem',
-                minWidth: '240px',
-                boxShadow: '0 20px 45px rgba(0, 0, 0, 0.45)',
-                zIndex: 999999,
-                animation: 'scaleIn 0.15s ease-out'
-              }}
-            >
-              <div style={{ padding: '0.3rem 0.6rem', borderBottom: '1px solid var(--border-color)', marginBottom: '0.2rem' }}>
-                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  CERTIFICATES MENU
-                </span>
-              </div>
-              
-              <button
-                onClick={() => handleNavClick('work-completion')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.625rem',
-                  padding: '0.6rem 0.75rem',
-                  borderRadius: '8px',
-                  border: activePage === 'work-completion' ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid transparent',
-                  background: activePage === 'work-completion' ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
-                  color: activePage === 'work-completion' ? 'var(--text-main)' : 'var(--text-muted)',
-                  fontSize: '0.825rem',
-                  fontWeight: activePage === 'work-completion' ? 700 : 500,
-                  cursor: 'pointer',
-                  textAlign: 'left'
-                }}
-              >
-                <Award size={16} color="#34d399" />
-                <span>Work Completed Certificate</span>
-              </button>
-
-              <button
-                onClick={() => handleNavClick('work-completion-history')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.625rem',
-                  padding: '0.6rem 0.75rem',
-                  borderRadius: '8px',
-                  border: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid transparent',
-                  background: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? 'rgba(56, 189, 248, 0.18)' : 'transparent',
-                  color: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? 'var(--text-main)' : 'var(--text-muted)',
-                  fontSize: '0.825rem',
-                  fontWeight: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? 700 : 500,
-                  cursor: 'pointer',
-                  textAlign: 'left'
-                }}
-              >
-                <History size={16} color="#38bdf8" />
-                <span>Work Completed Certificate History</span>
-              </button>
-            </div>
-          )}
-
-          {/* Submenu Accordion: Work Completed Certificate & History (For Full Mode) */}
-          {(!isCompact || mobileMenuOpen) && certDropdownOpen && (
-            <div 
-              style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: '0.2rem', 
-                paddingLeft: '1.25rem', 
-                borderLeft: '2px solid rgba(16, 185, 129, 0.35)', 
-                marginLeft: '1rem', 
-                marginTop: '0.1rem', 
-                marginBottom: '0.2rem' 
-              }}
-            >
-              {/* Sub-item 1: Work Completed Certificate */}
-              <button
-                onClick={() => handleNavClick('work-completion')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  width: '100%',
-                  padding: '0.55rem 0.8rem',
-                  borderRadius: '8px',
-                  border: activePage === 'work-completion' ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid transparent',
-                  background: activePage === 'work-completion' ? 'linear-gradient(90deg, rgba(16, 185, 129, 0.25) 0%, rgba(16, 185, 129, 0.05) 100%)' : 'transparent',
-                  color: activePage === 'work-completion' ? 'var(--text-main)' : 'var(--text-muted)',
-                  fontWeight: activePage === 'work-completion' ? 600 : 400,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  textAlign: 'left'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                  <Award size={16} color={activePage === 'work-completion' ? '#34d399' : '#9ca3af'} />
-                  <span style={{ fontSize: '0.8rem' }}>Work Completed Certificate</span>
-                </div>
-                <span style={{ fontSize: '0.6rem', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', padding: '0.1rem 0.35rem', borderRadius: '3px', fontWeight: 600 }}>
-                  Form
-                </span>
-              </button>
-
-              {/* Sub-item 2: Work Completed Certificate History */}
-              <button
-                onClick={() => handleNavClick('work-completion-history')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  width: '100%',
-                  padding: '0.55rem 0.8rem',
-                  borderRadius: '8px',
-                  border: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid transparent',
-                  background: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? 'linear-gradient(90deg, rgba(56, 189, 248, 0.25) 0%, rgba(56, 189, 248, 0.05) 100%)' : 'transparent',
-                  color: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? 'var(--text-main)' : 'var(--text-muted)',
-                  fontWeight: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? 600 : 400,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  textAlign: 'left'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                  <History size={16} color={activePage === 'work-completion-history' || activePage === 'work-completion-list' ? '#38bdf8' : '#9ca3af'} />
-                  <span style={{ fontSize: '0.8rem' }}>Certificate History</span>
-                </div>
-                <span style={{ fontSize: '0.6rem', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', padding: '0.1rem 0.35rem', borderRadius: '3px', fontWeight: 600 }}>
-                  History
-                </span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* 4. Invoice (Dropdown / Group for Tax Invoice & Tax Invoice History) */}
+        {/* 3. Invoice (Dropdown / Group for Tax Invoice, History, Proforma Invoice, Proforma History) */}
         <div ref={invoiceFlyoutRef} style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
           <button
             onClick={handleInvoiceClick}
@@ -657,7 +476,7 @@ export const Sidebar = ({ activePage, setActivePage }) => {
             {(!isCompact || mobileMenuOpen) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <span style={{ fontSize: '0.625rem', background: 'rgba(245, 158, 11, 0.25)', color: '#fbbf24', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 700 }}>
-                  2
+                  4
                 </span>
                 {invoiceDropdownOpen ? <ChevronDown size={15} color="#fbbf24" /> : <ChevronRight size={15} color="#9ca3af" />}
               </div>
@@ -898,6 +717,187 @@ export const Sidebar = ({ activePage, setActivePage }) => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
                   <History size={16} color={activePage === 'proforma-invoice-history' || activePage === 'proforma-invoice-list' || activePage === 'proforma-invoices' ? '#38bdf8' : '#9ca3af'} />
                   <span style={{ fontSize: '0.8rem' }}>Proforma History</span>
+                </div>
+                <span style={{ fontSize: '0.6rem', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', padding: '0.1rem 0.35rem', borderRadius: '3px', fontWeight: 600 }}>
+                  History
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* 4. Certificate (Dropdown / Group for Work Completed Certificate & History) */}
+        <div ref={certFlyoutRef} style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+          <button
+            onClick={handleCertClick}
+            className="has-tooltip"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: isCompact && !mobileMenuOpen ? 'center' : 'space-between',
+              width: '100%',
+              padding: isCompact && !mobileMenuOpen ? '0.7rem' : '0.7rem 0.9rem',
+              borderRadius: '10px',
+              border: isCertActive ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid transparent',
+              background: isCertActive ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+              color: isCertActive ? 'var(--text-main)' : 'var(--text-muted)',
+              fontWeight: isCertActive ? 600 : 400,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              textAlign: 'left'
+            }}
+            title={isCompact ? 'Certificate (Click to Open)' : ''}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Award size={18} color={isCertActive ? '#34d399' : '#9ca3af'} />
+              {(!isCompact || mobileMenuOpen) && <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Certificate</span>}
+            </div>
+            {(!isCompact || mobileMenuOpen) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span style={{ fontSize: '0.625rem', background: 'rgba(16, 185, 129, 0.25)', color: '#34d399', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 700 }}>
+                  2
+                </span>
+                {certDropdownOpen ? <ChevronDown size={15} color="#34d399" /> : <ChevronRight size={15} color="#9ca3af" />}
+              </div>
+            )}
+            {isCompact && !mobileMenuOpen && !certIconFlyoutOpen && <span className="nav-tooltip">Certificate (Click to Open)</span>}
+          </button>
+
+          {/* FLYOUT POPOVER MENU FOR CERTIFICATE IN ICON-ONLY MODE */}
+          {isCompact && !mobileMenuOpen && certIconFlyoutOpen && (
+            <div 
+              style={{
+                position: 'absolute',
+                left: '100%',
+                top: 0,
+                marginLeft: '8px',
+                background: 'var(--bg-card-solid)',
+                border: '1.5px solid var(--border-color-accent)',
+                borderRadius: '14px',
+                padding: '0.6rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem',
+                minWidth: '240px',
+                boxShadow: '0 20px 45px rgba(0, 0, 0, 0.45)',
+                zIndex: 999999,
+                animation: 'scaleIn 0.15s ease-out'
+              }}
+            >
+              <div style={{ padding: '0.3rem 0.6rem', borderBottom: '1px solid var(--border-color)', marginBottom: '0.2rem' }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  CERTIFICATES MENU
+                </span>
+              </div>
+              
+              <button
+                onClick={() => handleNavClick('work-completion')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.625rem',
+                  padding: '0.6rem 0.75rem',
+                  borderRadius: '8px',
+                  border: activePage === 'work-completion' ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid transparent',
+                  background: activePage === 'work-completion' ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
+                  color: activePage === 'work-completion' ? 'var(--text-main)' : 'var(--text-muted)',
+                  fontSize: '0.825rem',
+                  fontWeight: activePage === 'work-completion' ? 700 : 500,
+                  cursor: 'pointer',
+                  textAlign: 'left'
+                }}
+              >
+                <Award size={16} color="#34d399" />
+                <span>Work Completed Certificate</span>
+              </button>
+
+              <button
+                onClick={() => handleNavClick('work-completion-history')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.625rem',
+                  padding: '0.6rem 0.75rem',
+                  borderRadius: '8px',
+                  border: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid transparent',
+                  background: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? 'rgba(56, 189, 248, 0.18)' : 'transparent',
+                  color: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? 'var(--text-main)' : 'var(--text-muted)',
+                  fontSize: '0.825rem',
+                  fontWeight: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? 700 : 500,
+                  cursor: 'pointer',
+                  textAlign: 'left'
+                }}
+              >
+                <History size={16} color="#38bdf8" />
+                <span>Work Completed Certificate History</span>
+              </button>
+            </div>
+          )}
+
+          {/* Submenu Accordion: Work Completed Certificate & History (For Full Mode) */}
+          {(!isCompact || mobileMenuOpen) && certDropdownOpen && (
+            <div 
+              style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '0.2rem', 
+                paddingLeft: '1.25rem', 
+                borderLeft: '2px solid rgba(16, 185, 129, 0.35)', 
+                marginLeft: '1rem', 
+                marginTop: '0.1rem', 
+                marginBottom: '0.2rem' 
+              }}
+            >
+              {/* Sub-item 1: Work Completed Certificate */}
+              <button
+                onClick={() => handleNavClick('work-completion')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                  padding: '0.55rem 0.8rem',
+                  borderRadius: '8px',
+                  border: activePage === 'work-completion' ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid transparent',
+                  background: activePage === 'work-completion' ? 'linear-gradient(90deg, rgba(16, 185, 129, 0.25) 0%, rgba(16, 185, 129, 0.05) 100%)' : 'transparent',
+                  color: activePage === 'work-completion' ? 'var(--text-main)' : 'var(--text-muted)',
+                  fontWeight: activePage === 'work-completion' ? 600 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  textAlign: 'left'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                  <Award size={16} color={activePage === 'work-completion' ? '#34d399' : '#9ca3af'} />
+                  <span style={{ fontSize: '0.8rem' }}>Work Completed Certificate</span>
+                </div>
+                <span style={{ fontSize: '0.6rem', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', padding: '0.1rem 0.35rem', borderRadius: '3px', fontWeight: 600 }}>
+                  Form
+                </span>
+              </button>
+
+              {/* Sub-item 2: Work Completed Certificate History */}
+              <button
+                onClick={() => handleNavClick('work-completion-history')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                  padding: '0.55rem 0.8rem',
+                  borderRadius: '8px',
+                  border: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid transparent',
+                  background: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? 'linear-gradient(90deg, rgba(56, 189, 248, 0.25) 0%, rgba(56, 189, 248, 0.05) 100%)' : 'transparent',
+                  color: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? 'var(--text-main)' : 'var(--text-muted)',
+                  fontWeight: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? 600 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  textAlign: 'left'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                  <History size={16} color={activePage === 'work-completion-history' || activePage === 'work-completion-list' ? '#38bdf8' : '#9ca3af'} />
+                  <span style={{ fontSize: '0.8rem' }}>Certificate History</span>
                 </div>
                 <span style={{ fontSize: '0.6rem', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', padding: '0.1rem 0.35rem', borderRadius: '3px', fontWeight: 600 }}>
                   History

@@ -368,93 +368,10 @@ export const Navbar = ({ activePage, setActivePage }) => {
             )}
           </div>
 
-          {/* Top Nav: Certificate Dropdown */}
-          <div ref={topCertDropdownRef} style={{ position: 'relative', zIndex: 99999 }}>
-            <button
-              onClick={() => { setTopCertOpen(!topCertOpen); setTopMasterOpen(false); setTopInvoiceOpen(false); setTopCardOpen(false); setTopPassOpen(false); }}
-              className={`has-tooltip top-nav-item btn ${isCertActive ? 'btn-secondary' : 'btn-outline'}`}
-              style={{ padding: navMode === 'icons' ? '0.45rem 0.65rem' : '0.45rem 0.85rem', fontSize: '0.8rem', gap: '0.35rem' }}
-              title="Certificate"
-            >
-              <Award size={15} />
-              {navMode === 'full' && <span>Certificate</span>}
-              <ChevronDown size={13} />
-              {navMode === 'icons' && !topCertOpen && <span className="nav-tooltip">Certificate</span>}
-            </button>
-
-            {topCertOpen && (
-              <div 
-                style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 6px)',
-                  left: 0,
-                  background: 'var(--bg-card-solid)',
-                  border: '1.5px solid var(--border-color-accent)',
-                  borderRadius: '12px',
-                  boxShadow: '0 20px 45px rgba(0,0,0,0.45)',
-                  padding: '0.5rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.35rem',
-                  zIndex: 999999,
-                  minWidth: '240px',
-                  animation: 'scaleIn 0.15s ease-out'
-                }}
-              >
-                <div style={{ padding: '0.25rem 0.5rem', borderBottom: '1px solid var(--border-color)', marginBottom: '0.2rem' }}>
-                  <span style={{ fontSize: '0.675rem', fontWeight: 800, color: 'var(--text-subtle)', textTransform: 'uppercase' }}>
-                    CERTIFICATE MENU
-                  </span>
-                </div>
-
-                <button
-                  onClick={() => { setActivePage('work-completion'); setTopCertOpen(false); }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.55rem 0.75rem',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: activePage === 'work-completion' ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
-                    color: 'var(--text-main)',
-                    fontSize: '0.825rem',
-                    fontWeight: activePage === 'work-completion' ? 700 : 500,
-                    cursor: 'pointer',
-                    textAlign: 'left'
-                  }}
-                >
-                  <Award size={15} color="#34d399" />
-                  <span>Work Completed Certificate</span>
-                </button>
-                <button
-                  onClick={() => { setActivePage('work-completion-history'); setTopCertOpen(false); }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.55rem 0.75rem',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? 'rgba(56, 189, 248, 0.18)' : 'transparent',
-                    color: 'var(--text-main)',
-                    fontSize: '0.825rem',
-                    fontWeight: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? 700 : 500,
-                    cursor: 'pointer',
-                    textAlign: 'left'
-                  }}
-                >
-                  <History size={15} color="#38bdf8" />
-                  <span>Work Completed Certificate History</span>
-                </button>
-              </div>
-            )}
-          </div>
-
           {/* Top Nav: Invoice Dropdown */}
           <div ref={topInvoiceDropdownRef} style={{ position: 'relative', zIndex: 99999 }}>
             <button
-              onClick={() => { setTopInvoiceOpen(!topInvoiceOpen); setTopMasterOpen(false); setTopCertOpen(false); setTopCardOpen(false); setTopPassOpen(false); }}
+              onClick={() => { setTopInvoiceOpen(!topInvoiceOpen); setTopMasterOpen(false); setTopCertOpen(false); setTopCardOpen(false); setTopPassOpen(false); setTopAuditOpen(false); }}
               className={`has-tooltip top-nav-item btn ${isInvoiceActive ? 'btn-accent' : 'btn-outline'}`}
               style={{ padding: navMode === 'icons' ? '0.45rem 0.65rem' : '0.45rem 0.85rem', fontSize: '0.8rem', gap: '0.35rem' }}
               title="Invoice"
@@ -572,6 +489,89 @@ export const Navbar = ({ activePage, setActivePage }) => {
                 >
                   <History size={15} color="#38bdf8" />
                   <span>Proforma Invoice History</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Top Nav: Certificate Dropdown */}
+          <div ref={topCertDropdownRef} style={{ position: 'relative', zIndex: 99999 }}>
+            <button
+              onClick={() => { setTopCertOpen(!topCertOpen); setTopMasterOpen(false); setTopInvoiceOpen(false); setTopCardOpen(false); setTopPassOpen(false); setTopAuditOpen(false); }}
+              className={`has-tooltip top-nav-item btn ${isCertActive ? 'btn-secondary' : 'btn-outline'}`}
+              style={{ padding: navMode === 'icons' ? '0.45rem 0.65rem' : '0.45rem 0.85rem', fontSize: '0.8rem', gap: '0.35rem' }}
+              title="Certificate"
+            >
+              <Award size={15} />
+              {navMode === 'full' && <span>Certificate</span>}
+              <ChevronDown size={13} />
+              {navMode === 'icons' && !topCertOpen && <span className="nav-tooltip">Certificate</span>}
+            </button>
+
+            {topCertOpen && (
+              <div 
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  left: 0,
+                  background: 'var(--bg-card-solid)',
+                  border: '1.5px solid var(--border-color-accent)',
+                  borderRadius: '12px',
+                  boxShadow: '0 20px 45px rgba(0,0,0,0.45)',
+                  padding: '0.5rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.35rem',
+                  zIndex: 999999,
+                  minWidth: '240px',
+                  animation: 'scaleIn 0.15s ease-out'
+                }}
+              >
+                <div style={{ padding: '0.25rem 0.5rem', borderBottom: '1px solid var(--border-color)', marginBottom: '0.2rem' }}>
+                  <span style={{ fontSize: '0.675rem', fontWeight: 800, color: 'var(--text-subtle)', textTransform: 'uppercase' }}>
+                    CERTIFICATE MENU
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => { setActivePage('work-completion'); setTopCertOpen(false); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: activePage === 'work-completion' ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
+                    color: 'var(--text-main)',
+                    fontSize: '0.825rem',
+                    fontWeight: activePage === 'work-completion' ? 700 : 500,
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  <Award size={15} color="#34d399" />
+                  <span>Work Completed Certificate</span>
+                </button>
+                <button
+                  onClick={() => { setActivePage('work-completion-history'); setTopCertOpen(false); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? 'rgba(56, 189, 248, 0.18)' : 'transparent',
+                    color: 'var(--text-main)',
+                    fontSize: '0.825rem',
+                    fontWeight: activePage === 'work-completion-history' || activePage === 'work-completion-list' ? 700 : 500,
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  <History size={15} color="#38bdf8" />
+                  <span>Work Completed Certificate History</span>
                 </button>
               </div>
             )}
