@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { 
   LayoutDashboard, 
@@ -21,12 +22,21 @@ import {
 } from 'lucide-react';
 
 export const Sidebar = ({ activePage, setActivePage }) => {
+  const { user } = useAuth();
   const { 
     layout, 
     navMode, 
     mobileMenuOpen, 
     setMobileMenuOpen
   } = useSettings();
+
+  const canAccess = (pageKey) => {
+    if (!user) return false;
+    if (user.role === 'ADMIN' || user.permissions === 'all') return true;
+    if (!user.permissions) return false;
+    const perms = user.permissions.split(',').map(s => s.trim());
+    return perms.includes(pageKey);
+  };
 
   const [masterDropdownOpen, setMasterDropdownOpen] = useState(
     activePage === 'master' || activePage === 'customer-master'

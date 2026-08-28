@@ -232,16 +232,155 @@ export function getIndianFySuffix(dateObj = new Date()) {
   return `${startYY}-${endYY}`;
 }
 
+export const ALL_SYSTEM_PERMISSIONS = [
+  { id: 'dashboard', label: 'Dashboard Overview', category: 'General' },
+  { id: 'master', label: 'Item Master Catalog', category: 'Master Directory' },
+  { id: 'customer-master', label: 'Customer Directory', category: 'Master Directory' },
+  { id: 'challan', label: 'Create Tax Invoice', category: 'Invoice' },
+  { id: 'challan-list', label: 'Tax Invoice History', category: 'Invoice' },
+  { id: 'proforma-invoice', label: 'Create Proforma Invoice', category: 'Invoice' },
+  { id: 'proforma-invoice-history', label: 'Proforma Invoice History', category: 'Invoice' },
+  { id: 'work-completion', label: 'Work Completed Certificate', category: 'Certificate' },
+  { id: 'work-completion-history', label: 'Certificate History', category: 'Certificate' },
+  { id: 'job-card', label: 'Create Job Card', category: 'Job Card' },
+  { id: 'job-card-history', label: 'Job Card History', category: 'Job Card' },
+  { id: 'gate-pass', label: 'Create In & Out Gate Pass', category: 'Gate Pass' },
+  { id: 'gate-pass-list', label: 'Gate Pass History', category: 'Gate Pass' },
+  { id: 'sales-ledger', label: 'Sales Ledger Register', category: 'Audit & Ledgers' },
+  { id: 'purchase-ledger', label: 'Purchase Ledger Register', category: 'Audit & Ledgers' }
+];
+
+export const DEFAULT_INITIAL_USERS = [
+  {
+    id: 1,
+    userId: 'admin',
+    password: 'admin123',
+    fullName: 'Sri Durga Administrator',
+    role: 'ADMIN',
+    permissions: 'all'
+  },
+  {
+    id: 2,
+    userId: 'staff',
+    password: 'staff123',
+    fullName: 'Billing & Dispatch Staff',
+    role: 'STAFF',
+    permissions: 'dashboard,master,customer-master,challan,challan-list,proforma-invoice,proforma-invoice-history,gate-pass,gate-pass-list,job-card,job-card-history,work-completion,work-completion-history'
+  }
+];
+
+const getStoredUsers = () => {
+  const local = localStorage.getItem('sri_durga_users_list');
+  if (local) {
+    try { return JSON.parse(local); } catch(e) {}
+  }
+  localStorage.setItem('sri_durga_users_list', JSON.stringify(DEFAULT_INITIAL_USERS));
+  return DEFAULT_INITIAL_USERS;
+};
+
+const saveStoredUsers = (users) => {
+  localStorage.setItem('sri_durga_users_list', JSON.stringify(users));
+};
+
 // Authentication API Call
 export const loginApi = async (userId, password) => {
   try {
     const res = await api.post('/auth/login', { userId, password });
     return res.data;
   } catch (err) {
-    if (userId === 'admin' && password === 'admin123') {
-      return { userId: 'admin', fullName: 'Sri Durga Administrator', role: 'ADMIN' };
+    console.warn('Backend auth unavailable, checking client storage fallback for loginApi');
+    const users = getStoredUsers();
+    const cleanId = (userId || '').trim().toLowerCase();
+    const user = users.find(u => u.userId.toLowerCase() === cleanId && u.password === password);
+    if (user) {
+      return {
+        token: 'LOCAL-SESSION-' + Date.now(),
+        id: user.id,
+        userId: user.userId,
+        fullName: user.fullName,
+        role: user.role,
+        permissions: user.permissions || 'all'
+      };
     }
-    throw new Error('Invalid credentials');
+    throw new Error('Invalid User ID or Password.');
+  }
+};
+
+// User Management API Calls
+export const fetchUsersApi = async () => {
+  try {
+    const res = await api.get('/auth/users');
+    return res.data || [];
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for fetchUsersApi');
+    return getStoredUsers();
+  }
+};
+
+export const createUserApi = async (userData) => {
+  try {
+    const res = await api.post('/auth/users', userData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for createUserApi');
+    const users = getStoredUsers();
+    const cleanId = (userData.userId || '').trim().toLowerCase();
+    if (users.some(u => u.userId.toLowerCase() === cleanId)) {
+      throw new Error(`User ID '${cleanId}' already exists.`);
+    }
+    const newUser = {
+      id: Date.now(),
+      userId: cleanId,
+      fullName: userData.fullName.trim(),
+      password: userData.password,
+      role: userData.role || 'STAFF',
+      permissions: userData.permissions || 'all',
+      createdAt: new Date().toISOString()
+    };
+    users.push(newUser);
+    saveStoredUsers(users);
+    return newUser;
+  }
+};
+
+export const updateUserApi = async (id, userData) => {
+  try {
+    const res = await api.put(`/auth/users/${id}`, userData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for updateUserApi');
+    const users = getStoredUsers();
+    const index = users.findIndex(u => String(u.id) === String(id));
+    if (index === -1) throw new Error('User not found');
+    
+    const existing = users[index];
+    const updated = {
+      ...existing,
+      fullName: userData.fullName !== undefined ? userData.fullName.trim() : existing.fullName,
+      role: userData.role !== undefined ? userData.role : existing.role,
+      permissions: userData.permissions !== undefined ? userData.permissions : existing.permissions,
+      password: userData.password ? userData.password : existing.password
+    };
+    users[index] = updated;
+    saveStoredUsers(users);
+    return updated;
+  }
+};
+
+export const deleteUserApi = async (id) => {
+  try {
+    const res = await api.delete(`/auth/users/${id}`);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for deleteUserApi');
+    let users = getStoredUsers();
+    const target = users.find(u => String(u.id) === String(id));
+    if (target && target.userId.toLowerCase() === 'admin') {
+      throw new Error('Master Admin account cannot be deleted.');
+    }
+    users = users.filter(u => String(u.id) !== String(id));
+    saveStoredUsers(users);
+    return { message: 'User deleted successfully' };
   }
 };
 

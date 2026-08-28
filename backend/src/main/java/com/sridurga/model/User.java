@@ -30,6 +30,9 @@ public class User {
     @Column(nullable = false, length = 20)
     private String role = "USER";
 
+    @Column(name = "permissions", columnDefinition = "NVARCHAR(MAX)")
+    private String permissions = "all";
+
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 }

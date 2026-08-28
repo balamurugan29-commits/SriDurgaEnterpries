@@ -51,6 +51,13 @@ public class DatabaseMigrator {
             System.out.println("Column alter notice (challan_items description): " + e.getMessage());
         }
 
+        try {
+            jdbcTemplate.execute("ALTER TABLE users ADD permissions NVARCHAR(MAX) DEFAULT 'all'");
+            System.out.println("Successfully added MS SQL Server column 'users.permissions'!");
+        } catch (Exception e) {
+            System.out.println("Column alter notice (users permissions): " + e.getMessage());
+        }
+
         // Auto-create sales_ledger table if not exists
         try {
             jdbcTemplate.execute(

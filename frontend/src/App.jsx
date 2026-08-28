@@ -21,15 +21,48 @@ import { SalesLedgerPage } from './pages/SalesLedgerPage';
 import { PurchaseLedgerPage } from './pages/PurchaseLedgerPage';
 import { ProformaInvoicePage } from './pages/ProformaInvoicePage';
 import { ProformaInvoiceListPage } from './pages/ProformaInvoiceListPage';
+import { ShieldAlert } from 'lucide-react';
+
+// Permission Guard Component for Route Protection
+const PermissionGuard = ({ requiredPermission, children }) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const isAllowed = !requiredPermission || 
+    user?.role === 'ADMIN' || 
+    user?.permissions === 'all' || 
+    (user?.permissions && user.permissions.split(',').map(s => s.trim()).includes(requiredPermission));
+
+  if (!isAllowed) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center', padding: '2rem' }}>
+        <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'rgba(239, 68, 68, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', marginBottom: '1.25rem' }}>
+          <ShieldAlert size={36} />
+        </div>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
+          Access Restricted / அனுமதி மறுக்கப்பட்டது
+        </h2>
+        <p style={{ maxWidth: '500px', color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+          You do not have permission to access this module (<strong>{requiredPermission}</strong>). Please contact the Administrator to request access.
+        </p>
+        <button onClick={() => navigate('/dashboard')} className="btn btn-primary" style={{ padding: '0.6rem 1.25rem' }}>
+          Return to Dashboard
+        </button>
+      </div>
+    );
+  }
+
+  return children;
+};
 
 const MainApp = () => {
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { layout } = useSettings();
   const navigate = useNavigate();
   const location = useLocation();
 
   // Determine activePage from current URL path
-  const pathSegment = location.pathname.replace(/^\//, '') || 'master';
+  const pathSegment = location.pathname.replace(/^\//, '') || 'dashboard';
   const activePage = pathSegment;
 
   const [editingChallan, setEditingChallan] = useState(null);
@@ -110,29 +143,33 @@ const MainApp = () => {
           }}
         >
           <Routes>
-            <Route path="/" element={<MasterPage />} />
-            <Route path="/dashboard" element={<DashboardPage setActivePage={handleSetActivePage} />} />
-            <Route path="/master" element={<MasterPage />} />
-            <Route path="/customer-master" element={<CustomerMasterPage />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<PermissionGuard requiredPermission="dashboard"><DashboardPage setActivePage={handleSetActivePage} /></PermissionGuard>} />
+            <Route path="/master" element={<PermissionGuard requiredPermission="master"><MasterPage /></PermissionGuard>} />
+            <Route path="/customer-master" element={<PermissionGuard requiredPermission="customer-master"><CustomerMasterPage /></PermissionGuard>} />
             <Route 
               path="/work-completion" 
               element={
-                <WorkCompletionPage 
-                  editingCertificate={editingCertificate}
-                  onCancelEdit={handleClearEditingCertificate}
-                />
+                <PermissionGuard requiredPermission="work-completion">
+                  <WorkCompletionPage 
+                    editingCertificate={editingCertificate}
+                    onCancelEdit={handleClearEditingCertificate}
+                  />
+                </PermissionGuard>
               } 
             />
             <Route 
               path="/work-completion-history" 
               element={
-                <WorkCompletionListPage 
-                  onEditCertificate={handleEditCertificateFromList}
-                  onNewCertificate={() => {
-                    handleClearEditingCertificate();
-                    navigate('/work-completion');
-                  }}
-                />
+                <PermissionGuard requiredPermission="work-completion-history">
+                  <WorkCompletionListPage 
+                    onEditCertificate={handleEditCertificateFromList}
+                    onNewCertificate={() => {
+                      handleClearEditingCertificate();
+                      navigate('/work-completion');
+                    }}
+                  />
+                </PermissionGuard>
               } 
             />
             <Route 
@@ -142,15 +179,17 @@ const MainApp = () => {
             <Route 
               path="/challan" 
               element={
-                <ChallanPage
-                  initialChallan={editingChallan}
-                  clearEditingChallan={handleClearEditingChallan}
-                />
+                <PermissionGuard requiredPermission="challan">
+                  <ChallanPage
+                    initialChallan={editingChallan}
+                    clearEditingChallan={handleClearEditingChallan}
+                  />
+                </PermissionGuard>
               } 
             />
             <Route 
               path="/challan-list" 
-              element={<ChallanListPage onEditChallan={handleEditChallanFromList} />} 
+              element={<PermissionGuard requiredPermission="challan-list"><ChallanListPage onEditChallan={handleEditChallanFromList} /></PermissionGuard>} 
             />
             <Route 
               path="/challans-list" 
@@ -159,15 +198,17 @@ const MainApp = () => {
             <Route 
               path="/proforma-invoice" 
               element={
-                <ProformaInvoicePage
-                  initialProforma={editingProforma}
-                  clearEditingProforma={handleClearEditingProforma}
-                />
+                <PermissionGuard requiredPermission="proforma-invoice">
+                  <ProformaInvoicePage
+                    initialProforma={editingProforma}
+                    clearEditingProforma={handleClearEditingProforma}
+                  />
+                </PermissionGuard>
               } 
             />
             <Route 
               path="/proforma-invoice-history" 
-              element={<ProformaInvoiceListPage onEditProforma={handleEditProformaFromList} />} 
+              element={<PermissionGuard requiredPermission="proforma-invoice-history"><ProformaInvoiceListPage onEditProforma={handleEditProformaFromList} /></PermissionGuard>} 
             />
             <Route 
               path="/proforma-invoice-list" 
@@ -180,22 +221,26 @@ const MainApp = () => {
             <Route 
               path="/job-card" 
               element={
-                <JobCardPage 
-                  editingJobCard={editingJobCard} 
-                  onCancelEdit={handleClearEditingJobCard} 
-                />
+                <PermissionGuard requiredPermission="job-card">
+                  <JobCardPage 
+                    editingJobCard={editingJobCard} 
+                    onCancelEdit={handleClearEditingJobCard} 
+                  />
+                </PermissionGuard>
               } 
             />
             <Route 
               path="/job-card-history" 
               element={
-                <JobCardListPage 
-                  onEditJobCard={handleEditJobCardFromList}
-                  onNewJobCard={() => {
-                    handleClearEditingJobCard();
-                    navigate('/job-card');
-                  }}
-                />
+                <PermissionGuard requiredPermission="job-card-history">
+                  <JobCardListPage 
+                    onEditJobCard={handleEditJobCardFromList}
+                    onNewJobCard={() => {
+                      handleClearEditingJobCard();
+                      navigate('/job-card');
+                    }}
+                  />
+                </PermissionGuard>
               } 
             />
             <Route 
@@ -205,34 +250,30 @@ const MainApp = () => {
             <Route 
               path="/gate-pass" 
               element={
-                <GatePassPage 
-                  editingGatePass={editingGatePass} 
-                  onCancelEdit={() => {
-                    handleClearEditingGatePass();
-                    navigate('/gate-pass-list');
-                  }} 
-                />
+                <PermissionGuard requiredPermission="gate-pass">
+                  <GatePassPage 
+                    editingGatePass={editingGatePass} 
+                    onCancelEdit={handleClearEditingGatePass} 
+                  />
+                </PermissionGuard>
               } 
             />
             <Route 
               path="/gate-pass-list" 
-              element={
-                <GatePassListPage 
-                  onEditGatePass={handleEditGatePassFromList}
-                  onNewGatePass={() => {
-                    handleClearEditingGatePass();
-                    navigate('/gate-pass');
-                  }}
-                />
-              } 
+              element={<PermissionGuard requiredPermission="gate-pass-list"><GatePassListPage onEditGatePass={handleEditGatePassFromList} onNewGatePass={() => { handleClearEditingGatePass(); navigate('/gate-pass'); }} /></PermissionGuard>} 
             />
             <Route 
               path="/gate-pass-history" 
               element={<Navigate to="/gate-pass-list" replace />} 
             />
-            <Route path="/sales-ledger" element={<SalesLedgerPage />} />
-            <Route path="/purchase-ledger" element={<PurchaseLedgerPage />} />
-            <Route path="*" element={<Navigate to="/master" replace />} />
+            <Route 
+              path="/sales-ledger" 
+              element={<PermissionGuard requiredPermission="sales-ledger"><SalesLedgerPage /></PermissionGuard>} 
+            />
+            <Route 
+              path="/purchase-ledger" 
+              element={<PermissionGuard requiredPermission="purchase-ledger"><PurchaseLedgerPage /></PermissionGuard>} 
+            />
           </Routes>
         </main>
       </div>
