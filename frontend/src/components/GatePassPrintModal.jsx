@@ -223,16 +223,28 @@ export const GatePassPrintModal = ({ isOpen, onClose, gatePass }) => {
               </div>
             </div>
 
-            {/* Header: Sri Durga Enterprises Info */}
-            <div style={{ textAlign: 'center', borderBottom: '1.5px solid #000', paddingBottom: '8px', marginBottom: '10px' }}>
-              <h1 style={{ fontSize: '26px', fontWeight: '900', color: '#000', margin: '0 0 2px 0', letterSpacing: '0.5px', fontFamily: 'Georgia, serif' }}>
-                SRI DURGA ENTERPRISES
-              </h1>
-              <div style={{ fontSize: '12px', fontWeight: '600' }}>
-                # 10, V.G. NAGAR, KOVILPATHU, KARAIKAL - 609 605.
+            {/* Header: Sri Durga Enterprises Info with Company Logo */}
+            <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1.5px solid #000', paddingBottom: '8px', marginBottom: '10px', position: 'relative' }}>
+              {/* Left: Logo directly below GSTIN */}
+              <div style={{ width: '70px', minWidth: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'absolute', left: '0px', top: '50%', transform: 'translateY(-50%)' }}>
+                <img 
+                  src="/logo.jpg" 
+                  alt="Sri Durga Logo" 
+                  style={{ width: '65px', height: '65px', objectFit: 'contain' }} 
+                />
               </div>
-              <div style={{ fontSize: '12px', fontWeight: '500' }}>
-                Ph: 04368 - 225786 &bull; Cell: 94432 87986, 93454 87986
+
+              {/* Center: Company Name & Address */}
+              <div style={{ flex: 1, textAlign: 'center', paddingLeft: '75px', paddingRight: '75px' }}>
+                <h1 style={{ fontSize: '24px', fontWeight: '900', color: '#000', margin: '0 0 2px 0', letterSpacing: '0.5px', fontFamily: 'Georgia, serif' }}>
+                  SRI DURGA ENTERPRISES
+                </h1>
+                <div style={{ fontSize: '12px', fontWeight: '600' }}>
+                  # 10, V.G. NAGAR, KOVILPATHU, KARAIKAL - 609 605.
+                </div>
+                <div style={{ fontSize: '12px', fontWeight: '500' }}>
+                  Ph: 04368 - 225786 &bull; Cell: 94432 87986, 93454 87986
+                </div>
               </div>
             </div>
 
