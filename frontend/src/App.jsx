@@ -40,7 +40,7 @@ const PermissionGuard = ({ requiredPermission, children }) => {
           <ShieldAlert size={36} />
         </div>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
-          Access Restricted / அனுமதி மறுக்கப்பட்டது
+          Access Restricted
         </h2>
         <p style={{ maxWidth: '500px', color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: 1.6 }}>
           You do not have permission to access this module (<strong>{requiredPermission}</strong>). Please contact the Administrator to request access.
