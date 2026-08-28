@@ -370,11 +370,11 @@ export const AppSettingsModal = () => {
           </div>
 
           {/* Section 4: Multi-PC LAN & Central Server Connection */}
-          <div style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1.5px solid rgba(99, 102, 241, 0.3)', borderRadius: '14px', padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          <div style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1.5px solid rgba(99, 102, 241, 0.35)', borderRadius: '14px', padding: '1.15rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#818cf8', fontWeight: 700, fontSize: '0.85rem' }}>
                 <Network size={18} />
-                <span>Multi-PC LAN & Server Connection</span>
+                <span>Multi-PC LAN & Central Server Connection</span>
               </div>
               <span style={{ fontSize: '0.675rem', padding: '2px 8px', borderRadius: '12px', background: isCustomServer ? 'rgba(56, 189, 248, 0.2)' : 'rgba(16, 185, 129, 0.2)', color: isCustomServer ? '#38bdf8' : '#34d399', fontWeight: 700 }}>
                 {isCustomServer ? '🌐 Remote LAN Client' : '💻 Local Server Mode'}
@@ -382,15 +382,46 @@ export const AppSettingsModal = () => {
             </div>
 
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
-              To use multiple computers (PC1, PC2, PC3) in your office sharing the same database, enter the Server PC IP address below (e.g. <code>http://192.168.1.100:8085/api</code>).
+              To share the live database across multiple office computers (PC1, PC2, PC3), enter the Central Main Server PC IP below or click the quick preset button.
             </p>
+
+            {/* Quick 1-Click Server Presets */}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const url = 'http://192.168.1.39:8085/api';
+                  setServerUrl(url);
+                  setConnStatus(null);
+                  handleTestConnection(url);
+                }}
+                className="btn btn-outline"
+                style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', background: 'rgba(99, 102, 241, 0.15)', borderColor: 'rgba(99, 102, 241, 0.4)', color: '#818cf8', fontWeight: 600 }}
+              >
+                🎯 Use Main Server PC (192.168.1.39)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const url = 'http://127.0.0.1:8085/api';
+                  setServerUrl(url);
+                  setConnStatus(null);
+                  handleTestConnection(url);
+                }}
+                className="btn btn-outline"
+                style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', color: 'var(--text-muted)' }}
+              >
+                💻 Localhost (127.0.0.1)
+              </button>
+            </div>
 
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <input
                 type="text"
                 className="form-input"
                 style={{ flex: 1, minWidth: '240px', fontSize: '0.8rem' }}
-                placeholder="http://192.168.1.100:8085/api (or leave blank for localhost)"
+                placeholder="http://192.168.1.39:8085/api"
                 value={serverUrl}
                 onChange={e => {
                   setServerUrl(e.target.value);
@@ -400,7 +431,7 @@ export const AppSettingsModal = () => {
 
               <button
                 type="button"
-                onClick={handleTestConnection}
+                onClick={() => handleTestConnection(serverUrl)}
                 disabled={testingConn}
                 className="btn btn-secondary"
                 style={{ fontSize: '0.78rem', padding: '0.45rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
@@ -412,7 +443,7 @@ export const AppSettingsModal = () => {
 
             {connStatus && (
               <div style={{
-                padding: '0.5rem 0.75rem',
+                padding: '0.55rem 0.85rem',
                 borderRadius: '8px',
                 fontSize: '0.75rem',
                 display: 'flex',
