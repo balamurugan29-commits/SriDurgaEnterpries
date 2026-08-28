@@ -1,0 +1,24 @@
+{
+  "short_name": "Sri Durga",
+  "name": "Sri Durga Enterprises - ERP & Billing System",
+  "icons": [
+    {
+      "src": "/logo.jpg",
+      "type": "image/jpeg",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.jpg",
+      "type": "image/jpeg",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "./",
+  "background_color": "#090d16",
+  "theme_color": "#6366f1",
+  "display": "standalone",
+  "orientation": "any",
+  "description": "Sri Durga Enterprises Enterprise Inventory, Tax Invoicing, Job Cards, Gate Passes & Audit System"
+}
