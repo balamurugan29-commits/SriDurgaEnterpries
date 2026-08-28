@@ -5,6 +5,7 @@ import com.sridurga.model.ItemMaster;
 import com.sridurga.repository.ItemMasterRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -15,11 +16,13 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional
 public class ItemMasterService {
 
     @Autowired
     private ItemMasterRepository itemMasterRepository;
 
+    @Transactional(readOnly = true)
     public List<ItemDto> getAllItems() {
         return itemMasterRepository.findAllByOrderBySerialNumberAsc()
                 .stream()
@@ -27,6 +30,7 @@ public class ItemMasterService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ItemDto> searchItems(String query) {
         if (query == null || query.trim().isEmpty()) {
             return getAllItems();
@@ -38,6 +42,7 @@ public class ItemMasterService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public Optional<ItemDto> getItemByCode(String itemCode) {
         return itemMasterRepository.findByItemCodeIgnoreCase(itemCode.trim())
                 .map(this::convertToDto);
@@ -173,38 +178,22 @@ public class ItemMasterService {
     public void bulkMoveToFolder(List<Long> itemIds, String targetFolder) {
         if (itemIds == null || itemIds.isEmpty()) return;
         String folder = targetFolder != null && !targetFolder.trim().isEmpty() ? targetFolder.trim() : "General";
-        List<ItemMaster> items = itemMasterRepository.findAllById(itemIds);
-        for (ItemMaster item : items) {
-            item.setFolderName(folder);
-        }
-        itemMasterRepository.saveAll(items);
+        itemMasterRepository.bulkUpdateFolderName(itemIds, folder);
     }
 
     public void renameFolder(String oldFolder, String newFolder) {
         if (oldFolder == null || newFolder == null) return;
         String target = newFolder.trim();
-        List<ItemMaster> items = itemMasterRepository.findAll();
-        for (ItemMaster item : items) {
-            if (oldFolder.equalsIgnoreCase(item.getFolderName())) {
-                item.setFolderName(target);
-            }
-        }
-        itemMasterRepository.saveAll(items);
+        itemMasterRepository.renameFolder(oldFolder.trim(), target);
     }
 
     public void deleteFolder(String folderName, boolean deleteItems) {
         if (folderName == null) return;
-        List<ItemMaster> items = itemMasterRepository.findAll();
-        List<ItemMaster> targetItems = items.stream()
-                .filter(i -> folderName.equalsIgnoreCase(i.getFolderName()))
-                .collect(Collectors.toList());
+        String folder = folderName.trim();
         if (deleteItems) {
-            itemMasterRepository.deleteAll(targetItems);
+            itemMasterRepository.deleteByFolderNameIgnoreCase(folder);
         } else {
-            for (ItemMaster item : targetItems) {
-                item.setFolderName("General");
-            }
-            itemMasterRepository.saveAll(targetItems);
+            itemMasterRepository.resetFolderToGeneral(folder);
         }
     }
 
@@ -212,6 +201,7 @@ public class ItemMasterService {
         itemMasterRepository.deleteById(id);
     }
 
+    @Transactional(readOnly = true)
     public ByteArrayInputStream exportToCsv() {
         List<ItemMaster> items = itemMasterRepository.findAllByOrderBySerialNumberAsc();
         ByteArrayOutputStream out = new ByteArrayOutputStream();

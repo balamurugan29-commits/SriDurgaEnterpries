@@ -6,6 +6,7 @@ import com.sridurga.model.DeliveryChallan;
 import com.sridurga.repository.DeliveryChallanRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -14,24 +15,27 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class DeliveryChallanService {
 
     @Autowired
     private DeliveryChallanRepository deliveryChallanRepository;
 
+    @Transactional(readOnly = true)
     public List<DeliveryChallan> getAllChallans() {
         return deliveryChallanRepository.findAllByOrderByCreatedAtDesc();
     }
 
+    @Transactional(readOnly = true)
     public Optional<DeliveryChallan> getChallanById(Long id) {
         return deliveryChallanRepository.findById(id);
     }
 
     /**
      * Generates Tax Invoice Number in Indian Financial Year Format (e.g., "01/26-27", "02/26-27").
-     * Automatically updates next April to new Financial Year ("01/27-28") and resets sequence counter to 01!
+     * Uses persistent MAX sequence to prevent collisions upon record deletion.
      */
-    public String generateNextChallanNumber() {
+    public synchronized String generateNextChallanNumber() {
         LocalDate today = LocalDate.now();
         int year = today.getYear();
         int month = today.getMonthValue(); // 1 = Jan, 4 = April
@@ -42,22 +46,21 @@ public class DeliveryChallanService {
 
         String fySuffix = String.format("%02d-%02d", startYear % 100, endYear % 100);
 
-        // Count existing invoices for the current Financial Year
-        List<DeliveryChallan> allChallans = deliveryChallanRepository.findAll();
-        long currentFyCount = allChallans.stream().filter(c -> {
-            if (c.getChallanNumber() != null && c.getChallanNumber().endsWith(fySuffix)) {
-                return true;
+        List<String> existingNumbers = deliveryChallanRepository.findChallanNumbersBySuffix("/" + fySuffix);
+        long maxSeq = 0;
+        for (String num : existingNumbers) {
+            if (num != null && num.contains("/")) {
+                String prefix = num.substring(0, num.indexOf("/")).trim();
+                try {
+                    long val = Long.parseLong(prefix);
+                    if (val > maxSeq) {
+                        maxSeq = val;
+                    }
+                } catch (NumberFormatException ignored) {}
             }
-            if (c.getChallanDate() != null) {
-                int cYear = c.getChallanDate().getYear();
-                int cMonth = c.getChallanDate().getMonthValue();
-                int cStartYear = (cMonth >= 4) ? cYear : cYear - 1;
-                return cStartYear == startYear;
-            }
-            return false;
-        }).count();
+        }
 
-        long nextSeq = currentFyCount + 1;
+        long nextSeq = maxSeq + 1;
         return String.format("%02d/%s", nextSeq, fySuffix);
     }
 

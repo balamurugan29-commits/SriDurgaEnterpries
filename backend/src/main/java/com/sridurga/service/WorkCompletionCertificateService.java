@@ -5,26 +5,30 @@ import com.sridurga.model.WorkCompletionItem;
 import com.sridurga.repository.WorkCompletionCertificateRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class WorkCompletionCertificateService {
 
     @Autowired
     private WorkCompletionCertificateRepository certificateRepository;
 
+    @Transactional(readOnly = true)
     public List<WorkCompletionCertificate> getAllCertificates() {
         return certificateRepository.findAllByOrderByCreatedAtDesc();
     }
 
+    @Transactional(readOnly = true)
     public Optional<WorkCompletionCertificate> getCertificateById(Long id) {
         return certificateRepository.findById(id);
     }
 
-    public String generateNextCertificateNo() {
+    public synchronized String generateNextCertificateNo() {
         LocalDate today = LocalDate.now();
         int year = today.getYear();
         int month = today.getMonthValue();
@@ -32,8 +36,22 @@ public class WorkCompletionCertificateService {
         int endYear = startYear + 1;
         String fySuffix = String.format("%02d-%02d", startYear % 100, endYear % 100);
 
-        long count = certificateRepository.count() + 1;
-        return String.format("WCC-%02d/%s", count, fySuffix);
+        List<String> existingNumbers = certificateRepository.findCertificateNosBySuffix("/" + fySuffix);
+        long maxSeq = 0;
+        for (String num : existingNumbers) {
+            if (num != null && num.contains("/") && num.toUpperCase().startsWith("WCC-")) {
+                String mid = num.substring(4, num.indexOf("/")).trim();
+                try {
+                    long val = Long.parseLong(mid);
+                    if (val > maxSeq) {
+                        maxSeq = val;
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+
+        long nextSeq = maxSeq + 1;
+        return String.format("WCC-%02d/%s", nextSeq, fySuffix);
     }
 
     public WorkCompletionCertificate createCertificate(WorkCompletionCertificate certificate) {

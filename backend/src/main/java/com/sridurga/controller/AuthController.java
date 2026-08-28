@@ -1,5 +1,6 @@
 package com.sridurga.controller;
 
+import com.sridurga.config.JwtUtils;
 import com.sridurga.dto.LoginRequest;
 import com.sridurga.dto.LoginResponse;
 import com.sridurga.model.User;
@@ -7,12 +8,12 @@ import com.sridurga.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -24,6 +25,9 @@ public class AuthController {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtUtils jwtUtils;
 
     @GetMapping("/ping")
     public ResponseEntity<?> ping() {
@@ -51,21 +55,26 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Invalid User ID or Password."));
         }
 
-        // Generate dummy session token for demonstration
-        String token = "SD-SESSION-" + UUID.randomUUID().toString();
+        String permissions = user.getPermissions() != null ? user.getPermissions() : "all";
+        String role = user.getRole() != null ? user.getRole() : "STAFF";
+
+        // Generate cryptographically signed JWT Token
+        String token = jwtUtils.generateToken(user.getUserId(), role, permissions, user.getFullName(), user.getId());
+
         LoginResponse response = new LoginResponse(
             token, 
             user.getId(), 
             user.getUserId(), 
             user.getFullName(), 
-            user.getRole(), 
-            user.getPermissions() != null ? user.getPermissions() : "all"
+            role, 
+            permissions
         );
 
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/users")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     public ResponseEntity<?> getAllUsers() {
         return ResponseEntity.ok(userRepository.findAll().stream().map(u -> Map.of(
             "id", u.getId(),
@@ -78,6 +87,7 @@ public class AuthController {
     }
 
     @PostMapping("/users")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     public ResponseEntity<?> createUser(@RequestBody Map<String, String> payload) {
         String userId = payload.get("userId");
         String password = payload.get("password");
@@ -113,6 +123,7 @@ public class AuthController {
     }
 
     @PutMapping("/users/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody Map<String, String> payload) {
         Optional<User> userOpt = userRepository.findById(id);
         if (userOpt.isEmpty()) {
@@ -145,6 +156,7 @@ public class AuthController {
     }
 
     @DeleteMapping("/users/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         Optional<User> userOpt = userRepository.findById(id);
         if (userOpt.isEmpty()) {

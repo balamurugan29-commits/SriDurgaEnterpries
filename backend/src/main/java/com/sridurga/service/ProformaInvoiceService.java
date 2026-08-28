@@ -20,19 +20,21 @@ public class ProformaInvoiceService {
     @Autowired
     private ProformaInvoiceRepository proformaInvoiceRepository;
 
+    @Transactional(readOnly = true)
     public List<ProformaInvoice> getAllProformas() {
         return proformaInvoiceRepository.findAllByOrderByCreatedAtDesc();
     }
 
+    @Transactional(readOnly = true)
     public Optional<ProformaInvoice> getProformaById(Long id) {
         return proformaInvoiceRepository.findById(id);
     }
 
     /**
      * Generates Proforma Invoice Number in Indian Financial Year Format with 'PC/' prefix (e.g., "PC/01/26-27", "PC/02/26-27").
-     * Automatically updates next April to new Financial Year ("PC/01/27-28") and resets sequence counter!
+     * Uses persistent MAX sequence calculation.
      */
-    public String generateNextProformaNumber() {
+    public synchronized String generateNextProformaNumber() {
         LocalDate today = LocalDate.now();
         int year = today.getYear();
         int month = today.getMonthValue(); // 1 = Jan, 4 = April
@@ -43,22 +45,24 @@ public class ProformaInvoiceService {
 
         String fySuffix = String.format("%02d-%02d", startYear % 100, endYear % 100);
 
-        // Count existing proforma invoices for the current Financial Year
-        List<ProformaInvoice> allProformas = proformaInvoiceRepository.findAll();
-        long currentFyCount = allProformas.stream().filter(p -> {
-            if (p.getProformaNumber() != null && p.getProformaNumber().endsWith(fySuffix)) {
-                return true;
+        List<String> existingNumbers = proformaInvoiceRepository.findProformaNumbersBySuffix("/" + fySuffix);
+        long maxSeq = 0;
+        for (String num : existingNumbers) {
+            if (num != null) {
+                // e.g. "PC/01/26-27"
+                String[] parts = num.split("/");
+                if (parts.length >= 2) {
+                    try {
+                        long val = Long.parseLong(parts[1].trim());
+                        if (val > maxSeq) {
+                            maxSeq = val;
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
             }
-            if (p.getProformaDate() != null) {
-                int cYear = p.getProformaDate().getYear();
-                int cMonth = p.getProformaDate().getMonthValue();
-                int cStartYear = (cMonth >= 4) ? cYear : cYear - 1;
-                return cStartYear == startYear;
-            }
-            return false;
-        }).count();
+        }
 
-        long nextSeq = currentFyCount + 1;
+        long nextSeq = maxSeq + 1;
         return String.format("PC/%02d/%s", nextSeq, fySuffix);
     }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SettingsProvider, useSettings } from './context/SettingsContext';
@@ -6,22 +6,31 @@ import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { AppSettingsModal } from './components/AppSettingsModal';
 import { LoginPage } from './pages/LoginPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { MasterPage } from './pages/MasterPage';
-import { CustomerMasterPage } from './pages/CustomerMasterPage';
-import { WorkCompletionPage } from './pages/WorkCompletionPage';
-import { WorkCompletionListPage } from './pages/WorkCompletionListPage';
-import { ChallanPage } from './pages/ChallanPage';
-import { ChallanListPage } from './pages/ChallanListPage';
-import { JobCardPage } from './pages/JobCardPage';
-import { JobCardListPage } from './pages/JobCardListPage';
-import { GatePassPage } from './pages/GatePassPage';
-import { GatePassListPage } from './pages/GatePassListPage';
-import { SalesLedgerPage } from './pages/SalesLedgerPage';
-import { PurchaseLedgerPage } from './pages/PurchaseLedgerPage';
-import { ProformaInvoicePage } from './pages/ProformaInvoicePage';
-import { ProformaInvoiceListPage } from './pages/ProformaInvoiceListPage';
-import { ShieldAlert } from 'lucide-react';
+import { ShieldAlert, Loader2 } from 'lucide-react';
+
+// Code-split page components for optimal bundle performance
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const MasterPage = lazy(() => import('./pages/MasterPage').then(m => ({ default: m.MasterPage })));
+const CustomerMasterPage = lazy(() => import('./pages/CustomerMasterPage').then(m => ({ default: m.CustomerMasterPage })));
+const WorkCompletionPage = lazy(() => import('./pages/WorkCompletionPage').then(m => ({ default: m.WorkCompletionPage })));
+const WorkCompletionListPage = lazy(() => import('./pages/WorkCompletionListPage').then(m => ({ default: m.WorkCompletionListPage })));
+const ChallanPage = lazy(() => import('./pages/ChallanPage').then(m => ({ default: m.ChallanPage })));
+const ChallanListPage = lazy(() => import('./pages/ChallanListPage').then(m => ({ default: m.ChallanListPage })));
+const JobCardPage = lazy(() => import('./pages/JobCardPage').then(m => ({ default: m.JobCardPage })));
+const JobCardListPage = lazy(() => import('./pages/JobCardListPage').then(m => ({ default: m.JobCardListPage })));
+const GatePassPage = lazy(() => import('./pages/GatePassPage').then(m => ({ default: m.GatePassPage })));
+const GatePassListPage = lazy(() => import('./pages/GatePassListPage').then(m => ({ default: m.GatePassListPage })));
+const SalesLedgerPage = lazy(() => import('./pages/SalesLedgerPage').then(m => ({ default: m.SalesLedgerPage })));
+const PurchaseLedgerPage = lazy(() => import('./pages/PurchaseLedgerPage').then(m => ({ default: m.PurchaseLedgerPage })));
+const ProformaInvoicePage = lazy(() => import('./pages/ProformaInvoicePage').then(m => ({ default: m.ProformaInvoicePage })));
+const ProformaInvoiceListPage = lazy(() => import('./pages/ProformaInvoiceListPage').then(m => ({ default: m.ProformaInvoiceListPage })));
+
+const PageLoader = () => (
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', gap: '0.75rem', color: 'var(--primary, #6366f1)' }}>
+    <Loader2 className="animate-spin" size={28} />
+    <span style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-muted)' }}>Loading module...</span>
+  </div>
+);
 
 // Permission Guard Component for Route Protection
 const PermissionGuard = ({ requiredPermission, children }) => {
@@ -142,139 +151,141 @@ const MainApp = () => {
             zIndex: 1
           }}
         >
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<PermissionGuard requiredPermission="dashboard"><DashboardPage setActivePage={handleSetActivePage} /></PermissionGuard>} />
-            <Route path="/master" element={<PermissionGuard requiredPermission="master"><MasterPage /></PermissionGuard>} />
-            <Route path="/customer-master" element={<PermissionGuard requiredPermission="customer-master"><CustomerMasterPage /></PermissionGuard>} />
-            <Route 
-              path="/work-completion" 
-              element={
-                <PermissionGuard requiredPermission="work-completion">
-                  <WorkCompletionPage 
-                    editingCertificate={editingCertificate}
-                    onCancelEdit={handleClearEditingCertificate}
-                  />
-                </PermissionGuard>
-              } 
-            />
-            <Route 
-              path="/work-completion-history" 
-              element={
-                <PermissionGuard requiredPermission="work-completion-history">
-                  <WorkCompletionListPage 
-                    onEditCertificate={handleEditCertificateFromList}
-                    onNewCertificate={() => {
-                      handleClearEditingCertificate();
-                      navigate('/work-completion');
-                    }}
-                  />
-                </PermissionGuard>
-              } 
-            />
-            <Route 
-              path="/work-completion-list" 
-              element={<Navigate to="/work-completion-history" replace />} 
-            />
-            <Route 
-              path="/challan" 
-              element={
-                <PermissionGuard requiredPermission="challan">
-                  <ChallanPage
-                    initialChallan={editingChallan}
-                    clearEditingChallan={handleClearEditingChallan}
-                  />
-                </PermissionGuard>
-              } 
-            />
-            <Route 
-              path="/challan-list" 
-              element={<PermissionGuard requiredPermission="challan-list"><ChallanListPage onEditChallan={handleEditChallanFromList} /></PermissionGuard>} 
-            />
-            <Route 
-              path="/challans-list" 
-              element={<Navigate to="/challan-list" replace />} 
-            />
-            <Route 
-              path="/proforma-invoice" 
-              element={
-                <PermissionGuard requiredPermission="proforma-invoice">
-                  <ProformaInvoicePage
-                    initialProforma={editingProforma}
-                    clearEditingProforma={handleClearEditingProforma}
-                  />
-                </PermissionGuard>
-              } 
-            />
-            <Route 
-              path="/proforma-invoice-history" 
-              element={<PermissionGuard requiredPermission="proforma-invoice-history"><ProformaInvoiceListPage onEditProforma={handleEditProformaFromList} /></PermissionGuard>} 
-            />
-            <Route 
-              path="/proforma-invoice-list" 
-              element={<Navigate to="/proforma-invoice-history" replace />} 
-            />
-            <Route 
-              path="/proforma-invoices" 
-              element={<Navigate to="/proforma-invoice-history" replace />} 
-            />
-            <Route 
-              path="/job-card" 
-              element={
-                <PermissionGuard requiredPermission="job-card">
-                  <JobCardPage 
-                    editingJobCard={editingJobCard} 
-                    onCancelEdit={handleClearEditingJobCard} 
-                  />
-                </PermissionGuard>
-              } 
-            />
-            <Route 
-              path="/job-card-history" 
-              element={
-                <PermissionGuard requiredPermission="job-card-history">
-                  <JobCardListPage 
-                    onEditJobCard={handleEditJobCardFromList}
-                    onNewJobCard={() => {
-                      handleClearEditingJobCard();
-                      navigate('/job-card');
-                    }}
-                  />
-                </PermissionGuard>
-              } 
-            />
-            <Route 
-              path="/job-card-list" 
-              element={<Navigate to="/job-card-history" replace />} 
-            />
-            <Route 
-              path="/gate-pass" 
-              element={
-                <PermissionGuard requiredPermission="gate-pass">
-                  <GatePassPage 
-                    editingGatePass={editingGatePass} 
-                    onCancelEdit={handleClearEditingGatePass} 
-                  />
-                </PermissionGuard>
-              } 
-            />
-            <Route 
-              path="/gate-pass-list" 
-              element={<PermissionGuard requiredPermission="gate-pass-list"><GatePassListPage onEditGatePass={handleEditGatePassFromList} onNewGatePass={() => { handleClearEditingGatePass(); navigate('/gate-pass'); }} /></PermissionGuard>} 
-            />
-            <Route 
-              path="/gate-pass-history" 
-              element={<Navigate to="/gate-pass-list" replace />} 
-            />
-            <Route 
-              path="/sales-ledger" 
-              element={<PermissionGuard requiredPermission="sales-ledger"><SalesLedgerPage /></PermissionGuard>} 
-            />
-            <Route 
-              path="/purchase-ledger" 
-              element={<PermissionGuard requiredPermission="purchase-ledger"><PurchaseLedgerPage /></PermissionGuard>} 
-            />
-          </Routes>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<PermissionGuard requiredPermission="dashboard"><DashboardPage setActivePage={handleSetActivePage} /></PermissionGuard>} />
+              <Route path="/master" element={<PermissionGuard requiredPermission="master"><MasterPage /></PermissionGuard>} />
+              <Route path="/customer-master" element={<PermissionGuard requiredPermission="customer-master"><CustomerMasterPage /></PermissionGuard>} />
+              <Route 
+                path="/work-completion" 
+                element={
+                  <PermissionGuard requiredPermission="work-completion">
+                    <WorkCompletionPage 
+                      editingCertificate={editingCertificate}
+                      onCancelEdit={handleClearEditingCertificate}
+                    />
+                  </PermissionGuard>
+                } 
+              />
+              <Route 
+                path="/work-completion-history" 
+                element={
+                  <PermissionGuard requiredPermission="work-completion-history">
+                    <WorkCompletionListPage 
+                      onEditCertificate={handleEditCertificateFromList}
+                      onNewCertificate={() => {
+                        handleClearEditingCertificate();
+                        navigate('/work-completion');
+                      }}
+                    />
+                  </PermissionGuard>
+                } 
+              />
+              <Route 
+                path="/work-completion-list" 
+                element={<Navigate to="/work-completion-history" replace />} 
+              />
+              <Route 
+                path="/challan" 
+                element={
+                  <PermissionGuard requiredPermission="challan">
+                    <ChallanPage
+                      initialChallan={editingChallan}
+                      clearEditingChallan={handleClearEditingChallan}
+                    />
+                  </PermissionGuard>
+                } 
+              />
+              <Route 
+                path="/challan-list" 
+                element={<PermissionGuard requiredPermission="challan-list"><ChallanListPage onEditChallan={handleEditChallanFromList} /></PermissionGuard>} 
+              />
+              <Route 
+                path="/challans-list" 
+                element={<Navigate to="/challan-list" replace />} 
+              />
+              <Route 
+                path="/proforma-invoice" 
+                element={
+                  <PermissionGuard requiredPermission="proforma-invoice">
+                    <ProformaInvoicePage
+                      initialProforma={editingProforma}
+                      clearEditingProforma={handleClearEditingProforma}
+                    />
+                  </PermissionGuard>
+                } 
+              />
+              <Route 
+                path="/proforma-invoice-history" 
+                element={<PermissionGuard requiredPermission="proforma-invoice-history"><ProformaInvoiceListPage onEditProforma={handleEditProformaFromList} /></PermissionGuard>} 
+              />
+              <Route 
+                path="/proforma-invoice-list" 
+                element={<Navigate to="/proforma-invoice-history" replace />} 
+              />
+              <Route 
+                path="/proforma-invoices" 
+                element={<Navigate to="/proforma-invoice-history" replace />} 
+              />
+              <Route 
+                path="/job-card" 
+                element={
+                  <PermissionGuard requiredPermission="job-card">
+                    <JobCardPage 
+                      editingJobCard={editingJobCard} 
+                      onCancelEdit={handleClearEditingJobCard} 
+                    />
+                  </PermissionGuard>
+                } 
+              />
+              <Route 
+                path="/job-card-history" 
+                element={
+                  <PermissionGuard requiredPermission="job-card-history">
+                    <JobCardListPage 
+                      onEditJobCard={handleEditJobCardFromList}
+                      onNewJobCard={() => {
+                        handleClearEditingJobCard();
+                        navigate('/job-card');
+                      }}
+                    />
+                  </PermissionGuard>
+                } 
+              />
+              <Route 
+                path="/job-card-list" 
+                element={<Navigate to="/job-card-history" replace />} 
+              />
+              <Route 
+                path="/gate-pass" 
+                element={
+                  <PermissionGuard requiredPermission="gate-pass">
+                    <GatePassPage 
+                      editingGatePass={editingGatePass} 
+                      onCancelEdit={handleClearEditingGatePass} 
+                    />
+                  </PermissionGuard>
+                } 
+              />
+              <Route 
+                path="/gate-pass-list" 
+                element={<PermissionGuard requiredPermission="gate-pass-list"><GatePassListPage onEditGatePass={handleEditGatePassFromList} onNewGatePass={() => { handleClearEditingGatePass(); navigate('/gate-pass'); }} /></PermissionGuard>} 
+              />
+              <Route 
+                path="/gate-pass-history" 
+                element={<Navigate to="/gate-pass-list" replace />} 
+              />
+              <Route 
+                path="/sales-ledger" 
+                element={<PermissionGuard requiredPermission="sales-ledger"><SalesLedgerPage /></PermissionGuard>} 
+              />
+              <Route 
+                path="/purchase-ledger" 
+                element={<PermissionGuard requiredPermission="purchase-ledger"><PurchaseLedgerPage /></PermissionGuard>} 
+              />
+            </Routes>
+          </Suspense>
         </main>
       </div>
 

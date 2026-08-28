@@ -19,7 +19,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false, // Allows cross-origin LAN API access smoothly
+      webSecurity: true,
     }
   });
 

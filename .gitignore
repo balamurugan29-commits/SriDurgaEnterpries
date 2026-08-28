@@ -16,6 +16,7 @@ frontend/*.local
 
 # Maven / Java / Backend
 backend/target/
+backend/data/
 backend/.project
 backend/.classpath
 backend/.settings/

@@ -9,6 +9,16 @@ export const AuthProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : null;
   });
 
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      setUser(null);
+      localStorage.removeItem('sri_durga_user');
+    };
+
+    window.addEventListener('sri_durga_auth_expired', handleAuthExpired);
+    return () => window.removeEventListener('sri_durga_auth_expired', handleAuthExpired);
+  }, []);
+
   const login = async (userId, password) => {
     const data = await loginApi(userId, password);
     setUser(data);

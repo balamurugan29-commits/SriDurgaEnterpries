@@ -8,7 +8,7 @@ export const getServerApiUrl = () => {
   if (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
     return `http://${window.location.hostname}:8085/api`;
   }
-  return import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.39:8085/api';
+  return import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8085/api';
 };
 
 export const setServerApiUrl = (url) => {
@@ -25,14 +25,39 @@ const api = axios.create({
     'Content-Type': 'application/json',
     'bypass-tunnel-reminder': 'true',
   },
-  timeout: 120000, // 2 minutes timeout for large dataset operations (1000 - 1500+ items)
+  timeout: 120000, // 2 minutes timeout for large dataset operations
 });
 
-// Dynamic BaseURL interceptor
+// Dynamic BaseURL & JWT Bearer Token interceptor
 api.interceptors.request.use((config) => {
   config.baseURL = getServerApiUrl();
+  const userJson = localStorage.getItem('sri_durga_user');
+  if (userJson) {
+    try {
+      const user = JSON.parse(userJson);
+      if (user && user.token) {
+        config.headers.Authorization = `Bearer ${user.token}`;
+      }
+    } catch (e) {}
+  }
   return config;
 });
+
+// Response interceptor to handle session expiry (401 Unauthorized)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      if (!error.config?.url?.includes('/auth/login')) {
+        localStorage.removeItem('sri_durga_user');
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('sri_durga_auth_expired'));
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const testServerConnection = async (targetUrl) => {
   const url = (targetUrl || getServerApiUrl()).replace(/\/+$/, '');

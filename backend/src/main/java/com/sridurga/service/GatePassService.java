@@ -5,25 +5,30 @@ import com.sridurga.model.GatePassItem;
 import com.sridurga.repository.GatePassRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class GatePassService {
 
     @Autowired
     private GatePassRepository gatePassRepository;
 
+    @Transactional(readOnly = true)
     public List<GatePass> getAllGatePasses() {
         return gatePassRepository.findAllByOrderByCreatedAtDesc();
     }
 
+    @Transactional(readOnly = true)
     public Optional<GatePass> getGatePassById(Long id) {
         return gatePassRepository.findById(id);
     }
 
-    public String generateNextGatePassNo() {
+    public synchronized String generateNextGatePassNo() {
         LocalDate today = LocalDate.now();
         int year = today.getYear();
         int month = today.getMonthValue();
@@ -31,8 +36,22 @@ public class GatePassService {
         int endYear = startYear + 1;
         String fySuffix = String.format("%02d-%02d", startYear % 100, endYear % 100);
 
-        long count = gatePassRepository.count() + 1;
-        return String.format("GP-%02d/%s", count, fySuffix);
+        List<String> existingNumbers = gatePassRepository.findGatePassNosBySuffix("/" + fySuffix);
+        long maxSeq = 0;
+        for (String num : existingNumbers) {
+            if (num != null && num.contains("/") && num.toUpperCase().startsWith("GP-")) {
+                String mid = num.substring(3, num.indexOf("/")).trim();
+                try {
+                    long val = Long.parseLong(mid);
+                    if (val > maxSeq) {
+                        maxSeq = val;
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+
+        long nextSeq = maxSeq + 1;
+        return String.format("GP-%02d/%s", nextSeq, fySuffix);
     }
 
     public GatePass createGatePass(GatePass gatePass) {

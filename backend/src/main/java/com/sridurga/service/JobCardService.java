@@ -4,26 +4,30 @@ import com.sridurga.model.JobCard;
 import com.sridurga.repository.JobCardRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class JobCardService {
 
     @Autowired
     private JobCardRepository jobCardRepository;
 
+    @Transactional(readOnly = true)
     public List<JobCard> getAllJobCards() {
         return jobCardRepository.findAllByOrderByCreatedAtDesc();
     }
 
+    @Transactional(readOnly = true)
     public Optional<JobCard> getJobCardById(Long id) {
         return jobCardRepository.findById(id);
     }
 
-    public String generateNextJobNo() {
+    public synchronized String generateNextJobNo() {
         LocalDate today = LocalDate.now();
         int year = today.getYear();
         int month = today.getMonthValue();
@@ -31,8 +35,22 @@ public class JobCardService {
         int endYear = startYear + 1;
         String fySuffix = String.format("%02d-%02d", startYear % 100, endYear % 100);
 
-        long count = jobCardRepository.count() + 1;
-        return String.format("JC-%02d/%s", count, fySuffix);
+        List<String> existingNumbers = jobCardRepository.findJobNosBySuffix("/" + fySuffix);
+        long maxSeq = 0;
+        for (String num : existingNumbers) {
+            if (num != null && num.contains("/") && num.toUpperCase().startsWith("JC-")) {
+                String mid = num.substring(3, num.indexOf("/")).trim();
+                try {
+                    long val = Long.parseLong(mid);
+                    if (val > maxSeq) {
+                        maxSeq = val;
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+
+        long nextSeq = maxSeq + 1;
+        return String.format("JC-%02d/%s", nextSeq, fySuffix);
     }
 
     public JobCard createJobCard(JobCard jobCard) {
