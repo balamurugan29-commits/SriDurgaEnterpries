@@ -1,13 +1,39 @@
 {
-  "name": "frontend",
+  "name": "sri-durga-enterprises",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "version": "1.0.0",
+  "description": "Sri Durga Enterprises - Billing & ERP Management System",
+  "author": "Sri Durga Enterprises",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "app:dev": "electron electron/main.cjs",
+    "build:exe": "vite build && node build-exe.cjs"
+  },
+  "build": {
+    "appId": "com.sridurga.enterprises",
+    "productName": "Sri Durga Enterprises",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Sri Durga Enterprises"
+    }
   },
   "dependencies": {
     "axios": "^1.19.0",
@@ -18,9 +44,13 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@electron/packager": "^20.3.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
+    "electron": "^44.0.0",
+    "electron-builder": "^26.15.3",
+    "electron-packager": "^17.1.2",
     "oxlint": "^1.79.0",
     "vite": "^8.2.2"
   }
