@@ -1,16 +1,46 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8085/api';
-console.log(">>> Connecting to API base URL:", API_BASE_URL);
+export const getServerApiUrl = () => {
+  const custom = localStorage.getItem('sri_durga_custom_api_url');
+  if (custom && custom.trim()) {
+    return custom.trim().replace(/\/+$/, '');
+  }
+  return import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8085/api';
+};
+
+export const setServerApiUrl = (url) => {
+  if (!url || !url.trim() || url.trim() === 'http://127.0.0.1:8085/api' || url.trim() === 'http://localhost:8085/api') {
+    localStorage.removeItem('sri_durga_custom_api_url');
+  } else {
+    localStorage.setItem('sri_durga_custom_api_url', url.trim().replace(/\/+$/, ''));
+  }
+};
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: getServerApiUrl(),
   headers: {
     'Content-Type': 'application/json',
     'bypass-tunnel-reminder': 'true',
   },
   timeout: 120000, // 2 minutes timeout for large dataset operations (1000 - 1500+ items)
 });
+
+// Dynamic BaseURL interceptor
+api.interceptors.request.use((config) => {
+  config.baseURL = getServerApiUrl();
+  return config;
+});
+
+export const testServerConnection = async (targetUrl) => {
+  const url = (targetUrl || getServerApiUrl()).replace(/\/+$/, '');
+  const testApi = axios.create({ baseURL: url, timeout: 5000 });
+  try {
+    const res = await testApi.get('/items');
+    return { success: true, status: res.status, message: 'Connected successfully to Sri Durga Server!' };
+  } catch (err) {
+    return { success: false, message: err.message || 'Cannot reach server' };
+  }
+};
 
 const DEFAULT_INITIAL_ITEMS = [
   { id: 1, serialNumber: 1, itemCode: '70.3', description: 'Supply of RCCB 4P, 63A, 100mA Sensitivity', quantity: 4, unit: 'No', rate: 4500, serviceCharge: 0, amount: 18000 },

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSettings } from '../context/SettingsContext';
+import { getServerApiUrl, setServerApiUrl, testServerConnection } from '../services/api';
 import { 
   X, 
   Sun, 
@@ -13,7 +14,10 @@ import {
   Sliders, 
   Sparkles,
   Smartphone,
-  Monitor
+  Monitor,
+  Network,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 
 export const AppSettingsModal = () => {
@@ -28,6 +32,20 @@ export const AppSettingsModal = () => {
     setNavMode, 
     resetSettings 
   } = useSettings();
+
+  const [serverUrl, setServerUrl] = useState(getServerApiUrl());
+  const [testingConn, setTestingConn] = useState(false);
+  const [connStatus, setConnStatus] = useState(null);
+
+  const isCustomServer = !!localStorage.getItem('sri_durga_custom_api_url');
+
+  const handleTestConnection = async () => {
+    setTestingConn(true);
+    setConnStatus(null);
+    const res = await testServerConnection(serverUrl);
+    setConnStatus(res);
+    setTestingConn(false);
+  };
 
   if (!isSettingsOpen) return null;
 
@@ -351,6 +369,65 @@ export const AppSettingsModal = () => {
             </div>
           </div>
 
+          {/* Section 4: Multi-PC LAN & Central Server Connection */}
+          <div style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1.5px solid rgba(99, 102, 241, 0.3)', borderRadius: '14px', padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#818cf8', fontWeight: 700, fontSize: '0.85rem' }}>
+                <Network size={18} />
+                <span>Multi-PC LAN & Server Connection</span>
+              </div>
+              <span style={{ fontSize: '0.675rem', padding: '2px 8px', borderRadius: '12px', background: isCustomServer ? 'rgba(56, 189, 248, 0.2)' : 'rgba(16, 185, 129, 0.2)', color: isCustomServer ? '#38bdf8' : '#34d399', fontWeight: 700 }}>
+                {isCustomServer ? '🌐 Remote LAN Client' : '💻 Local Server Mode'}
+              </span>
+            </div>
+
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
+              To use multiple computers (PC1, PC2, PC3) in your office sharing the same database, enter the Server PC IP address below (e.g. <code>http://192.168.1.100:8085/api</code>).
+            </p>
+
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                className="form-input"
+                style={{ flex: 1, minWidth: '240px', fontSize: '0.8rem' }}
+                placeholder="http://192.168.1.100:8085/api (or leave blank for localhost)"
+                value={serverUrl}
+                onChange={e => {
+                  setServerUrl(e.target.value);
+                  setConnStatus(null);
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={handleTestConnection}
+                disabled={testingConn}
+                className="btn btn-secondary"
+                style={{ fontSize: '0.78rem', padding: '0.45rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <RefreshCw size={13} className={testingConn ? 'animate-spin' : ''} />
+                <span>{testingConn ? 'Testing...' : 'Test Connection'}</span>
+              </button>
+            </div>
+
+            {connStatus && (
+              <div style={{
+                padding: '0.5rem 0.75rem',
+                borderRadius: '8px',
+                fontSize: '0.75rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                background: connStatus.success ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                border: connStatus.success ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)',
+                color: connStatus.success ? '#34d399' : '#f87171'
+              }}>
+                {connStatus.success ? <Check size={14} /> : <AlertCircle size={14} />}
+                <span>{connStatus.message}</span>
+              </div>
+            )}
+          </div>
+
           {/* Quick Notice on Mobile Responsiveness */}
           <div style={{ padding: '0.75rem 1rem', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Smartphone size={20} color="#10b981" style={{ flexShrink: 0 }} />
@@ -375,12 +452,15 @@ export const AppSettingsModal = () => {
 
           <button
             type="button"
-            onClick={() => setIsSettingsOpen(false)}
+            onClick={() => {
+              setServerApiUrl(serverUrl);
+              setIsSettingsOpen(false);
+            }}
             className="btn btn-primary"
             style={{ fontSize: '0.85rem', padding: '0.55rem 1.25rem' }}
           >
             <Check size={15} />
-            <span>Done & Apply</span>
+            <span>Save & Apply</span>
           </button>
         </div>
 
