@@ -39,6 +39,27 @@ public class CustomerMaster {
     @Column(name = "address", length = 500)
     private String address;
 
+    @Column(name = "po_number", length = 100)
+    private String poNumber;
+
+    @Column(name = "po_date", length = 50)
+    private String poDate;
+
+    @Column(name = "vendor_code", length = 50)
+    private String vendorCode;
+
+    @Column(name = "sac_code", length = 50)
+    private String sacCode;
+
+    @Column(name = "contract_no", length = 100)
+    private String contractNo;
+
+    @Column(name = "contract_period", length = 100)
+    private String contractPeriod;
+
+    @Column(name = "bg_no", length = 200)
+    private String bgNo;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 

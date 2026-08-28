@@ -25,8 +25,26 @@ public class GatePass {
     @Column(name = "gate_pass_date")
     private LocalDate gatePassDate = LocalDate.now();
 
-    @Column(name = "receiver_name", length = 255)
+    @Column(name = "receiver_name", columnDefinition = "NVARCHAR(MAX)")
     private String receiverName;
+
+    @Column(name = "receiver_name_2", columnDefinition = "NVARCHAR(MAX)")
+    private String receiverName2;
+
+    @Column(name = "address_line_1", columnDefinition = "NVARCHAR(MAX)")
+    private String addressLine1;
+
+    @Column(name = "address_line_2", columnDefinition = "NVARCHAR(MAX)")
+    private String addressLine2;
+
+    @Column(name = "vehicle_no", length = 100)
+    private String vehicleNo;
+
+    @Column(name = "purpose_for_transport", columnDefinition = "NVARCHAR(MAX)")
+    private String purposeForTransport;
+
+    @Column(name = "customer_gstin", length = 50)
+    private String customerGstin;
 
     @Column(name = "pass_type", length = 10)
     private String passType = "OUT";

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { fetchJobCards, fetchNextJobNo, createJobCard, updateJobCard, deleteJobCard, fetchCustomers } from '../services/api';
 import { JobCardPrintModal } from '../components/JobCardPrintModal';
 import { Toast } from '../components/Toast';
-import { Wrench, Plus, Save, Printer, Edit3, Trash2, Search, RefreshCw, FileText, ChevronRight, CheckCircle2, RotateCcw, Building2, Cpu, Activity, UserCheck } from 'lucide-react';
+import { Wrench, Plus, Save, Printer, Edit3, Trash2, Search, RefreshCw, FileText, ChevronRight, CheckCircle2, RotateCcw, Building2, Cpu, Activity, UserCheck, Image as ImageIcon, Camera, Upload, UploadCloud, Trash, Eye } from 'lucide-react';
 
 const DynamicInputArray = ({ label, countValue, listString, onChangeCount, onChangeList, placeholder }) => {
   // Parse list from comma-separated string
@@ -167,10 +167,14 @@ export const JobCardPage = ({ editingJobCard, onCancelEdit }) => {
     coilDismantledBy: '',
     windingBy: '',
     assembledBy: '',
-    testedBy: ''
+    testedBy: '',
+
+    // Photo / Diagram Upload
+    diagramPhoto: ''
   };
 
   const [formData, setFormData] = useState(initialFormState);
+  const fileInputRef = useRef(null);
 
   const loadInitialData = async () => {
     try {
@@ -202,6 +206,44 @@ export const JobCardPage = ({ editingJobCard, onCancelEdit }) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handlePreviewJobCard = () => {
+    setSelectedJobCardForPrint({ ...formData });
+    setPrintModalOpen(true);
+  };
+
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setToast({ message: 'Please select a valid image file (PNG, JPG, JPEG, WEBP)', type: 'error' });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setToast({ message: 'Image size exceeds 5MB limit. Please choose a smaller image.', type: 'error' });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result;
+      if (base64) {
+        handleInputChange('diagramPhoto', base64);
+        setToast({ message: 'Diagram / Photo uploaded successfully!', type: 'success' });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = () => {
+    handleInputChange('diagramPhoto', '');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    setToast({ message: 'Diagram / Photo removed', type: 'info' });
+  };
+
   const handleCustomerSelect = (name) => {
     handleInputChange('customerName', name);
     const matched = masterCustomers.find(c => c.customerName.toLowerCase().trim() === name.toLowerCase().trim());
@@ -215,6 +257,9 @@ export const JobCardPage = ({ editingJobCard, onCancelEdit }) => {
   const handleResetForm = async () => {
     setEditingId(null);
     if (onCancelEdit) onCancelEdit();
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
     try {
       const nextNo = await fetchNextJobNo();
       setFormData({ ...initialFormState, jobNo: nextNo });
@@ -297,7 +342,7 @@ export const JobCardPage = ({ editingJobCard, onCancelEdit }) => {
             style={{ fontSize: '0.85rem' }}
           >
             <Plus size={15} />
-            <span>+ New Job Card</span>
+            <span>New Job Card</span>
           </button>
         </div>
       </div>
@@ -756,12 +801,162 @@ export const JobCardPage = ({ editingJobCard, onCancelEdit }) => {
           )}
         </div>
 
-        {/* Section 4: Test Details & Remarks */}
+        {/* Section 4: Diagram & Equipment Photo Upload */}
+        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <ImageIcon size={18} color="#10b981" />
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'white', margin: 0 }}>
+                4. Diagram & Equipment Photo Upload
+              </h3>
+            </div>
+            {formData.diagramPhoto && (
+              <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <CheckCircle2 size={14} /> Photo Attached & Ready
+              </span>
+            )}
+          </div>
+
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            accept="image/*" 
+            style={{ display: 'none' }} 
+            onChange={handlePhotoUpload} 
+          />
+
+          {!formData.diagramPhoto ? (
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                border: '2px dashed rgba(16, 185, 129, 0.4)',
+                borderRadius: '12px',
+                padding: '2rem 1.5rem',
+                textAlign: 'center',
+                background: 'rgba(16, 185, 129, 0.03)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.75rem'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#10b981';
+                e.currentTarget.style.background = 'rgba(16, 185, 129, 0.08)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                e.currentTarget.style.background = 'rgba(16, 185, 129, 0.03)';
+              }}
+            >
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981' }}>
+                <UploadCloud size={28} />
+              </div>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem', color: '#f8fafc' }}>
+                  Click to Upload Diagram or Equipment Photo
+                </p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Attach winding diagrams, motor nameplate, or equipment photos (PNG, JPG, JPEG, WEBP up to 5MB)
+                </p>
+              </div>
+              <button 
+                type="button" 
+                className="btn btn-outline" 
+                style={{ borderColor: 'rgba(16, 185, 129, 0.5)', color: '#10b981', fontSize: '0.8rem', padding: '0.4rem 1rem' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+              >
+                <Camera size={15} />
+                <span>Browse File...</span>
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-start' }}>
+                {/* Photo Preview Container */}
+                <div style={{ 
+                  position: 'relative', 
+                  borderRadius: '12px', 
+                  overflow: 'hidden', 
+                  border: '1.5px solid rgba(16, 185, 129, 0.4)', 
+                  background: '#0f172a',
+                  maxWidth: '360px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.4)'
+                }}>
+                  <img 
+                    src={formData.diagramPhoto} 
+                    alt="Uploaded Diagram / Equipment" 
+                    style={{ 
+                      width: '100%', 
+                      maxHeight: '260px', 
+                      objectFit: 'contain', 
+                      display: 'block' 
+                    }} 
+                  />
+                  <div style={{ 
+                    position: 'absolute', 
+                    bottom: 0, 
+                    left: 0, 
+                    right: 0, 
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)', 
+                    padding: '8px 12px', 
+                    color: '#f8fafc', 
+                    fontSize: '0.75rem',
+                    fontWeight: 600
+                  }}>
+                    Uploaded Photo / Diagram Preview
+                  </div>
+                </div>
+
+                {/* Control Actions */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1, minWidth: '220px' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600, color: '#f8fafc' }}>
+                      Image Attached to Job Card
+                    </p>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      This image will automatically be included and printed on the Job Card format.
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <button 
+                      type="button" 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="btn btn-outline" 
+                      style={{ fontSize: '0.8rem', padding: '0.5rem 1rem' }}
+                    >
+                      <Upload size={14} />
+                      <span>Replace Photo</span>
+                    </button>
+
+                    <button 
+                      type="button" 
+                      onClick={handleRemovePhoto}
+                      className="btn btn-outline" 
+                      style={{ fontSize: '0.8rem', padding: '0.5rem 1rem', borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171' }}
+                    >
+                      <Trash size={14} />
+                      <span>Remove Photo</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Section 5: Test Details & Remarks */}
         <div className="glass-panel" style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
             <Activity size={18} color="#38bdf8" />
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'white', margin: 0 }}>
-              4. Test Details & Remarks
+              5. Test Details & Remarks
             </h3>
           </div>
 
@@ -796,12 +991,12 @@ export const JobCardPage = ({ editingJobCard, onCancelEdit }) => {
           </div>
         </div>
 
-        {/* Section 5: Personnel Sign-off */}
+        {/* Section 6: Personnel Sign-off */}
         <div className="glass-panel" style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
             <UserCheck size={18} color="#a855f7" />
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'white', margin: 0 }}>
-              5. Personnel Responsible
+              6. Personnel Responsible
             </h3>
           </div>
 
@@ -841,7 +1036,17 @@ export const JobCardPage = ({ editingJobCard, onCancelEdit }) => {
             <span>Clear / New Job Card</span>
           </button>
 
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button 
+              type="button" 
+              onClick={handlePreviewJobCard} 
+              className="btn btn-outline"
+              style={{ padding: '0.75rem 1.5rem', fontWeight: 700, color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.4)' }}
+            >
+              <Eye size={18} />
+              <span>Preview Job Card</span>
+            </button>
+
             <button 
               type="button" 
               disabled={saving} 

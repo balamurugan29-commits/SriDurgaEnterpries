@@ -12,6 +12,7 @@ import { ShieldAlert, Loader2 } from 'lucide-react';
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const MasterPage = lazy(() => import('./pages/MasterPage').then(m => ({ default: m.MasterPage })));
 const CustomerMasterPage = lazy(() => import('./pages/CustomerMasterPage').then(m => ({ default: m.CustomerMasterPage })));
+const CompanyDetailsPage = lazy(() => import('./pages/CompanyDetailsPage').then(m => ({ default: m.CompanyDetailsPage })));
 const WorkCompletionPage = lazy(() => import('./pages/WorkCompletionPage').then(m => ({ default: m.WorkCompletionPage })));
 const WorkCompletionListPage = lazy(() => import('./pages/WorkCompletionListPage').then(m => ({ default: m.WorkCompletionListPage })));
 const ChallanPage = lazy(() => import('./pages/ChallanPage').then(m => ({ default: m.ChallanPage })));
@@ -66,7 +67,7 @@ const PermissionGuard = ({ requiredPermission, children }) => {
 
 const MainApp = () => {
   const { user, isAuthenticated } = useAuth();
-  const { layout } = useSettings();
+  const { layout, sidebarHidden } = useSettings();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -138,7 +139,9 @@ const MainApp = () => {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-dark)' }}>
       <Navbar activePage={activePage} setActivePage={handleSetActivePage} />
       <div style={{ display: 'flex', flex: 1, position: 'relative' }}>
-        <Sidebar activePage={activePage} setActivePage={handleSetActivePage} />
+        {!sidebarHidden && (
+          <Sidebar activePage={activePage} setActivePage={handleSetActivePage} />
+        )}
         <main 
           className="app-main-content"
           style={{ 
@@ -157,6 +160,7 @@ const MainApp = () => {
               <Route path="/dashboard" element={<PermissionGuard requiredPermission="dashboard"><DashboardPage setActivePage={handleSetActivePage} /></PermissionGuard>} />
               <Route path="/master" element={<PermissionGuard requiredPermission="master"><MasterPage /></PermissionGuard>} />
               <Route path="/customer-master" element={<PermissionGuard requiredPermission="customer-master"><CustomerMasterPage /></PermissionGuard>} />
+              <Route path="/company-details" element={<PermissionGuard requiredPermission="company-details"><CompanyDetailsPage /></PermissionGuard>} />
               <Route 
                 path="/work-completion" 
                 element={

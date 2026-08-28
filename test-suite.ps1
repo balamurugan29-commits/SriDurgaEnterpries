@@ -150,10 +150,42 @@ try {
 }
 
 # ------------------------------------------------------------------------------
+# 3B. COMPANY DETAILS MASTER PROFILE
+# ------------------------------------------------------------------------------
+Write-Host "`n--- MODULE 3B: Company Details Master ---" -ForegroundColor Cyan
+try {
+    $comp = Invoke-RestMethod -Uri "$baseUrl/api/company-details" -Method Get -Headers $adminHeaders
+    Assert-Test "Fetch Company Details Profile" ($comp.companyName -ne $null -and $comp.gstin -ne $null) "Company: $($comp.companyName) | GST: $($comp.gstin)"
+
+    $saveCompBody = @{
+        companyName = "SRI DURGA ENTERPRISES"
+        address = "No. 10 V.G. Nagar, Kovilpathu, Karaikal - 609 602"
+        phone = "9842492946"
+        email = "sridurgaenterprises@yahoo.com"
+        gstin = "34ABDFS4476N1ZN"
+        pan = "ABDFS4476N"
+        state = "Puducherry (34)"
+        epfCode = "PC 1758"
+        esiCode = "55000426770000602"
+        bankName = "Indian Overseas Bank"
+        branch = "Karaikal Main Branch"
+        accountNumber = "015402000001234"
+        ifscCode = "IOBA0000154"
+    } | ConvertTo-Json
+
+    $savedComp = Invoke-RestMethod -Uri "$baseUrl/api/company-details" -Method Post -Headers $adminHeaders -Body $saveCompBody
+    Assert-Test "Save and Update Company Details" ($savedComp.bankName -eq "Indian Overseas Bank" -and $savedComp.accountNumber -eq "015402000001234") "Bank: $($savedComp.bankName) | A/C: $($savedComp.accountNumber)"
+} catch {
+    Assert-Test "Company Details Master Operations" $false $_.Exception.Message
+}
+
+# ------------------------------------------------------------------------------
 # 4. ITEM MASTER CRUD & AUTO-CALCULATIONS
 # ------------------------------------------------------------------------------
 Write-Host "`n--- MODULE 4: Item Master & Auto-Calculations ---" -ForegroundColor Cyan
 $testItemId = $null
+$testItem1Id = $null
+$testItem2Id = $null
 try {
     $newItemBody = @{
         serialNumber = 101
@@ -172,11 +204,45 @@ try {
     $expectedAmount = 15000.00
     Assert-Test "Create Item & Auto-Calculate Amount" ($createdItem.amount -eq $expectedAmount -and $testItemId -gt 0) "Calculated Amount: $($createdItem.amount)"
     
-    # Clean up test item
-    Invoke-RestMethod -Uri "$baseUrl/api/items/$testItemId" -Method Delete -Headers $adminHeaders | Out-Null
-    Assert-Test "Delete Test Item" $true
+    # Test Folder-Scoped Duplicate Rule: Same code 'TEST-FOLDER-1' in 'General' and 'RC4'
+    $item1Body = @{
+        serialNumber = 102
+        itemCode = "TEST-FOLDER-1"
+        description = "Item in General folder"
+        quantity = 1.0
+        unit = "No"
+        rate = 100.00
+        serviceCharge = 0.00
+        folderName = "General"
+    } | ConvertTo-Json
+    $item1 = Invoke-RestMethod -Uri "$baseUrl/api/items" -Method Post -Headers $adminHeaders -Body $item1Body
+    $testItem1Id = $item1.id
+
+    $item2Body = @{
+        serialNumber = 103
+        itemCode = "TEST-FOLDER-1"
+        description = "Item with same code in RC4 folder"
+        quantity = 2.0
+        unit = "No"
+        rate = 200.00
+        serviceCharge = 0.00
+        folderName = "RC4"
+    } | ConvertTo-Json
+    $item2 = Invoke-RestMethod -Uri "$baseUrl/api/items" -Method Post -Headers $adminHeaders -Body $item2Body
+    $testItem2Id = $item2.id
+
+    Assert-Test "Same Item Code in Different Folders Allowed" ($testItem1Id -gt 0 -and $testItem2Id -gt 0) "General ID: $testItem1Id, RC4 ID: $testItem2Id"
+
+    # Clean up test items
+    if ($testItemId) { Invoke-RestMethod -Uri "$baseUrl/api/items/$testItemId" -Method Delete -Headers $adminHeaders | Out-Null }
+    if ($testItem1Id) { Invoke-RestMethod -Uri "$baseUrl/api/items/$testItem1Id" -Method Delete -Headers $adminHeaders | Out-Null }
+    if ($testItem2Id) { Invoke-RestMethod -Uri "$baseUrl/api/items/$testItem2Id" -Method Delete -Headers $adminHeaders | Out-Null }
+    Assert-Test "Delete Test Items" $true
 } catch {
     Assert-Test "Item Master Operations" $false $_.Exception.Message
+    if ($testItemId) { try { Invoke-RestMethod -Uri "$baseUrl/api/items/$testItemId" -Method Delete -Headers $adminHeaders | Out-Null } catch {} }
+    if ($testItem1Id) { try { Invoke-RestMethod -Uri "$baseUrl/api/items/$testItem1Id" -Method Delete -Headers $adminHeaders | Out-Null } catch {} }
+    if ($testItem2Id) { try { Invoke-RestMethod -Uri "$baseUrl/api/items/$testItem2Id" -Method Delete -Headers $adminHeaders | Out-Null } catch {} }
 }
 
 # ------------------------------------------------------------------------------

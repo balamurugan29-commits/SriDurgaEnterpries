@@ -47,6 +47,13 @@ public class CustomerMasterService {
         existing.setStateCode(customerDetails.getStateCode());
         existing.setPhone(customerDetails.getPhone());
         existing.setAddress(customerDetails.getAddress());
+        existing.setPoNumber(customerDetails.getPoNumber());
+        existing.setPoDate(customerDetails.getPoDate());
+        existing.setVendorCode(customerDetails.getVendorCode());
+        existing.setSacCode(customerDetails.getSacCode());
+        existing.setContractNo(customerDetails.getContractNo());
+        existing.setContractPeriod(customerDetails.getContractPeriod());
+        existing.setBgNo(customerDetails.getBgNo());
 
         return customerMasterRepository.save(existing);
     }

@@ -10,7 +10,7 @@ if %errorlevel% neq 0 (
     ) else (
         start /min "" "Run-Production-Server.bat"
     )
-    timeout /t 3 /nobreak >nul
+    ping -n 4 127.0.0.1 >nul
 )
 
 :: Find Chrome or Edge for Native Standalone App Window Mode (Frameless, dedicated desktop app)

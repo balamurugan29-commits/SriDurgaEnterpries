@@ -49,16 +49,17 @@ public class ItemMasterService {
     }
 
     public ItemDto createItem(ItemDto dto) {
-        if (itemMasterRepository.existsByItemCodeIgnoreCase(dto.getItemCode())) {
-            throw new IllegalArgumentException("Item Code '" + dto.getItemCode() + "' already exists!");
+        String folder = dto.getFolderName() != null && !dto.getFolderName().trim().isEmpty() ? dto.getFolderName().trim() : "General";
+        String code = dto.getItemCode() != null ? dto.getItemCode().trim().toUpperCase() : "";
+        if (code.length() > 100) code = code.substring(0, 100);
+
+        if (itemMasterRepository.existsByItemCodeIgnoreCaseAndFolderNameIgnoreCase(code, folder)) {
+            throw new IllegalArgumentException("Item Code '" + code + "' already exists in folder '" + folder + "'!");
         }
 
         ItemMaster item = new ItemMaster();
         Integer nextSerial = itemMasterRepository.findMaxSerialNumber();
         item.setSerialNumber(nextSerial != null ? nextSerial + 1 : 1);
-        
-        String code = dto.getItemCode().trim().toUpperCase();
-        if (code.length() > 100) code = code.substring(0, 100);
         item.setItemCode(code);
 
         String desc = dto.getDescription() != null ? dto.getDescription().trim() : "";
@@ -69,7 +70,7 @@ public class ItemMasterService {
         item.setUnit(dto.getUnit() != null && !dto.getUnit().trim().isEmpty() ? dto.getUnit().trim() : "No");
         item.setRate(dto.getRate() != null ? dto.getRate() : BigDecimal.ZERO);
         item.setServiceCharge(dto.getServiceCharge() != null ? dto.getServiceCharge() : BigDecimal.ZERO);
-        item.setFolderName(dto.getFolderName() != null && !dto.getFolderName().trim().isEmpty() ? dto.getFolderName().trim() : "General");
+        item.setFolderName(folder);
         
         // Amount auto calculation: Amount = Quantity * (Rate + Service Charge)
         item.calculateAmount();
@@ -82,12 +83,14 @@ public class ItemMasterService {
         ItemMaster item = itemMasterRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Item not found with ID: " + id));
 
-        String code = dto.getItemCode().trim().toUpperCase();
+        String code = dto.getItemCode() != null ? dto.getItemCode().trim().toUpperCase() : "";
         if (code.length() > 100) code = code.substring(0, 100);
 
-        if (!item.getItemCode().equalsIgnoreCase(code) &&
-                itemMasterRepository.existsByItemCodeIgnoreCase(code)) {
-            throw new IllegalArgumentException("Item Code '" + code + "' already exists!");
+        String targetFolder = dto.getFolderName() != null && !dto.getFolderName().trim().isEmpty() ? dto.getFolderName().trim() : item.getFolderName();
+        boolean changed = !item.getItemCode().equalsIgnoreCase(code) || !item.getFolderName().equalsIgnoreCase(targetFolder);
+
+        if (changed && itemMasterRepository.existsByItemCodeIgnoreCaseAndFolderNameIgnoreCase(code, targetFolder)) {
+            throw new IllegalArgumentException("Item Code '" + code + "' already exists in folder '" + targetFolder + "'!");
         }
 
         if (dto.getSerialNumber() != null) {
@@ -105,9 +108,7 @@ public class ItemMasterService {
         }
         item.setRate(dto.getRate() != null ? dto.getRate() : BigDecimal.ZERO);
         item.setServiceCharge(dto.getServiceCharge() != null ? dto.getServiceCharge() : BigDecimal.ZERO);
-        if (dto.getFolderName() != null && !dto.getFolderName().trim().isEmpty()) {
-            item.setFolderName(dto.getFolderName().trim());
-        }
+        item.setFolderName(targetFolder);
         
         // Amount auto calculation: Amount = Quantity * (Rate + Service Charge)
         item.calculateAmount();
@@ -130,7 +131,7 @@ public class ItemMasterService {
                 String desc = dto.getDescription() != null ? dto.getDescription().trim() : "";
                 String folder = dto.getFolderName() != null && !dto.getFolderName().trim().isEmpty() ? dto.getFolderName().trim() : "General";
 
-                Optional<ItemMaster> existingOpt = itemMasterRepository.findByItemCodeIgnoreCase(code);
+                Optional<ItemMaster> existingOpt = itemMasterRepository.findByItemCodeIgnoreCaseAndFolderNameIgnoreCase(code, folder);
                 ItemMaster item;
                 if (existingOpt.isPresent()) {
                     item = existingOpt.get();

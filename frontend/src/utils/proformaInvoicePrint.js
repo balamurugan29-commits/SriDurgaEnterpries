@@ -56,10 +56,11 @@ export function generateProformaInvoicePrintHtml(proforma) {
 
   // GST calculation
   const gstPct = Number(proforma.gstPercent) !== undefined && !isNaN(Number(proforma.gstPercent)) ? Number(proforma.gstPercent) : 18;
-  const isIntraState = proforma.customerStateCode && (
+  const customerGstPrefix = (proforma.customerGstin || '').trim().substring(0, 2);
+  const isIntraState = !customerGstPrefix || customerGstPrefix === '34' || (proforma.customerStateCode && (
     proforma.customerStateCode.toLowerCase().includes('puducherry') || 
     proforma.customerStateCode.includes('34')
-  );
+  ));
 
   const gstAmount = (subTotal * gstPct) / 100;
   const grossAmount = subTotal + gstAmount;
@@ -195,20 +196,20 @@ export function generateProformaInvoicePrintHtml(proforma) {
                   <td style="font-weight: 700;">Invoice Value</td>
                   <td style="font-weight: 800;">Rs. ${Math.round(grossAmount)}.00</td>
                 </tr>
-                <tr class="meta-row-billed">
-                  <td style="font-weight: 800; vertical-align: top;">BILLED TO</td>
-                  <td style="font-weight: 700; line-height: 1.3;">
-                    ${customerName}
+                <tr class="meta-row-billed" style="background-color: #dbe2ea !important;">
+                  <td style="font-weight: 800; vertical-align: top; background-color: #dbe2ea !important;">BILLED TO</td>
+                  <td style="font-weight: 700; line-height: 1.3; background-color: #dbe2ea !important;">
+                    <div style="font-weight: 800;">${customerName}</div>
                     ${proforma.customerAddress ? `<div style="font-size: 11px; font-weight: normal; margin-top: 2px;">${proforma.customerAddress}</div>` : ''}
                   </td>
-                  <td style="font-weight: 800; vertical-align: top;">PAN</td>
-                  <td style="font-weight: 800; vertical-align: top;">${customerPan}</td>
+                  <td style="font-weight: 800; vertical-align: top; background-color: #dbe2ea !important;">PAN</td>
+                  <td style="font-weight: 800; vertical-align: top; background-color: #dbe2ea !important;">${customerPan}</td>
                 </tr>
-                <tr class="meta-row-billed">
-                  <td style="font-weight: 800;">GST</td>
-                  <td style="font-weight: 800;">${customerGstin}</td>
-                  <td style="font-weight: 800;">State Code</td>
-                  <td style="font-weight: 800;">${customerState}</td>
+                <tr class="meta-row-billed" style="background-color: #dbe2ea !important;">
+                  <td style="font-weight: 800; background-color: #dbe2ea !important;">GST</td>
+                  <td style="font-weight: 800; background-color: #dbe2ea !important;">${customerGstin}</td>
+                  <td style="font-weight: 800; background-color: #dbe2ea !important;">State Code</td>
+                  <td style="font-weight: 800; background-color: #dbe2ea !important;">${customerState}</td>
                 </tr>
               ` : ''}
             </tbody>
@@ -456,8 +457,17 @@ export function generateProformaInvoicePrintHtml(proforma) {
         .meta-table td:last-child {
           border-right: none;
         }
-        .meta-row-highlight {
-          background: #dce4dc;
+        .meta-row-highlight,
+        .meta-row-highlight td {
+          background-color: #dbe2ea !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .meta-row-billed,
+        .meta-row-billed td {
+          background-color: #dbe2ea !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
         }
         .items-table {
           width: 100%;

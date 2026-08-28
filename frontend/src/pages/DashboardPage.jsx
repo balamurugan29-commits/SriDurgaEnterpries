@@ -61,49 +61,49 @@ export const DashboardPage = ({ setActivePage }) => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
         
         {/* Metric 1: Master Items Count */}
-        <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="glass-card metric-card-indigo" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-subtle)', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-subtle)', letterSpacing: '0.05em' }}>
               Master Items Count
             </span>
             <h3 style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '0.25rem' }}>
               {loading ? '...' : items.length}
             </h3>
-            <span style={{ fontSize: '0.75rem', color: '#818cf8' }}>Maintained in Master Page</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--metric-indigo)' }}>Maintained in Master Page</span>
           </div>
-          <div style={{ background: 'rgba(99, 102, 241, 0.15)', padding: '1rem', borderRadius: '14px', color: '#818cf8' }}>
+          <div style={{ background: 'var(--metric-indigo-bg)', padding: '1rem', borderRadius: '14px', color: 'var(--metric-indigo)' }}>
             <Database size={30} />
           </div>
         </div>
 
         {/* Metric 2: Total Tax Invoices Issued */}
-        <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="glass-card metric-card-amber" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-subtle)', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-subtle)', letterSpacing: '0.05em' }}>
               Tax Invoices Count
             </span>
-            <h3 style={{ fontSize: '2.2rem', fontWeight: 800, color: '#fbbf24', marginTop: '0.25rem' }}>
+            <h3 style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--metric-amber)', marginTop: '0.25rem' }}>
               {loading ? '...' : challans.length}
             </h3>
-            <span style={{ fontSize: '0.75rem', color: '#fbbf24' }}>Total Invoices Issued</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--metric-amber)' }}>Total Invoices Issued</span>
           </div>
-          <div style={{ background: 'rgba(245, 158, 11, 0.15)', padding: '1rem', borderRadius: '14px', color: '#fbbf24' }}>
+          <div style={{ background: 'var(--metric-amber-bg)', padding: '1rem', borderRadius: '14px', color: 'var(--metric-amber)' }}>
             <FileSpreadsheet size={30} />
           </div>
         </div>
 
-        {/* Metric 3: Total Invoice Value (Sum of all Tax Invoice Total Amounts) */}
-        <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+        {/* Metric 3: Total Invoice Value */}
+        <div className="glass-card metric-card-cyan" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#38bdf8', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--metric-cyan)', letterSpacing: '0.05em' }}>
               Total Invoice Value
             </span>
-            <h3 style={{ fontSize: '2.2rem', fontWeight: 800, color: '#38bdf8', marginTop: '0.25rem' }}>
+            <h3 style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--metric-cyan)', marginTop: '0.25rem' }}>
               {loading ? '...' : `₹${totalInvoiceValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </h3>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Sum of All Invoices (Inc. GST)</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Sum of All Invoices (Inc. GST)</span>
           </div>
-          <div style={{ background: 'rgba(56, 189, 248, 0.15)', padding: '1rem', borderRadius: '14px', color: '#38bdf8' }}>
+          <div style={{ background: 'var(--metric-cyan-bg)', padding: '1rem', borderRadius: '14px', color: 'var(--metric-cyan)' }}>
             <Receipt size={30} />
           </div>
         </div>

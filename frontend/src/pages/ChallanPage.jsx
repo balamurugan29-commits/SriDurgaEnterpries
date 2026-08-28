@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { fetchItems, fetchItemByCode, fetchNextChallanNumber, createChallan, updateChallan, fetchCustomers, createCustomer, updateCustomer, getIndianFySuffix, formatUnitWithQty, fetchCertificates } from '../services/api';
+import { fetchItems, fetchItemByCode, fetchNextChallanNumber, createChallan, updateChallan, fetchCustomers, createCustomer, updateCustomer, getIndianFySuffix, formatUnitWithQty, fetchCertificates, fetchCompanyDetails } from '../services/api';
 import { printTaxInvoiceDirect } from '../utils/taxInvoicePrint';
 import { ChallanPrintModal } from '../components/ChallanPrintModal';
+import { InvoiceImageUploadModal } from '../components/InvoiceImageUploadModal';
 import { Toast } from '../components/Toast';
-import { FileSpreadsheet, Plus, Trash2, Printer, Save, Zap, Edit3, X, RefreshCw, ShieldCheck, Building2, HelpCircle, CheckCircle2, XCircle, RotateCcw, ChevronDown, Eye } from 'lucide-react';
+import { FileSpreadsheet, Plus, Trash2, Printer, Save, Zap, Edit3, X, RefreshCw, ShieldCheck, Building2, HelpCircle, CheckCircle2, XCircle, RotateCcw, ChevronDown, Eye, Upload, Sparkles } from 'lucide-react';
 
 // Fast, responsive in-memory searchable Combobox for Item Code
 const ItemCodeCombobox = React.memo(({ value, masterItems, isFetched, onChange, onSelect }) => {
@@ -250,6 +251,56 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [currentPrintChallan, setCurrentPrintChallan] = useState(null);
 
+  // Invoice Image OCR & Auto-Extraction Modal State
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+
+  const handleApplyExtractedData = (data) => {
+    if (!data) return;
+
+    if (data.challanNumber) setChallanNumber(data.challanNumber);
+    if (data.challanDate) setChallanDate(data.challanDate);
+    if (data.customerName) setCustomerName(data.customerName);
+    if (data.customerAddress) setCustomerAddress(data.customerAddress);
+    if (data.customerPhone) setCustomerPhone(data.customerPhone);
+    if (data.customerPan) setCustomerPan(data.customerPan);
+    if (data.customerGstin) setCustomerGstin(data.customerGstin);
+    if (data.customerStateCode) setCustomerStateCode(data.customerStateCode);
+    if (data.poNumber) setPoNumber(data.poNumber);
+    if (data.poDate) setPoDate(data.poDate);
+    if (data.vendorCode) setVendorCode(data.vendorCode);
+    if (data.sacCode) setSacCode(data.sacCode);
+    if (data.contractNo) setContractNo(data.contractNo);
+    if (data.contractPeriod) setContractPeriod(data.contractPeriod);
+    if (data.bgNo) setBgNo(data.bgNo);
+    if (data.equipmentHeader) setEquipmentHeader(data.equipmentHeader);
+    if (data.gstPercent !== undefined && data.gstPercent !== '') setGstPercent(String(data.gstPercent));
+
+    if (data.lineItems && Array.isArray(data.lineItems) && data.lineItems.length > 0) {
+      const formattedItems = data.lineItems.map((item, idx) => {
+        const itemCodeClean = (item.itemCode || '').trim().toUpperCase();
+        const matched = masterItems.find(m => m.itemCode && m.itemCode.toUpperCase() === itemCodeClean);
+        const qty = Number(item.quantity) || 1;
+        const rate = Number(item.rate) || (matched ? Number(matched.rate) : 0);
+        return {
+          serialNumber: idx + 1,
+          itemCode: item.itemCode || (matched ? matched.itemCode : 'CUSTOM'),
+          description: item.description || (matched ? matched.description : ''),
+          quantity: qty,
+          unit: item.unit || (matched ? matched.unit : 'No'),
+          rate: rate,
+          amount: item.amount || (qty * rate),
+          fetched: !!matched
+        };
+      });
+      setLineItems(formattedItems);
+    }
+
+    setToast({
+      message: `✨ Successfully populated Tax Invoice details from uploaded image!`,
+      type: 'success'
+    });
+  };
+
   // WCC Selection Modal States
   const [wccModalOpen, setWccModalOpen] = useState(false);
   const [wccList, setWccList] = useState([]);
@@ -487,8 +538,18 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
 
     // Fetch next fresh auto-incremented invoice number in FY format (e.g. 01/26-27)
     try {
-      const nextNum = await fetchNextChallanNumber();
+      const [nextNum, company] = await Promise.all([
+        fetchNextChallanNumber(),
+        fetchCompanyDetails()
+      ]);
       setChallanNumber(parseChallanString(nextNum));
+      if (company) {
+        if (company.gstin) setGstin(company.gstin);
+        if (company.pan) setPan(company.pan);
+        if (company.state) setStateCode(company.state);
+        if (company.epfCode) setEpfCode(company.epfCode);
+        if (company.esiCode) setEsiCode(company.esiCode);
+      }
     } catch (e) {
       const fySuffix = getIndianFySuffix();
       setChallanNumber(`01/${fySuffix}`);
@@ -500,13 +561,22 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
   useEffect(() => {
     const initData = async () => {
       try {
-        const [items, customers, nextNum] = await Promise.all([
+        const [items, customers, nextNum, company] = await Promise.all([
           fetchItems(),
           fetchCustomers(),
-          fetchNextChallanNumber()
+          fetchNextChallanNumber(),
+          fetchCompanyDetails()
         ]);
         setMasterItems(items || []);
         setMasterCustomers(customers || []);
+
+        if (company && !initialChallan) {
+          if (company.gstin) setGstin(company.gstin);
+          if (company.pan) setPan(company.pan);
+          if (company.state) setStateCode(company.state);
+          if (company.epfCode) setEpfCode(company.epfCode);
+          if (company.esiCode) setEsiCode(company.esiCode);
+        }
 
         if (initialChallan) {
           // Editing existing invoice
@@ -656,9 +726,16 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
       if (matchedCustomer.address) setCustomerAddress(matchedCustomer.address);
       if (matchedCustomer.stateCode) setCustomerStateCode(matchedCustomer.stateCode);
       if (matchedCustomer.phone) setCustomerPhone(matchedCustomer.phone);
+      if (matchedCustomer.poNumber) setPoNumber(matchedCustomer.poNumber);
+      if (matchedCustomer.poDate) setPoDate(matchedCustomer.poDate);
+      if (matchedCustomer.vendorCode) setVendorCode(matchedCustomer.vendorCode);
+      if (matchedCustomer.sacCode) setSacCode(matchedCustomer.sacCode);
+      if (matchedCustomer.contractNo) setContractNo(matchedCustomer.contractNo);
+      if (matchedCustomer.contractPeriod) setContractPeriod(matchedCustomer.contractPeriod);
+      if (matchedCustomer.bgNo) setBgNo(matchedCustomer.bgNo);
 
       setToast({ 
-        message: `Auto-fetched details for '${matchedCustomer.customerName}' from Customer Page!`, 
+        message: `Auto-fetched all billing & contract details for '${matchedCustomer.customerName}' from Customer Page!`, 
         type: 'success' 
       });
     }
@@ -884,7 +961,14 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
         pan: customerPan.trim(),
         stateCode: customerStateCode.trim(),
         phone: customerPhone.trim(),
-        address: customerAddress.trim()
+        address: customerAddress.trim(),
+        poNumber: poNumber.trim(),
+        poDate: poDate ? poDate.trim() : '',
+        vendorCode: vendorCode.trim(),
+        sacCode: sacCode.trim(),
+        contractNo: contractNo.trim(),
+        contractPeriod: contractPeriod.trim(),
+        bgNo: bgNo.trim()
       };
 
       if (existingCustomer) {
@@ -1154,7 +1238,29 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <button 
+            type="button"
+            onClick={() => setUploadModalOpen(true)} 
+            className="btn btn-secondary" 
+            style={{ 
+              fontSize: '0.825rem', 
+              padding: '0.5rem 0.95rem', 
+              background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+              borderColor: 'rgba(99, 102, 241, 0.5)',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              fontWeight: 700,
+              boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)'
+            }}
+            title="Upload an Invoice/PO Image or Document to auto-populate all details"
+          >
+            <Upload size={15} />
+            <span>Upload</span>
+          </button>
+
           <button 
             onClick={resetFormToNewBill} 
             className="btn btn-outline" 
@@ -1172,7 +1278,7 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
             title="Open a fresh new Tax Invoice"
           >
             <Plus size={16} />
-            <span>+ New Invoice</span>
+            <span>New Invoice</span>
           </button>
         </div>
       </div>
@@ -1859,6 +1965,15 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
         isOpen={printModalOpen}
         onClose={() => setPrintModalOpen(false)}
         challan={currentPrintChallan}
+      />
+
+      {/* Invoice Image OCR & Auto-Extraction Modal */}
+      <InvoiceImageUploadModal
+        isOpen={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        onApplyExtractedData={handleApplyExtractedData}
+        masterCustomers={masterCustomers}
+        masterItems={masterItems}
       />
     </div>
   );

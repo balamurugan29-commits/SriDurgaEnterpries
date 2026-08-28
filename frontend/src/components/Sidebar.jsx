@@ -18,7 +18,8 @@ import {
   ShieldCheck,
   BookOpen,
   ShoppingBag,
-  X
+  X,
+  PanelLeftClose
 } from 'lucide-react';
 
 export const Sidebar = ({ activePage, setActivePage }) => {
@@ -27,7 +28,8 @@ export const Sidebar = ({ activePage, setActivePage }) => {
     layout, 
     navMode, 
     mobileMenuOpen, 
-    setMobileMenuOpen
+    setMobileMenuOpen,
+    toggleSidebarHidden
   } = useSettings();
 
   const canAccess = (pageKey) => {
@@ -39,7 +41,7 @@ export const Sidebar = ({ activePage, setActivePage }) => {
   };
 
   const [masterDropdownOpen, setMasterDropdownOpen] = useState(
-    activePage === 'master' || activePage === 'customer-master'
+    activePage === 'master' || activePage === 'customer-master' || activePage === 'company-details'
   );
 
   const [certDropdownOpen, setCertDropdownOpen] = useState(
@@ -77,7 +79,7 @@ export const Sidebar = ({ activePage, setActivePage }) => {
   const passFlyoutRef = useRef(null);
   const auditFlyoutRef = useRef(null);
 
-  const isMasterActive = activePage === 'master' || activePage === 'customer-master';
+  const isMasterActive = activePage === 'master' || activePage === 'customer-master' || activePage === 'company-details';
   const isCertActive = activePage === 'work-completion' || activePage === 'work-completion-history' || activePage === 'work-completion-list';
   const isInvoiceActive = activePage === 'challan' || activePage === 'challan-list' || activePage === 'challans-list' || activePage === 'proforma-invoice' || activePage === 'proforma-invoice-history' || activePage === 'proforma-invoice-list' || activePage === 'proforma-invoices';
   const isCardActive = activePage === 'job-card' || activePage === 'job-card-history' || activePage === 'job-card-list';
@@ -245,6 +247,25 @@ export const Sidebar = ({ activePage, setActivePage }) => {
             <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-subtle)' }}>
               MAIN MENU
             </span>
+            <button
+              onClick={toggleSidebarHidden}
+              className="btn btn-outline"
+              style={{
+                padding: '2px 7px',
+                fontSize: '0.68rem',
+                borderRadius: '6px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                color: 'var(--text-muted)',
+                borderColor: 'var(--border-color)',
+                cursor: 'pointer'
+              }}
+              title="Hide Navigation Menu Bar"
+            >
+              <PanelLeftClose size={12} />
+              <span>Hide</span>
+            </button>
           </div>
         )}
 
@@ -305,7 +326,7 @@ export const Sidebar = ({ activePage, setActivePage }) => {
             {(!isCompact || mobileMenuOpen) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <span style={{ fontSize: '0.625rem', background: 'rgba(99, 102, 241, 0.3)', color: '#818cf8', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 700 }}>
-                  2
+                  3
                 </span>
                 {masterDropdownOpen ? <ChevronDown size={15} color="#818cf8" /> : <ChevronRight size={15} color="#9ca3af" />}
               </div>
@@ -381,6 +402,27 @@ export const Sidebar = ({ activePage, setActivePage }) => {
                 <Building2 size={16} color="#34d399" />
                 <span>Customer Directory</span>
               </button>
+
+              <button
+                onClick={() => handleNavClick('company-details')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.625rem',
+                  padding: '0.6rem 0.75rem',
+                  borderRadius: '8px',
+                  border: activePage === 'company-details' ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid transparent',
+                  background: activePage === 'company-details' ? 'rgba(56, 189, 248, 0.18)' : 'transparent',
+                  color: activePage === 'company-details' ? 'var(--text-main)' : 'var(--text-muted)',
+                  fontSize: '0.825rem',
+                  fontWeight: activePage === 'company-details' ? 700 : 500,
+                  cursor: 'pointer',
+                  textAlign: 'left'
+                }}
+              >
+                <ShieldCheck size={16} color="#38bdf8" />
+                <span>Company Details</span>
+              </button>
             </div>
           )}
 
@@ -451,6 +493,34 @@ export const Sidebar = ({ activePage, setActivePage }) => {
                 </div>
                 <span style={{ fontSize: '0.6rem', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', padding: '0.1rem 0.35rem', borderRadius: '3px', fontWeight: 600 }}>
                   Directory
+                </span>
+              </button>
+
+              {/* Sub-item 3: Company Details */}
+              <button
+                onClick={() => handleNavClick('company-details')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                  padding: '0.55rem 0.8rem',
+                  borderRadius: '8px',
+                  border: activePage === 'company-details' ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid transparent',
+                  background: activePage === 'company-details' ? 'linear-gradient(90deg, rgba(56, 189, 248, 0.25) 0%, rgba(56, 189, 248, 0.05) 100%)' : 'transparent',
+                  color: activePage === 'company-details' ? 'var(--text-main)' : 'var(--text-muted)',
+                  fontWeight: activePage === 'company-details' ? 600 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  textAlign: 'left'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                  <ShieldCheck size={16} color={activePage === 'company-details' ? '#38bdf8' : '#9ca3af'} />
+                  <span style={{ fontSize: '0.8rem' }}>Company Details</span>
+                </div>
+                <span style={{ fontSize: '0.6rem', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', padding: '0.1rem 0.35rem', borderRadius: '3px', fontWeight: 600 }}>
+                  Master
                 </span>
               </button>
             </div>

@@ -42,7 +42,7 @@ const PERMISSION_GROUPS = [
     name: 'Master Directory',
     icon: Layers,
     color: '#34d399',
-    permissions: ['master', 'customer-master']
+    permissions: ['master', 'customer-master', 'company-details']
   },
   {
     name: 'Invoice Management',
@@ -172,7 +172,7 @@ export const UserManagementModal = ({ isOpen, onClose, currentUser }) => {
       setSelectedPermissions(ALL_SYSTEM_PERMISSIONS.map(p => p.id));
     } else if (type === 'billing') {
       setSelectedPermissions([
-        'dashboard', 'master', 'customer-master', 
+        'dashboard', 'master', 'customer-master', 'company-details',
         'challan', 'challan-list', 'proforma-invoice', 'proforma-invoice-history',
         'gate-pass', 'gate-pass-list', 'job-card', 'job-card-history',
         'work-completion', 'work-completion-history'
@@ -395,7 +395,7 @@ export const UserManagementModal = ({ isOpen, onClose, currentUser }) => {
                 style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
                 <UserPlus size={15} />
-                <span>+ Create New User</span>
+                <span>Create New User</span>
               </button>
             )}
           </div>

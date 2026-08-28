@@ -177,8 +177,9 @@ export const WorkCompletionListPage = ({ onEditCertificate, onNewCertificate }) 
           </button>
 
           {onNewCertificate && (
-            <button onClick={onNewCertificate} className="btn btn-primary" style={{ fontSize: '0.85rem' }}>
-              <Plus size={15} /> + New Certificate
+            <button onClick={onNewCertificate} className="btn btn-primary" style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Plus size={15} />
+              <span>New Certificate</span>
             </button>
           )}
         </div>

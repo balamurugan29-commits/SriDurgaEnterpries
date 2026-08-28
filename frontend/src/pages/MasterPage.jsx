@@ -69,20 +69,25 @@ export const MasterPage = () => {
   const [toast, setToast] = useState({ message: '', type: 'success' });
   const fileInputRef = useRef(null);
 
-  // Folder Management State
-  const [selectedFolder, setSelectedFolder] = useState('ALL'); // 'ALL', 'General', or custom folder name
+  // Folder Management State (Folder-by-Folder Navigation)
+  const [selectedFolder, setSelectedFolder] = useState(() => {
+    const saved = localStorage.getItem(CUSTOM_FOLDERS_STORAGE_KEY);
+    const parsed = saved ? JSON.parse(saved) : ['General'];
+    return parsed[0] || 'General';
+  });
   const [customFolders, setCustomFolders] = useState(() => {
     const saved = localStorage.getItem(CUSTOM_FOLDERS_STORAGE_KEY);
     return saved ? JSON.parse(saved) : ['General'];
   });
 
-  // Folder Action Modals (Create, Rename, Delete, Move)
+  // Folder Action Modals (Create, Rename, Delete with 2-Step Confirmation, Move)
   const [folderModal, setFolderModal] = useState({
     isOpen: false,
     mode: 'create', // 'create', 'rename', 'delete', 'move'
     targetFolder: '',
     newFolderName: '',
-    deleteItems: false,
+    deleteStep: 1, // 1 for first confirmation, 2 for final confirmation
+    deleteItems: true, // permanently deletes folder and its items
     itemIds: []
   });
 
@@ -137,14 +142,15 @@ export const MasterPage = () => {
   }, [items]);
 
   const allAvailableFolders = useMemo(() => {
-    const set = new Set(['General', ...customFolders, ...Object.keys(folderCounts)]);
-    return Array.from(set).filter(Boolean);
+    const set = new Set([...customFolders, ...Object.keys(folderCounts)]);
+    const list = Array.from(set).filter(Boolean);
+    return list.length > 0 ? list : ['General'];
   }, [customFolders, folderCounts]);
 
-  // Filter items by Selected Folder
+  // Filter items strictly by Selected Folder (Folder-by-Folder view)
   const folderFilteredItems = useMemo(() => {
-    if (selectedFolder === 'ALL') return items;
-    return items.filter(i => (i.folderName || 'General').toLowerCase() === selectedFolder.toLowerCase());
+    const active = (selectedFolder || 'General').toLowerCase().trim();
+    return items.filter(i => (i.folderName || 'General').toLowerCase().trim() === active);
   }, [items, selectedFolder]);
 
   // Select All Checkbox Handler
@@ -242,12 +248,12 @@ export const MasterPage = () => {
     setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteItems: false, itemIds: [] });
   };
 
-  // Rename Folder Handler
+  // Rename Folder Handler (Works for ANY folder including General)
   const handleRenameFolder = async () => {
     const oldName = folderModal.targetFolder;
     const newName = folderModal.newFolderName.trim();
-    if (!newName || newName === oldName) {
-      setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteItems: false, itemIds: [] });
+    if (!newName || newName.toLowerCase() === oldName.toLowerCase()) {
+      setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteStep: 1, deleteItems: true, itemIds: [] });
       return;
     }
 
@@ -255,16 +261,20 @@ export const MasterPage = () => {
       setLoading(true);
       await apiRenameFolder(oldName, newName);
       
-      const updated = customFolders.map(f => f.toLowerCase() === oldName.toLowerCase() ? newName : f);
-      setCustomFolders(Array.from(new Set(updated)));
-      localStorage.setItem(CUSTOM_FOLDERS_STORAGE_KEY, JSON.stringify(Array.from(new Set(updated))));
+      let updated = customFolders.map(f => f.toLowerCase() === oldName.toLowerCase() ? newName : f);
+      if (!updated.some(f => f.toLowerCase() === newName.toLowerCase())) {
+        updated.push(newName);
+      }
+      const uniqueFolders = Array.from(new Set(updated.filter(Boolean)));
+      setCustomFolders(uniqueFolders);
+      localStorage.setItem(CUSTOM_FOLDERS_STORAGE_KEY, JSON.stringify(uniqueFolders));
 
       if (selectedFolder.toLowerCase() === oldName.toLowerCase()) {
         setSelectedFolder(newName);
       }
 
-      setToast({ message: `Folder renamed from '${oldName}' to '${newName}'!`, type: 'success' });
-      setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteItems: false, itemIds: [] });
+      setToast({ message: `✨ Folder renamed from '${oldName}' to '${newName}'!`, type: 'success' });
+      setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteStep: 1, deleteItems: true, itemIds: [] });
       await loadItems(searchQuery);
     } catch (err) {
       setToast({ message: 'Rename failed: ' + err.message, type: 'error' });
@@ -273,30 +283,33 @@ export const MasterPage = () => {
     }
   };
 
-  // Delete Folder Handler
+  // Delete Folder Handler (Permanent Deletion after Double Confirmation)
   const handleDeleteFolder = async () => {
     const target = folderModal.targetFolder;
-    if (!target || target === 'General') {
-      setToast({ message: 'Cannot delete default General folder', type: 'error' });
+    if (!target) {
+      setToast({ message: 'No folder specified to delete', type: 'error' });
       return;
     }
 
     try {
       setLoading(true);
-      await apiDeleteFolder(target, folderModal.deleteItems);
+      // Permanently delete folder and all its items from database
+      await apiDeleteFolder(target, true);
 
-      const updated = customFolders.filter(f => f.toLowerCase() !== target.toLowerCase());
-      setCustomFolders(updated);
-      localStorage.setItem(CUSTOM_FOLDERS_STORAGE_KEY, JSON.stringify(updated));
+      const remainingCustom = customFolders.filter(f => f.toLowerCase() !== target.toLowerCase());
+      const remainingAll = allAvailableFolders.filter(f => f.toLowerCase() !== target.toLowerCase());
+      const nextFolder = remainingAll.length > 0 ? remainingAll[0] : (remainingCustom.length > 0 ? remainingCustom[0] : 'General');
 
-      setSelectedFolder('ALL');
+      const finalCustomList = remainingCustom.length > 0 ? remainingCustom : [nextFolder];
+      setCustomFolders(finalCustomList);
+      localStorage.setItem(CUSTOM_FOLDERS_STORAGE_KEY, JSON.stringify(finalCustomList));
+
+      setSelectedFolder(nextFolder);
       setToast({ 
-        message: folderModal.deleteItems 
-          ? `Folder '${target}' and its items were deleted.` 
-          : `Folder '${target}' deleted. Items moved to 'General'.`, 
+        message: `🗑️ Folder '${target}' and all its items were permanently deleted.`, 
         type: 'success' 
       });
-      setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteItems: false, itemIds: [] });
+      setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteStep: 1, deleteItems: true, itemIds: [] });
       await loadItems(searchQuery);
     } catch (err) {
       setToast({ message: 'Delete folder failed: ' + err.message, type: 'error' });
@@ -315,32 +328,41 @@ export const MasterPage = () => {
     setIsModalOpen(true);
   };
 
-  // Save / Add Single Item with Duplicate Item Code Validation
+  // Save / Add Single Item with Folder-Scoped Duplicate Item Code Validation
   const handleSaveItem = async (itemData) => {
     try {
       const code = (itemData.itemCode || '').trim().toUpperCase();
+      const targetFolder = (itemData.folderName || selectedFolder || 'General').trim();
+      const folderKey = targetFolder.toLowerCase();
       
-      // Strict No-Duplicate Rule Check
+      // Scoped Duplicate Check: Only check for duplicates within the SAME folder!
       if (!itemData.id) {
-        const isDuplicate = items.some(i => i.itemCode.toUpperCase() === code);
-        if (isDuplicate) {
-          setToast({ message: `Duplicate Item Code '${code}' is not allowed! Item Code already exists in catalog.`, type: 'error' });
+        const isDuplicateInFolder = items.some(i => 
+          (i.folderName || 'General').toLowerCase().trim() === folderKey && 
+          i.itemCode.toUpperCase().trim() === code
+        );
+        if (isDuplicateInFolder) {
+          setToast({ message: `Duplicate Item Code '${code}' already exists in folder '${targetFolder}'! (Same item code can be used in other folders)`, type: 'error' });
           return;
         }
       } else {
-        const isDuplicateOther = items.some(i => i.id !== itemData.id && i.itemCode.toUpperCase() === code);
-        if (isDuplicateOther) {
-          setToast({ message: `Item Code '${code}' is already used by another item in catalog!`, type: 'error' });
+        const isDuplicateInFolderOther = items.some(i => 
+          i.id !== itemData.id && 
+          (i.folderName || 'General').toLowerCase().trim() === folderKey && 
+          i.itemCode.toUpperCase().trim() === code
+        );
+        if (isDuplicateInFolderOther) {
+          setToast({ message: `Item Code '${code}' is already used by another item in folder '${targetFolder}'!`, type: 'error' });
           return;
         }
       }
 
       if (itemData.id) {
-        await updateItem(itemData.id, itemData);
-        setToast({ message: `Item '${itemData.itemCode}' updated successfully!`, type: 'success' });
+        await updateItem(itemData.id, { ...itemData, folderName: targetFolder });
+        setToast({ message: `Item '${itemData.itemCode}' updated in folder '${targetFolder}'!`, type: 'success' });
       } else {
-        await createItem(itemData);
-        setToast({ message: `Item '${itemData.itemCode}' added to Master Page!`, type: 'success' });
+        await createItem({ ...itemData, folderName: targetFolder });
+        setToast({ message: `Item '${itemData.itemCode}' added to folder '${targetFolder}'!`, type: 'success' });
       }
       setIsModalOpen(false);
       loadItems(searchQuery);
@@ -455,13 +477,19 @@ export const MasterPage = () => {
         }
 
         const parsedItems = [];
-        const existingCodesMap = new Map(items.map(i => [i.itemCode.toUpperCase().trim(), i]));
+        const defaultAssignedFolder = (selectedFolder || 'General').trim();
+        const targetFolderKey = defaultAssignedFolder.toLowerCase();
+
+        // Duplicate checking scoped ONLY to the target folder
+        const existingCodesInFolder = new Set(
+          items
+            .filter(i => (i.folderName || 'General').toLowerCase().trim() === targetFolderKey)
+            .map(i => i.itemCode.toUpperCase().trim())
+        );
         const seenInFileCodes = new Set();
 
         const duplicateItemsList = [];
         const newItemsList = [];
-
-        const defaultAssignedFolder = selectedFolder !== 'ALL' ? selectedFolder : 'General';
 
         for (let i = headerRowIndex + 1; i < rows.length; i++) {
           const row = rows[i];
@@ -507,7 +535,8 @@ export const MasterPage = () => {
 
           parsedItems.push(itemObj);
 
-          if (existingCodesMap.has(rawCode)) {
+          // Check if duplicate in the target folder
+          if (existingCodesInFolder.has(rawCode)) {
             duplicateItemsList.push(itemObj);
           } else {
             newItemsList.push(itemObj);
@@ -657,18 +686,14 @@ export const MasterPage = () => {
               <span style={{ fontWeight: 600 }}>Master Page</span>
               <BreadcrumbChevron size={12} />
               <span style={{ color: '#818cf8', fontWeight: 700 }}>Item Master Inventory Catalog</span>
-              {selectedFolder !== 'ALL' && (
-                <>
-                  <BreadcrumbChevron size={12} />
-                  <span style={{ color: '#38bdf8', fontWeight: 800 }}>📁 {selectedFolder}</span>
-                </>
-              )}
+              <BreadcrumbChevron size={12} />
+              <span style={{ color: '#34d399', fontWeight: 800 }}>📁 {selectedFolder}</span>
             </div>
             <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               Item Master Catalog Management
             </h2>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-              Central item specifications, folders, units, rates, and automatic service charge repository.
+              Folder-scoped item specifications, units, rates, and automatic service charge repository.
             </p>
           </div>
         </div>
@@ -677,7 +702,7 @@ export const MasterPage = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.4rem 0.85rem', borderRadius: '10px' }}>
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></span>
             <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#34d399' }}>
-              Catalog: {items.length} Items Active
+              Folder '{selectedFolder}': {folderFilteredItems.length} Items Active
             </span>
           </div>
         </div>
@@ -705,75 +730,51 @@ export const MasterPage = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
             {/* Create Folder Button */}
             <button
-              onClick={() => setFolderModal({ isOpen: true, mode: 'create', targetFolder: '', newFolderName: '', deleteItems: false, itemIds: [] })}
+              onClick={() => setFolderModal({ isOpen: true, mode: 'create', targetFolder: '', newFolderName: '', deleteStep: 1, deleteItems: true, itemIds: [] })}
               className="btn btn-outline"
               style={{ fontSize: '0.78rem', padding: '0.4rem 0.8rem', borderColor: 'rgba(56, 189, 248, 0.4)', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
               title="Create New Folder"
             >
               <FolderPlus size={14} />
-              <span>+ Create Folder</span>
+              <span>Create Folder</span>
             </button>
 
-            {/* Always-visible Rename Folder Button */}
+            {/* Rename Folder Button (for active folder) */}
             <button
               onClick={() => {
-                const target = selectedFolder !== 'ALL' ? selectedFolder : (allAvailableFolders[0] || 'General');
-                setFolderModal({ isOpen: true, mode: 'rename', targetFolder: target, newFolderName: target, deleteItems: false, itemIds: [] });
+                const target = selectedFolder || allAvailableFolders[0] || 'General';
+                setFolderModal({ isOpen: true, mode: 'rename', targetFolder: target, newFolderName: target, deleteStep: 1, deleteItems: true, itemIds: [] });
               }}
               className="btn btn-outline"
               style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', color: '#fbbf24', borderColor: 'rgba(251, 191, 36, 0.4)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-              title="Rename a Folder"
+              title={`Rename active folder '${selectedFolder}'`}
             >
               <Edit3 size={13} />
               <span>Rename Folder</span>
             </button>
 
-            {/* Folder Delete Button when a custom folder is selected */}
-            {selectedFolder !== 'ALL' && selectedFolder !== 'General' && (
-              <button
-                onClick={() => setFolderModal({ isOpen: true, mode: 'delete', targetFolder: selectedFolder, newFolderName: '', deleteItems: false, itemIds: [] })}
-                className="btn btn-outline"
-                style={{ fontSize: '0.78rem', padding: '0.4rem 0.65rem', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.4)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                title="Delete Current Folder"
-              >
-                <Trash2 size={13} />
-                <span>Delete</span>
-              </button>
-            )}
+            {/* Delete Folder Button (for active folder with 2-step confirmation) */}
+            <button
+              onClick={() => {
+                const target = selectedFolder || allAvailableFolders[0] || 'General';
+                setFolderModal({ isOpen: true, mode: 'delete', targetFolder: target, newFolderName: '', deleteStep: 1, deleteItems: true, itemIds: [] });
+              }}
+              className="btn btn-outline"
+              style={{ fontSize: '0.78rem', padding: '0.4rem 0.65rem', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.4)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              title={`Delete active folder '${selectedFolder}' (Double confirmation)`}
+            >
+              <Trash2 size={13} />
+              <span>Delete Folder</span>
+            </button>
           </div>
         </div>
 
-        {/* Scrollable Folder Pills */}
+        {/* Scrollable Folder Pills (No "All Items" - Pure Folder Navigation) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {/* All Items Pill */}
-          <button
-            onClick={() => { setSelectedFolder('ALL'); setCurrentPage(1); }}
-            style={{
-              padding: '0.45rem 0.9rem',
-              borderRadius: '10px',
-              border: selectedFolder === 'ALL' ? '1.5px solid #38bdf8' : '1px solid var(--border-color)',
-              background: selectedFolder === 'ALL' ? 'linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(3, 105, 161, 0.3) 100%)' : 'rgba(255, 255, 255, 0.03)',
-              color: selectedFolder === 'ALL' ? '#38bdf8' : 'var(--text-main)',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <Folder size={15} color={selectedFolder === 'ALL' ? '#38bdf8' : 'var(--text-muted)'} />
-            <span>All Items</span>
-            <span style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '12px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              {items.length}
-            </span>
-          </button>
-
           {/* Individual Folder Pills with Inline Rename & Delete */}
           {allAvailableFolders.map(folder => {
             const count = folderCounts[folder] || 0;
-            const isSelected = selectedFolder.toLowerCase() === folder.toLowerCase();
+            const isSelected = (selectedFolder || '').toLowerCase() === folder.toLowerCase();
 
             return (
               <div
@@ -815,7 +816,7 @@ export const MasterPage = () => {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setFolderModal({ isOpen: true, mode: 'rename', targetFolder: folder, newFolderName: folder, deleteItems: false, itemIds: [] });
+                    setFolderModal({ isOpen: true, mode: 'rename', targetFolder: folder, newFolderName: folder, deleteStep: 1, deleteItems: true, itemIds: [] });
                   }}
                   style={{
                     background: 'transparent',
@@ -835,32 +836,30 @@ export const MasterPage = () => {
                   <Edit3 size={12} />
                 </button>
 
-                {/* Inline Delete Quick Button (For custom folders) */}
-                {folder.toLowerCase() !== 'general' && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFolderModal({ isOpen: true, mode: 'delete', targetFolder: folder, newFolderName: '', deleteItems: false, itemIds: [] });
-                    }}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      padding: '0.35rem 0.45rem',
-                      color: '#ef4444',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      borderRadius: '6px',
-                      opacity: 0.7,
-                      marginRight: '2px'
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'rgba(239, 68, 68, 0.18)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.background = 'transparent'; }}
-                    title={`Delete '${folder}' folder`}
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                )}
+                {/* Inline Delete Quick Button for EVERY folder */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFolderModal({ isOpen: true, mode: 'delete', targetFolder: folder, newFolderName: '', deleteStep: 1, deleteItems: true, itemIds: [] });
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '0.35rem 0.45rem',
+                    color: '#ef4444',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    borderRadius: '6px',
+                    opacity: 0.7,
+                    marginRight: '2px'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'rgba(239, 68, 68, 0.18)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.background = 'transparent'; }}
+                  title={`Delete '${folder}' folder (Double confirmation)`}
+                >
+                  <Trash2 size={12} />
+                </button>
               </div>
             );
           })}
@@ -877,7 +876,7 @@ export const MasterPage = () => {
             type="text"
             className="form-input"
             style={{ paddingLeft: '2.5rem', fontSize: '0.85rem', width: '100%' }}
-            placeholder={selectedFolder !== 'ALL' ? `Search in '${selectedFolder}'...` : "Search by Item Code (e.g. W101) or Description..."}
+            placeholder={`Search in '${selectedFolder}'...`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -916,22 +915,33 @@ export const MasterPage = () => {
             onClick={() => setExportModalOpen(true)}
             className="btn btn-outline"
             style={{ fontSize: '0.85rem', padding: '0.55rem 0.85rem', borderColor: 'rgba(52, 211, 153, 0.4)', color: '#34d399' }}
-            title="Custom export to Excel / PDF"
+            title={`Export items from '${selectedFolder}' to Excel / PDF`}
           >
             <Download size={15} />
             <span>Export Designer</span>
           </button>
 
-          {/* Upload Excel Button */}
+          {/* Folder-Specific Upload Button */}
           <button
             onClick={handleTriggerUpload}
-            className="btn btn-outline"
-            style={{ fontSize: '0.85rem', padding: '0.55rem 0.85rem' }}
+            className="btn btn-secondary"
+            style={{
+              fontSize: '0.85rem',
+              padding: '0.55rem 0.95rem',
+              background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+              borderColor: 'rgba(99, 102, 241, 0.5)',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              fontWeight: 700,
+              boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)'
+            }}
             disabled={uploading}
-            title={selectedFolder !== 'ALL' ? `Upload Excel directly into '${selectedFolder}'` : "Upload Excel/CSV Catalog File"}
+            title={`Upload Excel/Document directly into folder '${selectedFolder}'`}
           >
             <Upload size={15} />
-            <span>{uploading ? 'Uploading...' : 'Upload Excel'}</span>
+            <span>{uploading ? 'Uploading...' : `Upload to ${selectedFolder}`}</span>
           </button>
 
           {/* Add New Item Button */}
@@ -939,10 +949,10 @@ export const MasterPage = () => {
             onClick={handleOpenAddModal}
             className="btn btn-primary"
             style={{ fontSize: '0.85rem', padding: '0.55rem 1.15rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            title={selectedFolder !== 'ALL' ? `Add item to '${selectedFolder}'` : "Add single new item"}
+            title={`Add single new item to folder '${selectedFolder}'`}
           >
             <Plus size={16} />
-            <span>+ Add New Item</span>
+            <span>Add Item</span>
           </button>
 
           {/* Refresh Button */}
@@ -1026,8 +1036,38 @@ export const MasterPage = () => {
               </tr>
             ) : currentPagedItems.length === 0 ? (
               <tr>
-                <td colSpan={11} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
-                  {searchQuery ? `No items matched '${searchQuery}'` : `No items found in folder '${selectedFolder}'.`}
+                <td colSpan={11} style={{ textAlign: 'center', padding: '3.5rem 1.5rem', color: 'var(--text-muted)' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                    <Folder size={44} color="#34d399" style={{ opacity: 0.6 }} />
+                    <div>
+                      <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', margin: '0 0 0.25rem 0' }}>
+                        {searchQuery ? `No items matched '${searchQuery}'` : `Folder '${selectedFolder}' is currently empty`}
+                      </h4>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                        {searchQuery ? 'Try clearing your search query.' : `Start by adding items or uploading an Excel/document directly into '${selectedFolder}'.`}
+                      </p>
+                    </div>
+                    {!searchQuery && (
+                      <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                        <button 
+                          onClick={handleOpenAddModal} 
+                          className="btn btn-primary" 
+                          style={{ fontSize: '0.8rem', padding: '0.45rem 1rem' }}
+                        >
+                          <Plus size={14} />
+                          <span>Add Item to {selectedFolder}</span>
+                        </button>
+                        <button 
+                          onClick={handleTriggerUpload} 
+                          className="btn btn-secondary" 
+                          style={{ fontSize: '0.8rem', padding: '0.45rem 1rem', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', color: 'white' }}
+                        >
+                          <Upload size={14} />
+                          <span>Upload to {selectedFolder}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -1183,15 +1223,15 @@ export const MasterPage = () => {
         )}
       </div>
 
-      {/* Item Modal (Add / Edit) */}
+      {/* Add / Edit Item Modal */}
       <ItemModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveItem}
         editItem={editItemData}
-        nextSno={items.length + 1}
+        nextSno={folderFilteredItems.length + 1}
         availableFolders={allAvailableFolders}
-        defaultFolder={selectedFolder !== 'ALL' ? selectedFolder : 'General'}
+        defaultFolder={selectedFolder || 'General'}
       />
 
       {/* Export Designer Modal */}
@@ -1313,41 +1353,93 @@ export const MasterPage = () => {
               </div>
             )}
 
+            {/* 2-Step Permanent Delete Confirmation */}
             {folderModal.mode === 'delete' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-main)', margin: 0, lineHeight: 1.5 }}>
-                  Are you sure you want to delete folder <strong>'{folderModal.targetFolder}'</strong>?
-                </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {folderModal.deleteStep === 1 ? (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#fbbf24' }}>
+                      <AlertTriangle size={28} />
+                      <div>
+                        <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>
+                          Delete Folder: '{folderModal.targetFolder}'
+                        </h4>
+                        <span style={{ fontSize: '0.75rem', color: '#fbbf24', fontWeight: 600 }}>
+                          Confirmation Step 1 of 2
+                        </span>
+                      </div>
+                    </div>
 
-                <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.825rem' }}>
-                    <input
-                      type="radio"
-                      name="deleteChoice"
-                      checked={!folderModal.deleteItems}
-                      onChange={() => setFolderModal(prev => ({ ...prev, deleteItems: false }))}
-                    />
-                    <span>Move items to <strong>'General'</strong> folder (Recommended)</span>
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.825rem', color: '#f87171' }}>
-                    <input
-                      type="radio"
-                      name="deleteChoice"
-                      checked={folderModal.deleteItems}
-                      onChange={() => setFolderModal(prev => ({ ...prev, deleteItems: true }))}
-                    />
-                    <span>Delete all items in this folder permanently</span>
-                  </label>
-                </div>
+                    <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: '10px', padding: '1rem', lineHeight: 1.5, fontSize: '0.875rem' }}>
+                      <p style={{ margin: '0 0 0.5rem 0', color: 'white' }}>
+                        Are you sure you want to delete folder <strong style={{ color: '#fbbf24' }}>'{folderModal.targetFolder}'</strong>?
+                      </p>
+                      <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.825rem' }}>
+                        This folder contains <strong>{folderCounts[folderModal.targetFolder] || 0} item(s)</strong> which will also be permanently deleted.
+                      </p>
+                    </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-                  <button onClick={() => setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteItems: false, itemIds: [] })} className="btn btn-outline">
-                    Cancel
-                  </button>
-                  <button onClick={handleDeleteFolder} className="btn btn-danger">
-                    Confirm Delete
-                  </button>
-                </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.25rem' }}>
+                      <button 
+                        type="button"
+                        onClick={() => setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteStep: 1, deleteItems: true, itemIds: [] })} 
+                        className="btn btn-outline"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setFolderModal(prev => ({ ...prev, deleteStep: 2 }))} 
+                        className="btn btn-secondary"
+                        style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: 'white', fontWeight: 700 }}
+                      >
+                        Proceed to Final Confirmation &rarr;
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#ef4444' }}>
+                      <ShieldAlert size={32} />
+                      <div>
+                        <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ef4444', margin: 0 }}>
+                          FINAL WARNING: Permanent Deletion
+                        </h4>
+                        <span style={{ fontSize: '0.75rem', color: '#f87171', fontWeight: 700 }}>
+                          Confirmation Step 2 of 2 (Irreversible Action)
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1.5px solid rgba(239, 68, 68, 0.4)', borderRadius: '10px', padding: '1rem', lineHeight: 1.5, fontSize: '0.875rem' }}>
+                      <p style={{ margin: '0 0 0.5rem 0', color: 'white', fontWeight: 700 }}>
+                        ⚠️ This action CANNOT be undone!
+                      </p>
+                      <p style={{ margin: 0, color: '#fca5a5', fontSize: '0.825rem' }}>
+                        Folder <strong style={{ color: 'white' }}>'{folderModal.targetFolder}'</strong> and all <strong style={{ color: 'white' }}>{folderCounts[folderModal.targetFolder] || 0} item(s)</strong> inside it will be permanently erased from your database.
+                      </p>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.25rem' }}>
+                      <button 
+                        type="button"
+                        onClick={() => setFolderModal(prev => ({ ...prev, deleteStep: 1 }))} 
+                        className="btn btn-outline"
+                      >
+                        &larr; Back
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={handleDeleteFolder} 
+                        className="btn btn-danger"
+                        style={{ fontWeight: 800, padding: '0.6rem 1.25rem' }}
+                      >
+                        <Trash2 size={15} />
+                        <span>Yes, Permanently Delete Folder</span>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

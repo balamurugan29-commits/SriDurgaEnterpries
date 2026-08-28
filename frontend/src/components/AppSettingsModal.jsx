@@ -1,6 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useSettings } from '../context/SettingsContext';
-import { getServerApiUrl, setServerApiUrl, testServerConnection } from '../services/api';
+import { 
+  getServerApiUrl, 
+  setServerApiUrl, 
+  testServerConnection,
+  downloadTotalDatabaseBackup,
+  uploadTotalDatabaseBackup
+} from '../services/api';
 import { 
   X, 
   Sun, 
@@ -12,12 +18,14 @@ import {
   RotateCcw, 
   Check, 
   Sliders, 
-  Sparkles,
-  Smartphone,
-  Monitor,
-  Network,
-  RefreshCw,
-  AlertCircle
+  Download, 
+  Upload, 
+  Database, 
+  Smartphone, 
+  RefreshCw, 
+  AlertCircle,
+  HardDrive,
+  ShieldCheck
 } from 'lucide-react';
 
 export const AppSettingsModal = () => {
@@ -37,6 +45,12 @@ export const AppSettingsModal = () => {
   const [testingConn, setTestingConn] = useState(false);
   const [connStatus, setConnStatus] = useState(null);
 
+  // Backup & Restore state
+  const [downloading, setDownloading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [dbStatus, setDbStatus] = useState(null);
+  const fileInputRef = useRef(null);
+
   const isCustomServer = !!localStorage.getItem('sri_durga_custom_api_url');
 
   const handleTestConnection = async () => {
@@ -45,6 +59,69 @@ export const AppSettingsModal = () => {
     const res = await testServerConnection(serverUrl);
     setConnStatus(res);
     setTestingConn(false);
+  };
+
+  const handleDownloadBackup = async () => {
+    try {
+      setDownloading(true);
+      setDbStatus(null);
+      await downloadTotalDatabaseBackup();
+      setDbStatus({
+        type: 'success',
+        message: 'Total database downloaded successfully! All records safely backed up.'
+      });
+    } catch (err) {
+      setDbStatus({
+        type: 'error',
+        message: 'Failed to download database backup: ' + (err.response?.data?.message || err.message)
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleUploadFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to restore the database from file "${file.name}"?\n\n` +
+      `WARNING: This will replace all existing records with the data from this backup file.`
+    );
+
+    if (!confirmed) {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setDbStatus(null);
+      const res = await uploadTotalDatabaseBackup(file);
+      
+      const counts = res.counts || {};
+      const countDetails = Object.entries(counts)
+        .filter(([_, val]) => val > 0)
+        .map(([key, val]) => `${key}: ${val}`)
+        .join(', ');
+
+      setDbStatus({
+        type: 'success',
+        message: `Database restored successfully! (${countDetails || 'All records restored'}). Reloading view in 2 seconds...`
+      });
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 2200);
+    } catch (err) {
+      setDbStatus({
+        type: 'error',
+        message: 'Failed to restore database: ' + (err.response?.data?.message || err.message)
+      });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   if (!isSettingsOpen) return null;
@@ -72,7 +149,7 @@ export const AppSettingsModal = () => {
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '100%',
-          maxWidth: '560px',
+          maxWidth: '580px',
           maxHeight: '90vh',
           overflowY: 'auto',
           padding: '1.75rem',
@@ -93,7 +170,7 @@ export const AppSettingsModal = () => {
                 Application Settings
               </h2>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-                Customize theme, navigation layout & display preferences
+                Total Database Backup, Restore & UI Preferences
               </p>
             </div>
           </div>
@@ -109,6 +186,129 @@ export const AppSettingsModal = () => {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
           
+          {/* PRIMARY FEATURE: Total Database Backup & Restore */}
+          <div style={{ 
+            padding: '1.25rem', 
+            borderRadius: '16px', 
+            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(16, 185, 129, 0.12) 100%)', 
+            border: '1.5px solid rgba(99, 102, 241, 0.35)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Database size={18} color="#818cf8" />
+                <span style={{ fontSize: '0.925rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                  Total Database Management
+                </span>
+              </div>
+              <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.55rem', borderRadius: '20px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontWeight: 700 }}>
+                <ShieldCheck size={12} style={{ display: 'inline', marginRight: '3px' }} /> Full Backup & Restore
+              </span>
+            </div>
+
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.45 }}>
+              Download the complete ERP database (Customers, Items, Invoices, Job Cards, Gate Passes, Certificates, Ledgers, Company Details) and restore it anytime on any computer.
+            </p>
+
+            {/* Hidden File Input for Database Upload */}
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              accept=".json,.sdbak" 
+              onChange={handleUploadFileChange} 
+              style={{ display: 'none' }} 
+            />
+
+            {/* Two Primary Buttons: Download Total Database & Upload Total Database */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+              
+              {/* Button 1: Download Total Database */}
+              <button
+                type="button"
+                onClick={handleDownloadBackup}
+                disabled={downloading || uploading}
+                className="btn btn-primary"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem 1rem',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                  boxShadow: '0 4px 15px rgba(37, 99, 235, 0.35)',
+                  cursor: downloading ? 'wait' : 'pointer'
+                }}
+              >
+                {downloading ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" />
+                    <span>Downloading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download size={16} />
+                    <span>Download Total Database</span>
+                  </>
+                )}
+              </button>
+
+              {/* Button 2: Upload Total Database */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={downloading || uploading}
+                className="btn btn-primary"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem 1rem',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
+                  boxShadow: '0 4px 15px rgba(16, 185, 129, 0.35)',
+                  cursor: uploading ? 'wait' : 'pointer'
+                }}
+              >
+                {uploading ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" />
+                    <span>Restoring...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload size={16} />
+                    <span>Upload Total Database</span>
+                  </>
+                )}
+              </button>
+
+            </div>
+
+            {/* Database Status Feedback Alert */}
+            {dbStatus && (
+              <div style={{
+                padding: '0.65rem 0.85rem',
+                borderRadius: '10px',
+                fontSize: '0.78rem',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '0.5rem',
+                background: dbStatus.type === 'success' ? 'rgba(16, 185, 129, 0.18)' : 'rgba(239, 68, 68, 0.18)',
+                border: dbStatus.type === 'success' ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
+                color: dbStatus.type === 'success' ? '#34d399' : '#f87171'
+              }}>
+                {dbStatus.type === 'success' ? <Check size={16} style={{ flexShrink: 0, marginTop: '2px' }} /> : <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />}
+                <span>{dbStatus.message}</span>
+              </div>
+            )}
+          </div>
+
           {/* Section 1: Theme Selection */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
@@ -203,84 +403,80 @@ export const AppSettingsModal = () => {
             </div>
           </div>
 
-          {/* Section 2: Layout Orientation (Sidebar vs Topbar) */}
+          {/* Section 2: Navigation Layout Orientation */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
               <label className="form-label" style={{ margin: 0, fontSize: '0.8rem' }}>
                 Navigation Layout Orientation
               </label>
-              <span style={{ fontSize: '0.725rem', color: 'var(--text-subtle)', textTransform: 'capitalize' }}>
-                Active: <strong>{layout === 'side' ? 'Sidebar (Left)' : 'Top Navigation Bar'}</strong>
+              <span style={{ fontSize: '0.725rem', color: 'var(--text-subtle)' }}>
+                Active: <strong>{layout === 'sidebar' ? 'Sidebar (Left)' : 'Top Bar'}</strong>
               </span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
-              {/* Sidebar Navigation */}
               <button
                 type="button"
-                onClick={() => setLayout('side')}
+                onClick={() => setLayout('sidebar')}
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.75rem',
                   padding: '1rem',
                   borderRadius: '14px',
-                  border: layout === 'side' ? '2px solid #6366f1' : '1px solid var(--border-color)',
-                  background: layout === 'side' ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-card)',
+                  border: layout === 'sidebar' ? '2px solid #6366f1' : '1px solid var(--border-color)',
+                  background: layout === 'sidebar' ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-card)',
                   cursor: 'pointer',
                   textAlign: 'left',
                   transition: 'all 0.2s ease',
                   position: 'relative'
                 }}
               >
-                {layout === 'side' && (
+                {layout === 'sidebar' && (
                   <div style={{ position: 'absolute', top: '10px', right: '10px', width: '20px', height: '20px', borderRadius: '50%', background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
                     <Check size={12} strokeWidth={3} />
                   </div>
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(99, 102, 241, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(99, 102, 241, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8' }}>
                     <PanelLeft size={16} />
                   </div>
                   <div>
                     <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-main)', display: 'block' }}>Side Navigation</span>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Left-docked sidebar</span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Full-docked sidebar</span>
                   </div>
                 </div>
-                {/* Visual Layout Mockup */}
-                <div style={{ height: '36px', borderRadius: '6px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', display: 'flex', overflow: 'hidden' }}>
-                  <div style={{ width: '25%', background: 'rgba(99, 102, 241, 0.35)', borderRight: '1px solid var(--border-color)' }} />
-                  <div style={{ flex: 1, background: 'rgba(255, 255, 255, 0.03)', padding: '4px' }}>
-                    <div style={{ width: '60%', height: '4px', background: 'var(--border-color)', borderRadius: '2px' }} />
-                  </div>
+                {/* Visual Wireframe */}
+                <div style={{ height: '28px', borderRadius: '6px', background: 'var(--bg-app)', border: '1px solid var(--border-color)', display: 'flex', overflow: 'hidden' }}>
+                  <div style={{ width: '28%', background: '#6366f1', opacity: 0.6 }} />
+                  <div style={{ flex: 1 }} />
                 </div>
               </button>
 
-              {/* Top Navigation */}
               <button
                 type="button"
-                onClick={() => setLayout('top')}
+                onClick={() => setLayout('topbar')}
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.75rem',
                   padding: '1rem',
                   borderRadius: '14px',
-                  border: layout === 'top' ? '2px solid #6366f1' : '1px solid var(--border-color)',
-                  background: layout === 'top' ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-card)',
+                  border: layout === 'topbar' ? '2px solid #6366f1' : '1px solid var(--border-color)',
+                  background: layout === 'topbar' ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-card)',
                   cursor: 'pointer',
                   textAlign: 'left',
                   transition: 'all 0.2s ease',
                   position: 'relative'
                 }}
               >
-                {layout === 'top' && (
+                {layout === 'topbar' && (
                   <div style={{ position: 'absolute', top: '10px', right: '10px', width: '20px', height: '20px', borderRadius: '50%', background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
                     <Check size={12} strokeWidth={3} />
                   </div>
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34d399' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34d399' }}>
                     <PanelTop size={16} />
                   </div>
                   <div>
@@ -288,30 +484,27 @@ export const AppSettingsModal = () => {
                     <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Horizontal top bar</span>
                   </div>
                 </div>
-                {/* Visual Layout Mockup */}
-                <div style={{ height: '36px', borderRadius: '6px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                  <div style={{ height: '10px', background: 'rgba(16, 185, 129, 0.4)', borderBottom: '1px solid var(--border-color)' }} />
-                  <div style={{ flex: 1, background: 'rgba(255, 255, 255, 0.03)', padding: '4px' }}>
-                    <div style={{ width: '60%', height: '4px', background: 'var(--border-color)', borderRadius: '2px' }} />
-                  </div>
+                {/* Visual Wireframe */}
+                <div style={{ height: '28px', borderRadius: '6px', background: 'var(--bg-app)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                  <div style={{ height: '8px', background: '#10b981', opacity: 0.6 }} />
+                  <div style={{ flex: 1 }} />
                 </div>
               </button>
             </div>
           </div>
 
-          {/* Section 3: Navigation Display (Full with labels vs Icon Only) */}
+          {/* Section 3: Navigation Display Mode */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
               <label className="form-label" style={{ margin: 0, fontSize: '0.8rem' }}>
                 Navigation Bar Display Mode
               </label>
               <span style={{ fontSize: '0.725rem', color: 'var(--text-subtle)' }}>
-                Active: <strong>{navMode === 'full' ? 'Icons + Labels' : 'Icons Only (Compact)'}</strong>
+                Active: <strong>{navMode === 'full' ? 'Icons + Labels' : 'Icons Only'}</strong>
               </span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
-              {/* Full Mode */}
               <button
                 type="button"
                 onClick={() => setNavMode('full')}
@@ -329,54 +522,55 @@ export const AppSettingsModal = () => {
                   position: 'relative'
                 }}
               >
-                <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'rgba(99, 102, 241, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8', flexShrink: 0 }}>
-                  <Eye size={15} />
-                </div>
-                <div style={{ flex: 1 }}>
+                <Eye size={18} color="#818cf8" />
+                <div>
                   <span style={{ fontSize: '0.825rem', fontWeight: 700, color: 'var(--text-main)', display: 'block' }}>Full Labels</span>
-                  <span style={{ fontSize: '0.675rem', color: 'var(--text-muted)' }}>Icons + text wording</span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Icons + text wording</span>
                 </div>
-                {navMode === 'full' && <Check size={14} color="#6366f1" strokeWidth={3} />}
+                {navMode === 'full' && (
+                  <Check size={14} color="#6366f1" style={{ marginLeft: 'auto' }} />
+                )}
               </button>
 
-              {/* Icon Only Mode */}
               <button
                 type="button"
-                onClick={() => setNavMode('icons')}
+                onClick={() => setNavMode('collapsed')}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.75rem',
                   padding: '0.875rem 1rem',
                   borderRadius: '12px',
-                  border: navMode === 'icons' ? '2px solid #6366f1' : '1px solid var(--border-color)',
-                  background: navMode === 'icons' ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-card)',
+                  border: navMode === 'collapsed' ? '2px solid #6366f1' : '1px solid var(--border-color)',
+                  background: navMode === 'collapsed' ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-card)',
                   cursor: 'pointer',
                   textAlign: 'left',
                   transition: 'all 0.2s ease',
                   position: 'relative'
                 }}
               >
-                <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'rgba(245, 158, 11, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fbbf24', flexShrink: 0 }}>
-                  <EyeOff size={15} />
-                </div>
-                <div style={{ flex: 1 }}>
+                <EyeOff size={18} color="#f59e0b" />
+                <div>
                   <span style={{ fontSize: '0.825rem', fontWeight: 700, color: 'var(--text-main)', display: 'block' }}>Icons Only</span>
-                  <span style={{ fontSize: '0.675rem', color: 'var(--text-muted)' }}>Hide text wording</span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Hide text wording</span>
                 </div>
-                {navMode === 'icons' && <Check size={14} color="#6366f1" strokeWidth={3} />}
+                {navMode === 'collapsed' && (
+                  <Check size={14} color="#6366f1" style={{ marginLeft: 'auto' }} />
+                )}
               </button>
             </div>
           </div>
 
           {/* Section 4: Multi-PC LAN & Central Server Connection */}
-          <div style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1.5px solid rgba(99, 102, 241, 0.35)', borderRadius: '14px', padding: '1.15rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          <div style={{ padding: '1.25rem', borderRadius: '16px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#818cf8', fontWeight: 700, fontSize: '0.85rem' }}>
-                <Network size={18} />
-                <span>Multi-PC LAN & Central Server Connection</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <HardDrive size={18} color="#6366f1" />
+                <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  Multi-PC LAN & Central Server Connection
+                </span>
               </div>
-              <span style={{ fontSize: '0.675rem', padding: '2px 8px', borderRadius: '12px', background: isCustomServer ? 'rgba(56, 189, 248, 0.2)' : 'rgba(16, 185, 129, 0.2)', color: isCustomServer ? '#38bdf8' : '#34d399', fontWeight: 700 }}>
+              <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: '20px', background: isCustomServer ? 'rgba(99, 102, 241, 0.15)' : 'rgba(16, 185, 129, 0.15)', color: isCustomServer ? '#818cf8' : '#34d399', fontWeight: 600 }}>
                 {isCustomServer ? '🌐 Remote LAN Client' : '💻 Local Server Mode'}
               </span>
             </div>
@@ -393,7 +587,7 @@ export const AppSettingsModal = () => {
                   const url = 'http://192.168.1.39:8085/api';
                   setServerUrl(url);
                   setConnStatus(null);
-                  handleTestConnection(url);
+                  handleTestConnection();
                 }}
                 className="btn btn-outline"
                 style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', background: 'rgba(99, 102, 241, 0.15)', borderColor: 'rgba(99, 102, 241, 0.4)', color: '#818cf8', fontWeight: 600 }}
@@ -407,7 +601,7 @@ export const AppSettingsModal = () => {
                   const url = 'http://127.0.0.1:8085/api';
                   setServerUrl(url);
                   setConnStatus(null);
-                  handleTestConnection(url);
+                  handleTestConnection();
                 }}
                 className="btn btn-outline"
                 style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', color: 'var(--text-muted)' }}
@@ -431,7 +625,7 @@ export const AppSettingsModal = () => {
 
               <button
                 type="button"
-                onClick={() => handleTestConnection(serverUrl)}
+                onClick={handleTestConnection}
                 disabled={testingConn}
                 className="btn btn-secondary"
                 style={{ fontSize: '0.78rem', padding: '0.45rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}

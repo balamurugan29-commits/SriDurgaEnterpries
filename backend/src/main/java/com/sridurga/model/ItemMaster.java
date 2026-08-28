@@ -22,7 +22,7 @@ public class ItemMaster {
     @Column(name = "serial_number", nullable = false)
     private Integer serialNumber;
 
-    @Column(name = "item_code", nullable = false, unique = true, length = 100)
+    @Column(name = "item_code", nullable = false, length = 100)
     private String itemCode;
 
     @Column(nullable = false, length = 2000)

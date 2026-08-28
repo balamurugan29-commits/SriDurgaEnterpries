@@ -33,6 +33,24 @@ public class DatabaseMigrator {
             System.out.println("Notice reading database metadata: " + e.getMessage());
         }
 
+        // Drop any legacy global unique constraints on item_master(item_code) to allow folder-level duplicate scoping
+        try {
+            java.util.List<String> constraintNames = jdbcTemplate.query(
+                "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE UPPER(TABLE_NAME) = 'ITEM_MASTER' AND CONSTRAINT_TYPE = 'UNIQUE'",
+                (rs, rowNum) -> rs.getString("CONSTRAINT_NAME")
+            );
+            for (String cName : constraintNames) {
+                try {
+                    jdbcTemplate.execute("ALTER TABLE item_master DROP CONSTRAINT " + cName);
+                    System.out.println("Successfully dropped legacy unique constraint: " + cName);
+                } catch (Exception e) {
+                    System.out.println("Could not drop constraint " + cName + ": " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error querying table_constraints: " + e.getMessage());
+        }
+
         if (isSqlServer) {
             System.out.println("Running MS SQL Server Schema Column Alteration for Unlimited Description Length & Unit Support...");
 

@@ -25,6 +25,24 @@ export const SettingsProvider = ({ children }) => {
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarHidden, setSidebarHidden] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sri_durga_sidebar_hidden');
+      return saved === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const toggleSidebarHidden = () => {
+    setSidebarHidden(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('sri_durga_sidebar_hidden', String(next));
+      } catch (e) {}
+      return next;
+    });
+  };
 
   // Sync settings with DOM attributes and localStorage
   useEffect(() => {
@@ -95,6 +113,9 @@ export const SettingsProvider = ({ children }) => {
         setIsSettingsOpen,
         mobileMenuOpen,
         setMobileMenuOpen,
+        sidebarHidden,
+        setSidebarHidden,
+        toggleSidebarHidden,
       }}
     >
       {children}

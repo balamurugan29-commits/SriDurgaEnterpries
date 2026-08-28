@@ -172,35 +172,29 @@ export function generateTaxInvoicePrintHtml(challan) {
           <!-- Metadata Table Grid -->
           <table class="meta-table">
             <tbody>
-              <tr class="meta-row-highlight">
+              <tr class="meta-row-highlight" style="background-color: #dbe2ea !important;">
                 <td style="width: 15%; font-weight: 700;">Invoice No.</td>
                 <td style="width: 45%; font-weight: 800; font-size: 13px;">${cleanChallanNo}</td>
                 <td style="width: 15%; font-weight: 700;">Date :</td>
                 <td style="width: 25%; font-weight: 800; font-size: 13px;">${formattedDate}</td>
               </tr>
               <tr>
-                <td style="font-weight: 700;">Contract No.</td>
-                <td>${contractNo}</td>
+                <td style="font-weight: 700;">Vendor Code</td>
+                <td>${vendorCode || '-'}</td>
                 <td style="font-weight: 700;">Page</td>
                 <td style="font-weight: 700;">${page.pageNum} of ${page.totalPages}</td>
               </tr>
               ${isFirstPage ? `
                 <tr>
-                  <td style="font-weight: 700;">C. Period</td>
-                  <td>${contractPeriod}</td>
-                  <td style="font-weight: 700;">Vendor Code</td>
-                  <td>${vendorCode}</td>
-                </tr>
-                <tr>
-                  <td style="font-weight: 800;">P.O. No.</td>
-                  <td style="font-weight: 800;">${poNo}</td>
-                  <td style="font-weight: 800;">GSTIN</td>
+                  <td style="font-weight: 700;">P.O. No.</td>
+                  <td style="font-weight: 700;">${poNo || 'NA'}</td>
+                  <td style="font-weight: 700;">GSTIN</td>
                   <td style="font-weight: 800;">${gstin}</td>
                 </tr>
                 <tr>
-                  <td style="font-weight: 700;">B.G. No.</td>
-                  <td>${bgNo}</td>
-                  <td style="font-weight: 800;">PAN</td>
+                  <td style="font-weight: 700;">P.O. Date</td>
+                  <td>${challan.poDate ? new Date(challan.poDate).toLocaleDateString('en-GB') : (challan.poNumber ? '-' : 'NA')}</td>
+                  <td style="font-weight: 700;">PAN</td>
                   <td style="font-weight: 800;">${pan}</td>
                 </tr>
                 <tr>
@@ -213,19 +207,23 @@ export function generateTaxInvoicePrintHtml(challan) {
                   <td style="font-weight: 700;">ESI CODE</td>
                   <td>${esiCode}</td>
                   <td style="font-weight: 700;">Invoice Value</td>
-                  <td style="font-weight: 800;">Rs. ${Math.round(grossAmount)}.00</td>
+                  <td style="font-weight: 800;">Rs. ${grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 </tr>
-                <tr class="meta-row-billed">
-                  <td style="font-weight: 800; vertical-align: top;">BILLED TO</td>
-                  <td style="font-weight: 700; line-height: 1.3;">${customerName}</td>
-                  <td style="font-weight: 800; vertical-align: top;">PAN</td>
-                  <td style="font-weight: 800; vertical-align: top;">${customerPan}</td>
+                <tr class="meta-row-billed" style="background-color: #dbe2ea !important;">
+                  <td style="font-weight: 800; vertical-align: top; background-color: #dbe2ea !important;">BILLED TO</td>
+                  <td style="font-weight: 700; line-height: 1.3; background-color: #dbe2ea !important;">
+                    <div style="font-weight: 800;">${customerName}</div>
+                    ${challan.customerAddress ? `<div style="font-weight: 400; font-size: 11px;">${challan.customerAddress}</div>` : ''}
+                    ${challan.customerPhone ? `<div style="font-weight: 400; font-size: 11px;">Phone: ${challan.customerPhone}</div>` : ''}
+                  </td>
+                  <td style="font-weight: 800; vertical-align: top; background-color: #dbe2ea !important;">PAN</td>
+                  <td style="font-weight: 800; vertical-align: top; background-color: #dbe2ea !important;">${customerPan || '-'}</td>
                 </tr>
-                <tr class="meta-row-billed">
-                  <td style="font-weight: 800;">GST</td>
-                  <td style="font-weight: 800;">${customerGstin}</td>
-                  <td style="font-weight: 800;">State Code</td>
-                  <td style="font-weight: 800;">${customerState}</td>
+                <tr class="meta-row-billed" style="background-color: #dbe2ea !important;">
+                  <td style="font-weight: 800; background-color: #dbe2ea !important;">GST</td>
+                  <td style="font-weight: 800; background-color: #dbe2ea !important;">${customerGstin || '-'}</td>
+                  <td style="font-weight: 800; background-color: #dbe2ea !important;">State Code</td>
+                  <td style="font-weight: 800; background-color: #dbe2ea !important;">${customerState}</td>
                 </tr>
               ` : ''}
             </tbody>
@@ -235,12 +233,12 @@ export function generateTaxInvoicePrintHtml(challan) {
           <table class="items-table">
             <thead>
               <tr>
-                <th style="width: 38px; text-align: center;">Sl.No.</th>
-                <th style="width: 65px; text-align: center;">Item No.</th>
+                <th style="width: 42px; text-align: center;">Sl.No.</th>
+                <th style="width: 75px; text-align: center;">Item No.</th>
                 <th style="text-align: center;">Description</th>
-                <th style="width: 85px; text-align: right;">Rate</th>
-                <th style="width: 75px; text-align: center;">Qty</th>
-                <th style="width: 105px; text-align: right;">Amount</th>
+                <th style="width: 85px; text-align: center;">Rate</th>
+                <th style="width: 60px; text-align: center;">Qty</th>
+                <th style="width: 105px; text-align: center;">Amount</th>
               </tr>
             </thead>
             <tbody>
@@ -259,23 +257,22 @@ export function generateTaxInvoicePrintHtml(challan) {
               <!-- Page Items -->
               ${page.items.map((it, idx) => {
                 const itemSl = page.startIdx + idx + 1;
-                const itemCode = it.itemCode || '';
+                const itemCode = it.itemCode && it.itemCode !== 'CUSTOM' ? it.itemCode : '-';
                 const desc = it.description || '';
                 const rate = Number(it.rate) || 0;
                 const qty = Number(it.quantity) || 1;
-                const unit = it.unit || 'No';
+                const unit = it.unit || (qty === 1 ? 'No' : 'Nos');
                 const amt = Number(it.amount) || (qty * rate);
 
-                // Pluralize unit
-                const qtyDisplay = `${qty} ${qty > 1 && unit === 'No' ? 'Nos' : unit}`;
+                const qtyDisplay = `${qty} ${unit}`;
 
                 return `
                   <tr>
-                    <td style="text-align: center; vertical-align: top;">${itemSl}</td>
+                    <td style="text-align: center; vertical-align: top;">${it.serialNumber || itemSl}</td>
                     <td style="text-align: center; vertical-align: top; font-weight: 600;">${itemCode}</td>
-                    <td style="text-align: left; vertical-align: top; line-height: 1.35;">${desc}</td>
-                    <td style="text-align: right; vertical-align: top;">${rate.toFixed(2)}</td>
-                    <td style="text-align: center; vertical-align: top; white-space: nowrap;">${qtyDisplay}</td>
+                    <td style="text-align: left; vertical-align: top; line-height: 1.35; white-space: pre-line;">${desc}</td>
+                    <td style="text-align: right; vertical-align: top;">${rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td style="text-align: center; vertical-align: top; white-space: nowrap; font-weight: 600;">${qtyDisplay}</td>
                     <td style="text-align: right; vertical-align: top; font-weight: 600;">${amt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   </tr>
                 `;
@@ -293,49 +290,68 @@ export function generateTaxInvoicePrintHtml(challan) {
                 </tr>
               ` : ''}
 
-              <!-- Sub-Total and Final Calculation Rows (Only on Last Page) -->
+              <!-- Sub-Total (Only on Last Page) -->
               ${isLastPage ? `
-                <tr class="summary-row-subtotal">
-                  <td colspan="5" style="text-align: center; font-weight: 800;">Sub-Total</td>
-                  <td style="text-align: right; font-weight: 800;">${subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                </tr>
-                <tr class="summary-row-tax">
-                  <td colspan="4" style="text-align: left; font-weight: 800;">SAC Code : ${sacCode}</td>
-                  <td style="text-align: center; font-style: italic; font-weight: 700;">${isIntraState ? `CGST+SGST @ ${gstPct}%` : `IGST @ ${gstPct}%`}</td>
-                  <td style="text-align: right; font-weight: 700;">${gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                </tr>
-                <tr class="summary-row-gross">
-                  <td colspan="4" style="text-align: left; font-style: italic; font-weight: 800; font-size: 11px; line-height: 1.3;">
-                    ${wordsInRupees}
-                  </td>
-                  <td style="text-align: center; font-weight: 900; font-size: 12px; text-transform: uppercase;">
-                    GROSS AMOUNT
-                  </td>
-                  <td style="text-align: right; font-weight: 900; font-size: 13px;">
-                    Rs. ${Math.round(grossAmount)}.00
-                  </td>
+                <tr class="summary-row-subtotal" style="border-top: 1.5px solid #000;">
+                  <td colspan="5" style="text-align: right; font-style: italic; font-weight: 700; padding: 4px 12px;">Total</td>
+                  <td style="text-align: right; font-weight: 700;">${subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 </tr>
               ` : ''}
             </tbody>
           </table>
 
-          <!-- Footer Declaration and Signature Block (on Last Page) -->
+          <!-- Final Calculation & Footer Blocks (Only on Last Page) -->
           ${isLastPage ? `
-            <div class="declaration-box">
-              <div class="declaration-heading">DECLARATION</div>
-              <div class="declaration-text">
-                We hereby certifying that all the clause of the contract agreement including statutory clauses, Remittance of EPF payment have been complied.
+            <div style="border-top: 1.5px solid #000; display: flex; font-size: 11.5px; border-bottom: 1px solid #000;">
+              <!-- Left: SAC Code & Words -->
+              <div style="flex: 1; border-right: 1px solid #000; padding: 4px 8px; display: flex; flexDirection: column; justify-content: space-between;">
+                <div style="font-weight: 700; font-size: 11.5px;">
+                  SAC Code : ${sacCode || '995464'}, GST : ${gstPct}%
+                </div>
+                <div style="font-style: italic; font-weight: 700; font-size: 11px; margin-top: 6px;">
+                  ${wordsInRupees}
+                </div>
+              </div>
+
+              <!-- Right: Tax Breakdown & Gross Amount -->
+              <div style="width: 255px; display: flex; flex-direction: column;">
+                ${isIntraState ? `
+                  <div style="display: flex; justify-content: space-between; padding: 3px 8px; border-bottom: 1px solid #000; font-style: italic; font-size: 11.5px;">
+                    <span>CGST @ ${gstPct / 2}%</span>
+                    <span style="font-weight: 600;">${(gstAmount / 2).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; padding: 3px 8px; border-bottom: 1px solid #000; font-style: italic; font-size: 11.5px;">
+                    <span>SGST @ ${gstPct / 2}%</span>
+                    <span style="font-weight: 600;">${(gstAmount / 2).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                ` : `
+                  <div style="display: flex; justify-content: space-between; padding: 3px 8px; border-bottom: 1px solid #000; font-style: italic; font-size: 11.5px;">
+                    <span>IGST @ ${gstPct}%</span>
+                    <span style="font-weight: 600;">${gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                `}
+                <div style="display: flex; justify-content: space-between; padding: 4px 8px; font-weight: 700; font-size: 12px;">
+                  <span>GROSS AMOUNT</span>
+                  <span>Rs. ${grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
               </div>
             </div>
 
-            <div class="signature-box">
-              <div class="sig-left">
-                <u>E & O.E</u>
+            <!-- Footer: E & O.E, Bank Account Details, Signatory -->
+            <div style="display: flex; font-size: 11px; min-height: 80px;">
+              <div style="width: 15%; border-right: 1px solid #000; display: flex; align-items: center; justify-content: center; padding: 4px;">
+                <u style="font-weight: 700; font-size: 11.5px;">E & O.E</u>
               </div>
-              <div class="sig-right">
-                <div class="sig-company">For &nbsp;<strong>SRI DURGA ENTERPRISES</strong></div>
-                <div class="sig-space"></div>
-                <div class="sig-designation">MANAGING PARTNER</div>
+              <div style="width: 45%; border-right: 1px solid #000; padding: 4px 8px; line-height: 1.4;">
+                <div style="font-weight: 700; text-decoration: underline; margin-bottom: 2px;">Bank Account Details</div>
+                <div>Bank Name &nbsp;&nbsp;: Bank of India</div>
+                <div>Account No. : <strong>811030100000006</strong></div>
+                <div>Branch &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: Karaikal</div>
+                <div>IFSC &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <strong>BKID0008110</strong></div>
+              </div>
+              <div style="width: 40%; padding: 4px 10px; display: flex; flex-direction: column; justify-content: space-between; text-align: right;">
+                <div style="font-size: 11.5px;">For <strong>SRI DURGA ENTERPRISES</strong></div>
+                <div style="font-style: italic; font-size: 10.5px;">Authorised Signatory</div>
               </div>
             </div>
           ` : `
@@ -482,12 +498,18 @@ export function generateTaxInvoicePrintHtml(challan) {
             vertical-align: middle;
           }
 
-          .meta-row-highlight {
-            background-color: #f3f4f6 !important;
+          .meta-row-highlight,
+          .meta-row-highlight td {
+            background-color: #dbe2ea !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
 
-          .meta-row-billed {
-            background-color: #f3f4f6 !important;
+          .meta-row-billed,
+          .meta-row-billed td {
+            background-color: #dbe2ea !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
 
           /* Items Table */

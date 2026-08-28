@@ -277,8 +277,11 @@ export const ProformaInvoicePage = ({ initialProforma, clearEditingProforma }) =
     setCustomerPan(c.pan || '');
     if (c.stateCode) setCustomerStateCode(c.stateCode);
     if (c.vendorCode) setVendorCode(c.vendorCode);
+    if (c.poNumber) setPoNumber(c.poNumber);
+    if (c.poDate) setPoDate(c.poDate);
+    if (c.sacCode) setSacCode(c.sacCode);
     setCustomerSearchOpen(false);
-    setToast({ message: `Auto-filled details for '${c.customerName}' from Customer Directory!`, type: 'info' });
+    setToast({ message: `Auto-filled all details for '${c.customerName}' from Customer Directory!`, type: 'info' });
   };
 
   // Item Table Manipulation
@@ -349,14 +352,18 @@ export const ProformaInvoicePage = ({ initialProforma, clearEditingProforma }) =
     return items.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
   }, [items]);
 
-  const gstPctNum = parseFloat(gstPercent) || 0;
-  const gstAmount = (subTotal * gstPctNum) / 100;
-  const grossTotal = subTotal + gstAmount;
+  const customerGstPrefix = (customerGstin || '').trim().substring(0, 2);
+  const isIntraState = !customerGstPrefix || customerGstPrefix === '34' || (customerStateCode && (customerStateCode.includes('34') || customerStateCode.toLowerCase().includes('puducherry')));
 
-  const isIntraState = customerStateCode && (
-    customerStateCode.toLowerCase().includes('puducherry') || 
-    customerStateCode.includes('34')
-  );
+  const fullGstPercent = Number(gstPercent !== undefined ? gstPercent : 18);
+  const halfGstPercent = fullGstPercent / 2;
+
+  const cgstAmount = isIntraState ? subTotal * (halfGstPercent / 100) : 0;
+  const sgstAmount = isIntraState ? subTotal * (halfGstPercent / 100) : 0;
+  const igstAmount = !isIntraState ? subTotal * (fullGstPercent / 100) : 0;
+
+  const totalGstAmount = cgstAmount + sgstAmount + igstAmount;
+  const grossTotal = subTotal + totalGstAmount;
 
   // Build Payload
   const getPayload = () => {
@@ -420,12 +427,16 @@ export const ProformaInvoicePage = ({ initialProforma, clearEditingProforma }) =
         phone: customerPhone.trim(),
         gstin: customerGstin.trim(),
         pan: customerPan.trim(),
-        stateCode: customerStateCode.trim()
+        stateCode: customerStateCode.trim(),
+        poNumber: poNumber.trim(),
+        poDate: poDate ? poDate.trim() : '',
+        vendorCode: vendorCode.trim(),
+        sacCode: sacCode.trim()
       };
 
       if (existingCustomer && existingCustomer.id) {
         try {
-          await updateCustomer(existingCustomer.id, customerPayload);
+          await updateCustomer(existingCustomer.id, { ...existingCustomer, ...customerPayload });
         } catch (e) {
           console.warn('Customer directory update notice:', e);
         }
@@ -824,58 +835,125 @@ export const ProformaInvoicePage = ({ initialProforma, clearEditingProforma }) =
         </div>
       </div>
 
-      {/* Financial Summary & Tax Breakdown */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
+      {/* Summary Calculations & GST Breakdown Card */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.25rem' }}>
         
-        {/* Left: Notes & Terms */}
-        <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#818cf8', textTransform: 'uppercase' }}>
-            3. Notes & Remarks
-          </div>
-          <textarea
-            className="form-input"
-            rows={4}
-            placeholder="Special conditions, delivery terms, payment timelines..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </div>
-
-        {/* Right: Calculations */}
-        <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase' }}>
-            4. Proforma Financial Summary
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Taxable SubTotal:</span>
-            <span style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.95rem' }}>₹{subTotal.toFixed(2)}</span>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.35rem 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>GST Rate:</span>
-              <select
-                className="form-input"
-                style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', width: '80px' }}
-                value={gstPercent}
-                onChange={(e) => setGstPercent(e.target.value)}
-              >
-                <option value="0">0%</option>
-                <option value="5">5%</option>
-                <option value="12">12%</option>
-                <option value="18">18%</option>
-                <option value="28">28%</option>
-              </select>
+        {/* Notes & Summary Highlights */}
+        <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
+              Proforma Invoice GST Summary Details
+            </h4>
+            <div style={{ fontSize: '0.825rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+              <div>• Supply Type: <strong style={{ color: '#818cf8' }}>{isIntraState ? 'Intra-State (Puducherry - 34)' : 'Inter-State (Outside Puducherry)'}</strong></div>
+              <div>• Applied GST Tax Rates: <strong style={{ color: '#34d399' }}>{isIntraState ? `CGST: ${halfGstPercent}% + SGST: ${halfGstPercent}%` : `IGST: ${fullGstPercent}%`}</strong></div>
+              <div>• Proforma Number: <strong style={{ color: '#fbbf24' }}>{proformaNumber}</strong></div>
             </div>
-            <span style={{ fontWeight: 700, color: '#818cf8', fontSize: '0.9rem' }}>₹{gstAmount.toFixed(2)}</span>
+
+            <div style={{ marginTop: '0.75rem' }}>
+              <label className="form-label" style={{ fontSize: '0.725rem' }}>Notes & Remarks</label>
+              <textarea
+                className="form-input"
+                rows={2}
+                placeholder="Special conditions, delivery terms, payment timelines..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0.75rem', background: 'rgba(56, 189, 248, 0.12)', borderRadius: '8px', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
-            <span style={{ fontWeight: 900, color: '#38bdf8', fontSize: '1rem' }}>Gross Estimate Total:</span>
-            <span style={{ fontWeight: 900, color: '#34d399', fontSize: '1.2rem' }}>₹{grossTotal.toFixed(2)}</span>
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => setIsPreviewOpen(true)}
+              className="btn btn-outline"
+              style={{ flex: 1, minWidth: '150px', padding: '0.85rem 1rem', fontSize: '0.9rem', fontWeight: 700, color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.4)' }}
+            >
+              <Eye size={18} />
+              <span>Preview Proforma</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={saving}
+              onClick={handleSave}
+              className="btn btn-primary"
+              style={{ flex: 1, minWidth: '160px', padding: '0.85rem 1rem', fontSize: '0.9rem', fontWeight: 700 }}
+            >
+              <Save size={18} />
+              <span>{saving ? 'Saving...' : proformaId ? 'Update Proforma' : 'Save Proforma'}</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={saving}
+              onClick={async () => {
+                await handleSave();
+                handleDirectPrint();
+              }}
+              className="btn btn-secondary"
+              style={{ flex: 1, minWidth: '180px', padding: '0.85rem 1.25rem', fontSize: '0.9rem', fontWeight: 800, background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)', borderColor: 'rgba(16, 185, 129, 0.4)' }}
+            >
+              <Printer size={18} />
+              <span>Save & Preview / Print</span>
+            </button>
           </div>
         </div>
+
+        {/* GST Amount Calculation Table */}
+        <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+            <span style={{ color: 'var(--text-muted)' }}>Sub Total (Items Total):</span>
+            <strong style={{ color: 'var(--text-main)' }}>₹{subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+            <span style={{ color: 'var(--text-muted)' }}>GST Rate:</span>
+            <select
+              className="form-input"
+              style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', width: '90px' }}
+              value={gstPercent}
+              onChange={(e) => setGstPercent(e.target.value)}
+            >
+              <option value="0">0%</option>
+              <option value="5">5%</option>
+              <option value="12">12%</option>
+              <option value="18">18%</option>
+              <option value="28">28%</option>
+            </select>
+          </div>
+
+          {isIntraState ? (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>CGST ({halfGstPercent}%):</span>
+                <strong style={{ color: '#38bdf8' }}>+ ₹{cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>SGST / UTGST ({halfGstPercent}%):</span>
+                <strong style={{ color: '#38bdf8' }}>+ ₹{sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+              <span style={{ color: 'var(--text-muted)' }}>IGST ({fullGstPercent}%):</span>
+              <strong style={{ color: '#38bdf8' }}>+ ₹{igstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+            </div>
+          )}
+
+          <div style={{ borderTop: '1.5px solid var(--border-color)', paddingTop: '0.75rem', marginTop: '0.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'block' }}>Gross Estimate Total</span>
+              <span style={{ fontSize: '0.7rem', color: '#34d399', fontWeight: 600 }}>(Including All GST Taxes)</span>
+            </div>
+            <strong style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text-main)' }}>
+              ₹{grossTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </strong>
+          </div>
+        </div>
+
       </div>
 
       {/* Preview Modal */}

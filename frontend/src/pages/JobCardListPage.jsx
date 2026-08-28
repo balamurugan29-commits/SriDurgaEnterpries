@@ -182,8 +182,9 @@ export const JobCardListPage = ({ onEditJobCard, onNewJobCard }) => {
           </button>
 
           {onNewJobCard && (
-            <button onClick={onNewJobCard} className="btn btn-primary" style={{ fontSize: '0.85rem' }}>
-              <Plus size={15} /> + New Job Card
+            <button onClick={onNewJobCard} className="btn btn-primary" style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Plus size={15} />
+              <span>New Job Card</span>
             </button>
           )}
         </div>

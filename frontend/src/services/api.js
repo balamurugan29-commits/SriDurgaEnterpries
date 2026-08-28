@@ -307,6 +307,7 @@ export const ALL_SYSTEM_PERMISSIONS = [
   { id: 'dashboard', label: 'Dashboard Overview', category: 'General' },
   { id: 'master', label: 'Item Master Catalog', category: 'Master Directory' },
   { id: 'customer-master', label: 'Customer Directory', category: 'Master Directory' },
+  { id: 'company-details', label: 'Company Details Master', category: 'Master Directory' },
   { id: 'challan', label: 'Create Tax Invoice', category: 'Invoice' },
   { id: 'challan-list', label: 'Tax Invoice History', category: 'Invoice' },
   { id: 'proforma-invoice', label: 'Create Proforma Invoice', category: 'Invoice' },
@@ -336,7 +337,7 @@ export const DEFAULT_INITIAL_USERS = [
     password: 'staff123',
     fullName: 'Billing & Dispatch Staff',
     role: 'STAFF',
-    permissions: 'dashboard,master,customer-master,challan,challan-list,proforma-invoice,proforma-invoice-history,gate-pass,gate-pass-list,job-card,job-card-history,work-completion,work-completion-history'
+    permissions: 'dashboard,master,customer-master,company-details,challan,challan-list,proforma-invoice,proforma-invoice-history,gate-pass,gate-pass-list,job-card,job-card-history,work-completion,work-completion-history'
   }
 ];
 
@@ -1486,5 +1487,91 @@ export const deleteProforma = async (id) => {
   }
 };
 
+// ==========================================
+// COMPANY DETAILS MASTER API SERVICES
+// ==========================================
+export const DEFAULT_COMPANY_DETAILS = {
+  companyName: '',
+  address: '',
+  phone: '',
+  email: '',
+  gstin: '',
+  pan: '',
+  state: '',
+  epfCode: '',
+  esiCode: '',
+  bankName: '',
+  branch: '',
+  accountNumber: '',
+  ifscCode: ''
+};
 
+export const fetchCompanyDetails = async () => {
+  try {
+    const res = await api.get('/company-details');
+    if (res.data) {
+      localStorage.setItem('sri_durga_company_details', JSON.stringify(res.data));
+      return res.data;
+    }
+  } catch (err) {
+    console.warn('Backend fetch failed, using local storage cache for company details', err);
+    const local = localStorage.getItem('sri_durga_company_details');
+    if (local) {
+      try { return JSON.parse(local); } catch(e) {}
+    }
+  }
+  return DEFAULT_COMPANY_DETAILS;
+};
+
+export const saveCompanyDetails = async (details) => {
+  try {
+    const res = await api.post('/company-details', details);
+    localStorage.setItem('sri_durga_company_details', JSON.stringify(res.data));
+    return res.data;
+  } catch (err) {
+    console.warn('Backend save failed, caching in local storage', err);
+    localStorage.setItem('sri_durga_company_details', JSON.stringify(details));
+    return details;
+  }
+};
+
+// ==========================================
+// TOTAL DATABASE BACKUP & RESTORE
+// ==========================================
+
+export const downloadTotalDatabaseBackup = async () => {
+  const res = await api.get('/database/download', {
+    responseType: 'blob'
+  });
+  
+  const blob = new Blob([res.data], { type: 'application/json' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const now = new Date();
+  const dateStr = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  a.download = `sri_durga_total_database_backup_${dateStr}.json`;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+  return true;
+};
+
+export const uploadTotalDatabaseBackup = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const res = await api.post('/database/upload-restore', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+  return res.data;
+};
+
+export const fetchDatabaseSummary = async () => {
+  const res = await api.get('/database/summary');
+  return res.data;
+};
 

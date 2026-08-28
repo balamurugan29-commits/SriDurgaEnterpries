@@ -78,7 +78,7 @@ export const ItemModal = ({ isOpen, onClose, onSave, editItem, nextSno, availabl
     });
   };
 
-  const folderOptions = Array.from(new Set(['General', ...availableFolders.filter(Boolean)]));
+  const folderOptions = Array.from(new Set(['General', defaultFolder, ...availableFolders.filter(Boolean)].filter(Boolean)));
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>

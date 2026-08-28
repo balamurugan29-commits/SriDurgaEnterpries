@@ -1259,7 +1259,7 @@ export const PurchaseLedgerPage = () => {
             }}
           >
             <Plus size={16} />
-            <span>+ New Purchase Entry</span>
+            <span>New Purchase Entry</span>
           </button>
 
           {/* 2. FILTER BUTTON WITH ACTIVE BADGE */}

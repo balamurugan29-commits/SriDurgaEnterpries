@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fetchCertificates, fetchNextCertificateNo, createCertificate, updateCertificate, deleteCertificate, fetchItems, fetchItemByCode } from '../services/api';
 import { WorkCompletionPrintModal } from '../components/WorkCompletionPrintModal';
+import { WorkCompletionUploadModal } from '../components/WorkCompletionUploadModal';
 import { Toast } from '../components/Toast';
-import { Award, Plus, Save, Printer, Trash2, Edit3, ChevronRight, FileCheck, Building, Sparkles, RotateCcw, Calendar, HelpCircle, CheckCircle2, ShieldCheck, Wrench, Package } from 'lucide-react';
+import { Award, Plus, Save, Printer, Trash2, Edit3, ChevronRight, FileCheck, Building, Sparkles, RotateCcw, Calendar, HelpCircle, CheckCircle2, ShieldCheck, Wrench, Package, Upload, Eye } from 'lucide-react';
 
 const WCC_DRAFT_KEY = 'sri_durga_wcc_draft';
 
@@ -15,7 +16,39 @@ export const WorkCompletionPage = ({ editingCertificate, onCancelEdit }) => {
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [savedCertificate, setSavedCertificate] = useState(null);
   const [toast, setToast] = useState({ message: '', type: 'success' });
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const isInitialMount = useRef(true);
+
+  const handleApplyExtractedWccData = (data) => {
+    if (!data) return;
+
+    setFormData(prev => ({
+      ...prev,
+      certificateNo: data.certificateNo || prev.certificateNo,
+      certificateDate: data.certificateDate || prev.certificateDate,
+      agency: data.agency || prev.agency,
+      rateContractRef: data.rateContractRef || prev.rateContractRef,
+      equipmentDescription: data.equipmentDescription || prev.equipmentDescription,
+      equipment: data.equipment || prev.equipment,
+      location: data.location || prev.location,
+      make: data.make || prev.make,
+      slNo: data.slNo || prev.slNo,
+      capacity: data.capacity || prev.capacity,
+      typeModel: data.typeModel || prev.typeModel,
+      completionTime: data.completionTime || prev.completionTime,
+      dateHandingOver: data.dateHandingOver || prev.dateHandingOver,
+      dateCompletion: data.dateCompletion || prev.dateCompletion,
+      delayInCompletion: data.delayInCompletion || prev.delayInCompletion,
+      performanceOfMachines: data.performanceOfMachines || prev.performanceOfMachines,
+      defectiveSparesReturned: data.defectiveSparesReturned || prev.defectiveSparesReturned,
+      items: data.items && data.items.length > 0 ? data.items : prev.items
+    }));
+
+    setToast({
+      message: `✨ Successfully populated Certificate details from uploaded document!`,
+      type: 'success'
+    });
+  };
 
   // Clean blank template for 100% fresh data entry
   const getBlankCertificateForm = (nextNo = '') => ({
@@ -230,6 +263,16 @@ export const WorkCompletionPage = ({ editingCertificate, onCancelEdit }) => {
       setFormData(getBlankCertificateForm('WCC-01/26-27'));
     }
     setToast({ message: 'Cleared all fields. Ready for fresh new certificate entry!', type: 'info' });
+  };
+
+  const handlePreviewCertificate = () => {
+    const validItems = formData.items.filter(i => (i.rcItemNo && i.rcItemNo.trim()) || (i.description && i.description.trim()));
+    const previewPayload = {
+      ...formData,
+      items: validItems.length > 0 ? validItems.map((item, idx) => ({ ...item, serialNumber: idx + 1 })) : formData.items
+    };
+    setSavedCertificate(previewPayload);
+    setPrintModalOpen(true);
   };
 
   const handleSave = async (shouldPrint = false) => {
@@ -478,7 +521,29 @@ export const WorkCompletionPage = ({ editingCertificate, onCancelEdit }) => {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <button 
+            type="button"
+            onClick={() => setUploadModalOpen(true)} 
+            className="btn btn-secondary" 
+            style={{ 
+              fontSize: '0.85rem', 
+              padding: '0.5rem 1rem', 
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              borderColor: 'rgba(16, 185, 129, 0.4)',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              fontWeight: 700,
+              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
+            }}
+            title="Upload an Excel, PDF, or Image to auto-populate all Certificate details"
+          >
+            <Upload size={15} />
+            <span>Upload</span>
+          </button>
+
           {isServiceSelected && (
             <button 
               type="button"
@@ -761,7 +826,17 @@ export const WorkCompletionPage = ({ editingCertificate, onCancelEdit }) => {
           <span>Clear All / New Certificate</span>
         </button>
 
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button 
+            type="button" 
+            onClick={handlePreviewCertificate} 
+            className="btn btn-outline" 
+            style={{ padding: '0.85rem 1.5rem', fontWeight: 700, fontSize: '0.95rem', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.4)' }}
+          >
+            <Eye size={18} />
+            <span>Preview Certificate</span>
+          </button>
+
           <button 
             type="button" 
             disabled={saving} 
@@ -793,11 +868,19 @@ export const WorkCompletionPage = ({ editingCertificate, onCancelEdit }) => {
         certificate={savedCertificate} 
       />
 
+      {/* Universal Document & Image Upload Modal for Work Completion Certificate */}
+      <WorkCompletionUploadModal
+        isOpen={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        onApplyExtractedData={handleApplyExtractedWccData}
+        masterItems={masterItems}
+      />
+
       {/* Shared Datalist for Performance Optimization */}
       <datalist id="rc-master-items-datalist">
         {masterItems.map(m => (
           <option key={m.id} value={m.itemCode}>
-            {m.description ? m.description.slice(0, 45) + '...' : ''}
+            {m.folderName ? `[📁 ${m.folderName}] ` : ''}{m.description ? m.description.slice(0, 45) + '...' : ''}
           </option>
         ))}
       </datalist>

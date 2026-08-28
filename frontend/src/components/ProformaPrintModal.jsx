@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Printer, CheckCircle } from 'lucide-react';
 import { companyLogoBase64 } from '../assets/companyLogo';
+import { fetchCompanyDetails, DEFAULT_COMPANY_DETAILS } from '../services/api';
 
 // Utility to convert amount in numbers to Indian Rupee Words
 function numberToWordsINR(amount) {
@@ -36,6 +37,25 @@ function numberToWordsINR(amount) {
 
 export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
   const [copyType, setCopyType] = useState('ORIGINAL'); // 'ORIGINAL', 'DUPLICATE', 'OFFICE COPY', 'ALL'
+  const [showItemNumber, setShowItemNumber] = useState(() => {
+    const saved = localStorage.getItem('sri_durga_print_show_item_number');
+    return saved !== null ? saved === 'true' : true;
+  });
+  const [companyDetails, setCompanyDetails] = useState(() => {
+    const cached = localStorage.getItem('sri_durga_company_details');
+    if (cached) {
+      try { return JSON.parse(cached); } catch(e) {}
+    }
+    return DEFAULT_COMPANY_DETAILS;
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchCompanyDetails().then(data => {
+        if (data) setCompanyDetails(data);
+      }).catch(err => console.warn('Could not load company details for print', err));
+    }
+  }, [isOpen]);
 
   // Listen for Escape key to close modal
   useEffect(() => {
@@ -73,6 +93,9 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                 margin: 0;
                 padding: 0;
                 box-sizing: border-box;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
               }
               body {
                 font-family: Arial, sans-serif;
@@ -80,6 +103,8 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                 color: #000000;
                 padding: 0;
                 font-size: 12px;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
               }
               #proforma-invoice-print-area {
                 width: 100% !important;
@@ -100,6 +125,8 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                 page-break-after: always !important;
                 break-after: page !important;
                 overflow: hidden !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
               }
               .invoice-page:last-child {
                 page-break-after: avoid !important;
@@ -168,10 +195,8 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
   const grossAmount = subTotal + cgst + sgst + igst;
   const amountInWords = numberToWordsINR(grossAmount);
 
-  // Dynamic Column Check: If NO items have an Item Code, hide Item Code column from printed invoice!
-  const hasAnyItemCode = items.some(
-    i => i.itemCode && i.itemCode.trim() !== '' && i.itemCode.trim().toUpperCase() !== 'CUSTOM'
-  );
+  // Dynamic Column Check: Controls whether "Item No." column is displayed in printed invoice
+  const hasAnyItemCode = showItemNumber;
 
   // Full A4 Page Utilization Chunking Logic
   const chunkItems = (itemList) => {
@@ -447,8 +472,8 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                         {/* Metadata Grid Table */}
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', margin: 0, borderBottom: '1px solid #000' }}>
                           <tbody>
-                            {/* Row 1: Invoice No & Date with Light Shading Background (Present on ALL Pages) */}
-                            <tr style={{ background: '#dce4dc', borderBottom: '1px solid #000' }}>
+                            {/* Row 1: Invoice No & Date with Light Shading Background */}
+                            <tr style={{ background: '#dbe2ea', borderBottom: '1px solid #000' }}>
                               <td style={{ width: '15%', padding: '4px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
                                 Invoice No.
                               </td>
@@ -463,138 +488,119 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                               </td>
                             </tr>
 
-                            {/* Row 2: Contract No & Page (Present on ALL Pages) */}
-                            <tr style={{ borderBottom: isFirstPage ? '1px solid #000' : 'none' }}>
-                              <td style={{ padding: '4px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                Contract No.
+                            {/* Row 2: Vendor Code & Page */}
+                            <tr style={{ borderBottom: '1px solid #000' }}>
+                              <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                Vendor Code
                               </td>
-                              <td style={{ padding: '4px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                {proforma.contractNo || '9010038288'}
+                              <td style={{ padding: '3.5px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                {proforma.vendorCode || '-'}
                               </td>
-                              <td style={{ padding: '4px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                              <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
                                 Page
                               </td>
-                              <td style={{ padding: '4px 6px', fontWeight: 'bold', fontSize: '12px' }}>
+                              <td style={{ padding: '3.5px 6px', fontWeight: 'bold', fontSize: '12px' }}>
                                 {pageIdx + 1} of {pages.length}
                               </td>
                             </tr>
 
-                            {/* Rows 3 to 9: Rendered ONLY on Page 1 */}
+                            {/* Rows 3 to 8: Rendered ONLY on Page 1 */}
                             {isFirstPage && (
                               <>
-                                {/* Row 3: C. Period & Vendor Code */}
+                                {/* Row 3: P.O. No. & GSTIN */}
                                 <tr style={{ borderBottom: '1px solid #000' }}>
-                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                    C. Period
-                                  </td>
-                                  <td style={{ padding: '3px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                    {proforma.contractPeriod || '01.05.2024 to 30.04.2027'}
-                                  </td>
-                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                    Vendor Code
-                                  </td>
-                                  <td style={{ padding: '3px 6px', fontSize: '12px' }}>
-                                    {proforma.vendorCode || '840305'}
-                                  </td>
-                                </tr>
-
-                                {/* Row 4: P.O. No. & GSTIN */}
-                                <tr style={{ borderBottom: '1px solid #000' }}>
-                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                  <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     P.O. No.
                                   </td>
-                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                    {proforma.poNumber || '5060173862'}
+                                  <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    {proforma.poNumber || 'NA'}
                                   </td>
-                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                  <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     GSTIN
                                   </td>
-                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', fontSize: '12px' }}>
-                                    {proforma.gstin || '34ABDFS4476N1ZN'}
+                                  <td style={{ padding: '3.5px 6px', fontWeight: 'bold', fontSize: '12px' }}>
+                                    {companyDetails?.gstin || proforma.gstin || '34ABDFS4476N1ZN'}
                                   </td>
                                 </tr>
 
-                                {/* Row 5: B.G. NO. & PAN */}
+                                {/* Row 4: P.O. Date & PAN */}
                                 <tr style={{ borderBottom: '1px solid #000' }}>
-                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                    B.G. NO.
+                                  <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    P.O. Date
                                   </td>
-                                  <td style={{ padding: '3px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                    {proforma.bgNo || '8110IPEBG240001 Validity Upto : 30.09.2027'}
+                                  <td style={{ padding: '3.5px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    {proforma.poDate ? new Date(proforma.poDate).toLocaleDateString('en-GB') : (proforma.poNumber ? '-' : 'NA')}
                                   </td>
-                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                  <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     PAN
                                   </td>
-                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', fontSize: '12px' }}>
-                                    {proforma.pan || 'ABDFS4476N'}
+                                  <td style={{ padding: '3.5px 6px', fontWeight: 'bold', fontSize: '12px' }}>
+                                    {companyDetails?.pan || proforma.pan || 'ABDFS4476N'}
                                   </td>
                                 </tr>
 
-                                {/* Row 6: EPF Code & State Code */}
+                                {/* Row 5: EPF Code & State Code */}
                                 <tr style={{ borderBottom: '1px solid #000' }}>
-                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                  <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     EPF Code
                                   </td>
-                                  <td style={{ padding: '3px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                    {proforma.epfCode || 'PC 1758'}
+                                  <td style={{ padding: '3.5px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    {companyDetails?.epfCode || proforma.epfCode || 'PC 1758'}
                                   </td>
-                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                  <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     State Code
                                   </td>
-                                  <td style={{ padding: '3px 6px', fontSize: '12px' }}>
-                                    {proforma.stateCode || 'Puducherry (34)'}
+                                  <td style={{ padding: '3.5px 6px', fontSize: '12px' }}>
+                                    {companyDetails?.state || proforma.stateCode || 'Puducherry (34)'}
                                   </td>
                                 </tr>
 
-                                {/* Row 7: ESI CODE & Invoice Value */}
+                                {/* Row 6: ESI CODE & Invoice Value */}
                                 <tr style={{ borderBottom: '1px solid #000' }}>
-                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                  <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     ESI CODE
                                   </td>
-                                  <td style={{ padding: '3px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                    {proforma.esiCode || '55000426770000602'}
+                                  <td style={{ padding: '3.5px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    {companyDetails?.esiCode || proforma.esiCode || '55000426770000602'}
                                   </td>
-                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                  <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     Invoice Value
                                   </td>
-                                  <td style={{ padding: '3px 6px', fontWeight: '900', fontSize: '12.5px' }}>
-                                    Rs. {grossAmount.toFixed(2)}
+                                  <td style={{ padding: '3.5px 6px', fontWeight: 'bold', fontSize: '12px' }}>
+                                    Rs. {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </td>
                                 </tr>
 
-                                {/* Row 8: BILLED TO & PAN */}
-                                <tr style={{ borderBottom: '1px solid #000' }}>
-                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px', verticalAlign: 'top' }}>
+                                {/* Row 7: BILLED TO Section (Entire Row Highlighted) */}
+                                <tr style={{ background: '#dbe2ea', borderBottom: '1px solid #000' }}>
+                                  <td style={{ padding: '4px 6px', fontWeight: 'bold', background: '#dbe2ea', verticalAlign: 'top', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     BILLED TO
                                   </td>
-                                  <td style={{ padding: '3px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                    <div style={{ fontWeight: 'bold' }}>{proforma.customerName || 'The G.M (Electrical), Surface Team , ONGC, Tamilnadu.'}</div>
-                                    {proforma.customerAddress && (
-                                      <div style={{ fontSize: '11px', color: '#111827', marginTop: '1px' }}>
-                                        {proforma.customerAddress}
-                                      </div>
-                                    )}
+                                  <td style={{ padding: '4px 6px', fontWeight: 'bold', background: '#dbe2ea', lineHeight: '1.35', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    <div style={{ fontWeight: 'bold' }}>{proforma.customerName || '-'}</div>
+                                    {proforma.customerAddress && <div style={{ fontWeight: 'normal', fontSize: '11px', whiteSpace: 'pre-line' }}>{proforma.customerAddress}</div>}
+                                    {proforma.customerPhone && <div style={{ fontWeight: 'normal', fontSize: '11px' }}>Phone: {proforma.customerPhone}</div>}
                                   </td>
-                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px', verticalAlign: 'top' }}>
+                                  <td style={{ padding: '4px 6px', fontWeight: 'bold', background: '#dbe2ea', verticalAlign: 'top', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     PAN
                                   </td>
-                                  <td style={{ padding: '3px 6px', fontSize: '12px', verticalAlign: 'top', fontWeight: 'bold' }}>
-                                    {proforma.customerPan || 'AAACO1598A'}
+                                  <td style={{ padding: '4px 6px', fontWeight: 'bold', background: '#dbe2ea', verticalAlign: 'top', fontSize: '12px' }}>
+                                    {proforma.customerPan || '-'}
                                   </td>
                                 </tr>
 
-                                {/* Row 9: GST & State Code */}
-                                <tr>
-                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                {/* Row 8: Customer GST & Customer State Code (Entire Row Highlighted) */}
+                                <tr style={{ background: '#dbe2ea', borderBottom: '1px solid #000' }}>
+                                  <td style={{ padding: '3.5px 6px', fontWeight: 'bold', background: '#dbe2ea', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     GST
                                   </td>
-                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                    {proforma.customerGstin || '33AAACO1598A1ZU'}
+                                  <td style={{ padding: '3.5px 6px', fontWeight: 'bold', background: '#dbe2ea', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    {proforma.customerGstin || '-'}
                                   </td>
-                                  <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                  <td style={{ padding: '3.5px 6px', fontWeight: 'bold', background: '#dbe2ea', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     State Code
                                   </td>
-                                  <td style={{ padding: '3px 6px', fontSize: '12px' }}>
+                                  <td style={{ padding: '3.5px 6px', fontWeight: 'bold', background: '#dbe2ea', fontSize: '12px' }}>
                                     {proforma.customerStateCode || 'TAMILNADU (33)'}
                                   </td>
                                 </tr>
@@ -602,48 +608,41 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                             )}
                           </tbody>
                         </table>
+
+                        {/* Equipment / Job Header (If provided) */}
+                        {proforma.equipmentHeader && isFirstPage && (
+                          <div style={{ borderBottom: '1px solid #000', padding: '0.35rem 0.75rem', background: '#f8fafc', fontWeight: 'bold', fontSize: '12px', textAlign: 'center' }}>
+                            {proforma.equipmentHeader}
+                          </div>
+                        )}
                       </div>
 
-                      {/* 2. BODY / LINE ITEMS SECTION (Grows to fill page completely with continuous vertical lines) */}
+                      {/* 2. BODY / LINE ITEMS SECTION */}
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                         <table style={{ width: '100%', height: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left', margin: 0, display: 'table' }}>
                           <thead>
-                            <tr style={{ borderBottom: '1px solid #000', borderTop: 'none', background: '#ffffff', height: '26px' }}>
-                              <th style={{ width: '42px', padding: '4px 2px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}>
-                                Sl.No.
-                              </th>
-                              {hasAnyItemCode && (
-                                <th style={{ width: '75px', padding: '4px 4px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}>
-                                  Item No.
-                                </th>
-                              )}
-                              <th style={{ padding: '4px 6px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}>
-                                Description
-                              </th>
-                              <th style={{ width: '85px', padding: '4px 4px', borderRight: '1px solid #000', textAlign: 'right', fontSize: '12px', fontWeight: 'bold' }}>
-                                Rate
-                              </th>
-                              <th style={{ width: '50px', padding: '4px 2px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}>
-                                Qty
-                              </th>
-                              <th style={{ width: '105px', padding: '4px 6px', textAlign: 'right', fontSize: '12px', fontWeight: 'bold' }}>
-                                Amount
-                              </th>
+                            <tr style={{ borderBottom: '1.5px solid #000', background: '#f1f5f9', fontWeight: 'bold', textAlign: 'center', height: '28px' }}>
+                              <th style={{ width: '42px', padding: '4px 2px', borderRight: '1px solid #000', fontSize: '12px' }}>Sl.No.</th>
+                              {hasAnyItemCode && <th style={{ width: '80px', padding: '4px 2px', borderRight: '1px solid #000', fontSize: '12px' }}>Item No.</th>}
+                              <th style={{ padding: '4px 6px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px' }}>Description</th>
+                              <th style={{ width: '85px', padding: '4px 4px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px' }}>Rate</th>
+                              <th style={{ width: '60px', padding: '4px 2px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px' }}>Qty</th>
+                              <th style={{ width: '105px', padding: '4px 6px', textAlign: 'center', fontSize: '12px' }}>Amount</th>
                             </tr>
                           </thead>
                           <tbody>
                             {/* Page 2+: Show Amount Brought Forward at top */}
                             {!isFirstPage && (
-                              <tr style={{ borderBottom: '1px solid #000', background: '#f8fafc', height: '24px' }}>
-                                <td style={{ padding: '3px', borderRight: '1px solid #000', textAlign: 'center' }}>-</td>
-                                {hasAnyItemCode && <td style={{ padding: '3px', borderRight: '1px solid #000' }}>-</td>}
-                                <td style={{ padding: '3px 6px', borderRight: '1px solid #000', fontWeight: 'bold', fontSize: '12px' }}>
-                                  Amount Brought Forward from Page {pageIdx}
+                              <tr style={{ borderBottom: '1px solid #000', background: '#f8fafc', height: '26px' }}>
+                                <td style={{ borderRight: '1px solid #000' }}></td>
+                                {hasAnyItemCode && <td style={{ borderRight: '1px solid #000' }}></td>}
+                                <td style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #000', fontStyle: 'italic', fontWeight: 800, fontSize: '12px' }}>
+                                  Brought Forward from Page {pageIdx}
                                 </td>
-                                <td style={{ padding: '3px', borderRight: '1px solid #000' }}></td>
-                                <td style={{ padding: '3px', borderRight: '1px solid #000' }}></td>
-                                <td style={{ padding: '3px 6px', textAlign: 'right', fontWeight: 'bold', fontSize: '12px' }}>
-                                  {bForward.toFixed(2)}
+                                <td style={{ borderRight: '1px solid #000' }}></td>
+                                <td style={{ borderRight: '1px solid #000' }}></td>
+                                <td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 800, fontSize: '12px' }}>
+                                  {bForward.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </td>
                               </tr>
                             )}
@@ -653,34 +652,35 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                               const qty = Number(item.quantity) || 1;
                               const rate = Number(item.rate) || 0;
                               const amt = Number(item.amount) || (qty * rate);
+                              const overallIndex = pageIdx === 0 ? itemIdx + 1 : (pages.slice(0, pageIdx).reduce((acc, p) => acc + p.length, 0) + itemIdx + 1);
 
                               return (
                                 <tr key={itemIdx} style={{ verticalAlign: 'top', minHeight: '24px' }}>
-                                  <td style={{ padding: '3px 2px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px' }}>
-                                    {item.serialNumber || (itemIdx + 1)}
+                                  <td style={{ padding: '4px 2px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px' }}>
+                                    {item.serialNumber || overallIndex}
                                   </td>
                                   {hasAnyItemCode && (
-                                    <td style={{ padding: '3px 4px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}>
-                                      {item.itemCode && item.itemCode.toUpperCase() !== 'CUSTOM' ? item.itemCode : ''}
+                                    <td style={{ padding: '4px 2px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: '600' }}>
+                                      {item.itemCode && item.itemCode.toUpperCase() !== 'CUSTOM' ? item.itemCode : '-'}
                                     </td>
                                   )}
-                                  <td style={{ padding: '3px 6px', borderRight: '1px solid #000', textAlign: 'left', fontSize: '12px', lineHeight: '1.25' }}>
+                                  <td style={{ padding: '4px 6px', borderRight: '1px solid #000', textAlign: 'left', fontSize: '12px', whiteSpace: 'pre-line', lineHeight: '1.35' }}>
                                     {item.description}
                                   </td>
-                                  <td style={{ padding: '3px 4px', borderRight: '1px solid #000', textAlign: 'right', fontSize: '12px' }}>
-                                    {rate.toFixed(2)}
+                                  <td style={{ padding: '4px 4px', borderRight: '1px solid #000', textAlign: 'right', fontSize: '12px' }}>
+                                    {Number(rate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </td>
-                                  <td style={{ padding: '3px 2px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px' }}>
-                                    {qty}
+                                  <td style={{ padding: '4px 2px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: '600' }}>
+                                    {qty} {item.unit || (Number(qty) === 1 ? 'No' : 'Nos')}
                                   </td>
-                                  <td style={{ padding: '3px 6px', textAlign: 'right', fontSize: '12px', fontWeight: '600' }}>
-                                    {amt.toFixed(2)}
+                                  <td style={{ padding: '4px 6px', textAlign: 'right', fontSize: '12px', fontWeight: '600' }}>
+                                    {amt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </td>
                                 </tr>
                               );
                             })}
 
-                            {/* Stretcher row to ensure vertical border lines connect seamlessly all the way to the bottom footer */}
+                            {/* Stretcher row */}
                             <tr style={{ height: '100%' }}>
                               <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>
                               {hasAnyItemCode && <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>}
@@ -689,127 +689,122 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                               <td style={{ borderRight: '1px solid #000' }}>&nbsp;</td>
                               <td>&nbsp;</td>
                             </tr>
+
+                            {/* Carried Forward row */}
+                            {pageIdx < pages.length - 1 && (
+                              <tr style={{ fontWeight: 'bold', background: '#f8fafc', borderTop: '1.5px solid #000', height: '30px' }}>
+                                <td style={{ borderRight: '1px solid #000' }}></td>
+                                {hasAnyItemCode && <td style={{ borderRight: '1px solid #000' }}></td>}
+                                <td style={{ padding: '5px 8px', textAlign: 'center', borderRight: '1px solid #000', fontSize: '12px', fontStyle: 'italic' }}>
+                                  Carried Over to Page {pageIdx + 2}
+                                </td>
+                                <td style={{ borderRight: '1px solid #000' }}></td>
+                                <td style={{ borderRight: '1px solid #000' }}></td>
+                                <td style={{ padding: '5px 8px', textAlign: 'right', fontSize: '12px', fontWeight: 800 }}>
+                                  {(bForward + pTotal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                              </tr>
+                            )}
+
+                            {/* Final Total row on last page */}
+                            {isLastPage && (
+                              <tr style={{ borderTop: '1.5px solid #000', height: '28px' }}>
+                                <td colSpan={hasAnyItemCode ? 5 : 4} style={{ padding: '4px 12px', textAlign: 'right', fontStyle: 'italic', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                  Total
+                                </td>
+                                <td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 'bold', fontSize: '12px' }}>
+                                  {subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                              </tr>
+                            )}
                           </tbody>
                         </table>
                       </div>
 
                       {/* 3. FOOTER / TOTALS SECTION */}
-                      <div style={{ flexShrink: 0 }}>
-                        {/* If NOT the last page: Print Subtotal and Carried Over line */}
-                        {!isLastPage && (
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', borderTop: '1px solid #000' }}>
-                            <tbody>
-                              <tr style={{ borderBottom: '1px solid #000', background: '#f8fafc' }}>
-                                <td style={{ width: hasAnyItemCode ? '68%' : '78%', padding: '4px 6px', borderRight: '1px solid #000', fontWeight: 'bold', textAlign: 'right' }}>
-                                  Page {pageIdx + 1} Total:
-                                </td>
-                                <td style={{ width: '6%', borderRight: '1px solid #000' }}></td>
-                                <td style={{ width: '16%', padding: '4px 6px', textAlign: 'right', fontWeight: 'bold' }}>
-                                  {pTotal.toFixed(2)}
-                                </td>
-                              </tr>
-                              <tr style={{ background: '#dce4dc' }}>
-                                <td style={{ width: hasAnyItemCode ? '68%' : '78%', padding: '4px 6px', borderRight: '1px solid #000', fontWeight: '900', textAlign: 'right' }}>
-                                  Amount Carried Over to Page {pageIdx + 2}:
-                                </td>
-                                <td style={{ width: '6%', borderRight: '1px solid #000' }}></td>
-                                <td style={{ width: '16%', padding: '4px 6px', textAlign: 'right', fontWeight: '900' }}>
-                                  {(bForward + pTotal).toFixed(2)}
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        )}
+                      {isLastPage && (
+                        <div style={{ flexShrink: 0, borderTop: '1.5px solid #000' }}>
+                          {/* SAC Code, Words, Tax Breakdown & Gross Amount Box */}
+                          <div style={{ borderBottom: '1px solid #000', display: 'flex', fontSize: '12px' }}>
+                            {/* Left: SAC Code & Words */}
+                            <div style={{ flex: 1, borderRight: '1px solid #000', padding: '4px 8px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                              <div style={{ fontWeight: 'bold', fontSize: '12px' }}>
+                                SAC Code : {proforma.sacCode || '995464'}, GST : {gstPercent}%
+                              </div>
+                              <div style={{ fontStyle: 'italic', fontWeight: 'bold', fontSize: '11.5px', marginTop: '6px' }}>
+                                {amountInWords}
+                              </div>
+                            </div>
 
-                        {/* If LAST PAGE: Print Final Full Tax Invoice Footer Table with GST & Signatures */}
-                        {isLastPage && (
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', margin: 0, borderTop: '1px solid #000' }}>
-                            <tbody>
-                              {/* Total Amount Line */}
-                              <tr style={{ borderBottom: '1px solid #000' }}>
-                                <td style={{ width: hasAnyItemCode ? '68%' : '78%', padding: '3px 6px', borderRight: '1px solid #000', textAlign: 'right', fontWeight: 'bold', fontSize: '12px' }}>
-                                  Total Amount
-                                </td>
-                                <td style={{ width: '6%', borderRight: '1px solid #000' }}></td>
-                                <td style={{ width: '16%', padding: '3px 6px', textAlign: 'right', fontWeight: 'bold', fontSize: '12px' }}>
-                                  {subTotal.toFixed(2)}
-                                </td>
-                              </tr>
-
-                              {/* SAC Code & GST Breakdown */}
+                            {/* Right: IGST / CGST+SGST & Gross Amount */}
+                            <div style={{ width: '255px', display: 'flex', flexDirection: 'column' }}>
                               {isIntraState ? (
                                 <>
-                                  <tr style={{ borderBottom: '1px solid #000' }}>
-                                    <td style={{ padding: '2px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                      SAC CODE : {proforma.sacCode || '995469'}
-                                    </td>
-                                    <td style={{ borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}>
-                                      CGST
-                                    </td>
-                                    <td style={{ padding: '2px 6px', textAlign: 'right', fontSize: '12px' }}>
-                                      {halfGst}% &nbsp;&nbsp;&nbsp; {cgst.toFixed(2)}
-                                    </td>
-                                  </tr>
-                                  <tr style={{ borderBottom: '1px solid #000' }}>
-                                    <td style={{ padding: '2px 6px', borderRight: '1px solid #000', fontSize: '12px' }}></td>
-                                    <td style={{ borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}>
-                                      SGST / UGST
-                                    </td>
-                                    <td style={{ padding: '2px 6px', textAlign: 'right', fontSize: '12px' }}>
-                                      {halfGst}% &nbsp;&nbsp;&nbsp; {sgst.toFixed(2)}
-                                    </td>
-                                  </tr>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 8px', borderBottom: '1px solid #000', fontStyle: 'italic', fontSize: '12px' }}>
+                                    <span>CGST @ {halfGst}%</span>
+                                    <span style={{ fontWeight: '600' }}>{cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 8px', borderBottom: '1px solid #000', fontStyle: 'italic', fontSize: '12px' }}>
+                                    <span>SGST @ {halfGst}%</span>
+                                    <span style={{ fontWeight: '600' }}>{sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  </div>
                                 </>
                               ) : (
-                                <tr style={{ borderBottom: '1px solid #000' }}>
-                                  <td style={{ padding: '2px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                    SAC CODE : {proforma.sacCode || '995469'}
-                                  </td>
-                                  <td style={{ borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' }}>
-                                    IGST
-                                  </td>
-                                  <td style={{ padding: '2px 6px', textAlign: 'right', fontSize: '12px' }}>
-                                    {gstPercent}% &nbsp;&nbsp;&nbsp; {igst.toFixed(2)}
-                                  </td>
-                                </tr>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 8px', borderBottom: '1px solid #000', fontStyle: 'italic', fontSize: '12px' }}>
+                                  <span>IGST @ {gstPercent}%</span>
+                                  <span style={{ fontWeight: '600' }}>{igst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
                               )}
 
-                              {/* Gross Total */}
-                              <tr style={{ borderBottom: '1px solid #000', background: '#dce4dc' }}>
-                                <td style={{ padding: '3px 6px', borderRight: '1px solid #000', textAlign: 'right', fontWeight: '900', fontSize: '12.5px' }}>
-                                  GROSS TOTAL
-                                </td>
-                                <td style={{ borderRight: '1px solid #000' }}></td>
-                                <td style={{ padding: '3px 6px', textAlign: 'right', fontWeight: '900', fontSize: '13px' }}>
-                                  {grossAmount.toFixed(2)}
-                                </td>
-                              </tr>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 8px', fontWeight: 'bold', fontSize: '12.5px' }}>
+                                <span>GROSS AMOUNT</span>
+                                <span>Rs. {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                              </div>
+                            </div>
+                          </div>
 
-                              {/* Amount in Words */}
-                              <tr style={{ borderBottom: '1px solid #000' }}>
-                                <td colSpan={3} style={{ padding: '4px 6px', fontSize: '12px', fontWeight: 'bold' }}>
-                                  {amountInWords}
-                                </td>
-                              </tr>
+                          {/* Footer Terms, Bank Details & Signatures */}
+                          <div style={{ display: 'flex', fontSize: '11.5px', minHeight: '85px' }}>
+                            {/* Col 1: E & O.E */}
+                            <div style={{ width: '15%', borderRight: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}>
+                              <u style={{ fontWeight: 'bold', fontSize: '12px' }}>E & O.E</u>
+                            </div>
 
-                              {/* Bank Details & Signature Section */}
-                              <tr>
-                                <td style={{ padding: '4px 6px', borderRight: '1px solid #000', fontSize: '11px', lineHeight: '1.3' }}>
-                                  <div>Bank Account Details for Payment:</div>
-                                  <div>Account Name: <strong>SRI DURGA ENTERPRISES</strong></div>
-                                  <div>Account No: <strong>1152135000003056</strong> &nbsp;&nbsp; IFSC: <strong>KVBL0001152</strong></div>
-                                  <div>Bank: <strong>Karur Vysya Bank, Karaikal</strong></div>
-                                </td>
-                                <td colSpan={2} style={{ padding: '4px 6px', textAlign: 'center', verticalAlign: 'bottom', fontSize: '12px' }}>
-                                  <div style={{ fontWeight: 'bold', fontSize: '12px' }}>For SRI DURGA ENTERPRISES</div>
-                                  <div style={{ height: '35px' }}></div>
-                                  <div style={{ fontWeight: 'bold', fontSize: '11px' }}>Authorised Signatory</div>
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        )}
-                      </div>
+                            {/* Col 2: Bank Account Details */}
+                            <div style={{ width: '45%', borderRight: '1px solid #000', padding: '4px 8px', lineHeight: '1.4' }}>
+                              <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '2px', fontSize: '12px' }}>
+                                Bank Account Details
+                              </div>
+                              <div style={{ display: 'flex' }}>
+                                <span style={{ width: '85px', fontWeight: '500' }}>Bank Name</span>
+                                <span>: {companyDetails?.bankName || 'Bank of India'}</span>
+                              </div>
+                              <div style={{ display: 'flex' }}>
+                                <span style={{ width: '85px', fontWeight: '500' }}>Account No.</span>
+                                <span>: <strong>{companyDetails?.accountNumber || '811030100000006'}</strong></span>
+                              </div>
+                              <div style={{ display: 'flex' }}>
+                                <span style={{ width: '85px', fontWeight: '500' }}>Branch</span>
+                                <span>: {companyDetails?.branch || 'Karaikal'}</span>
+                              </div>
+                              <div style={{ display: 'flex' }}>
+                                <span style={{ width: '85px', fontWeight: '500' }}>IFSC</span>
+                                <span>: <strong>{companyDetails?.ifscCode || 'BKID0008110'}</strong></span>
+                              </div>
+                            </div>
+
+                            {/* Col 3: Signatory */}
+                            <div style={{ width: '40%', padding: '4px 10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', textAlign: 'right' }}>
+                              <div style={{ fontSize: '12px' }}>
+                                For <strong>{companyDetails?.companyName || 'SRI DURGA ENTERPRISES'}</strong>
+                              </div>
+                              <div style={{ fontStyle: 'italic', fontSize: '11px', textAlign: 'right' }}>
+                                Authorised Signatory
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -861,6 +856,38 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                 {tab.label}
               </button>
             ))}
+          </div>
+
+          {/* Middle: Item Number Selector Option */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label 
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '0.45rem', 
+                background: showItemNumber ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.04)', 
+                border: showItemNumber ? '1.5px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.12)',
+                padding: '0.35rem 0.85rem', 
+                borderRadius: '6px', 
+                cursor: 'pointer',
+                userSelect: 'none',
+                transition: 'all 0.2s ease'
+              }}
+              title="Toggle to Show or Hide Item Number column in Proforma Invoice printout"
+            >
+              <input
+                type="checkbox"
+                checked={showItemNumber}
+                onChange={(e) => {
+                  setShowItemNumber(e.target.checked);
+                  localStorage.setItem('sri_durga_print_show_item_number', String(e.target.checked));
+                }}
+                style={{ width: '15px', height: '15px', accentColor: '#0284c7', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: showItemNumber ? '#38bdf8' : '#cbd5e1' }}>
+                Item Number
+              </span>
+            </label>
           </div>
 
           {/* Action Buttons */}

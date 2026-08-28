@@ -222,6 +222,10 @@ public class JobCard {
     @Column(name = "tested_by", length = 100)
     private String testedBy;
 
+    // Photo / Diagram Upload (Base64 string or image URI)
+    @Column(name = "diagram_photo", columnDefinition = "NVARCHAR(MAX)")
+    private String diagramPhoto;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 }

@@ -17,6 +17,12 @@ public interface ItemMasterRepository extends JpaRepository<ItemMaster, Long> {
 
     boolean existsByItemCodeIgnoreCase(String itemCode);
 
+    Optional<ItemMaster> findByItemCodeIgnoreCaseAndFolderNameIgnoreCase(String itemCode, String folderName);
+
+    boolean existsByItemCodeIgnoreCaseAndFolderNameIgnoreCase(String itemCode, String folderName);
+
+    List<ItemMaster> findByFolderNameIgnoreCaseOrderBySerialNumberAsc(String folderName);
+
     List<ItemMaster> findByItemCodeContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrderBySerialNumberAsc(String itemCodeQuery, String descQuery);
 
     List<ItemMaster> findAllByOrderBySerialNumberAsc();

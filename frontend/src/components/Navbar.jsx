@@ -26,7 +26,9 @@ import {
   ChevronDown,
   BookOpen,
   ShoppingBag,
-  Users
+  Users,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 
 export const Navbar = ({ activePage, setActivePage }) => {
@@ -38,7 +40,9 @@ export const Navbar = ({ activePage, setActivePage }) => {
     navMode, 
     setIsSettingsOpen, 
     mobileMenuOpen, 
-    setMobileMenuOpen 
+    setMobileMenuOpen,
+    sidebarHidden,
+    toggleSidebarHidden
   } = useSettings();
 
   const [isUserMgmtOpen, setIsUserMgmtOpen] = useState(false);
@@ -99,7 +103,9 @@ export const Navbar = ({ activePage, setActivePage }) => {
       case 'master':
         return 'Item Master Management';
       case 'customer-master':
-        return 'Customer Master Directory';
+        return 'Customer & Party Master Directory';
+      case 'company-details':
+        return 'Company Details Master Profile';
       case 'challan':
         return 'Tax Invoice Management';
       case 'challan-list':
@@ -135,7 +141,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
     }
   };
 
-  const isMasterActive = activePage === 'master' || activePage === 'customer-master';
+  const isMasterActive = activePage === 'master' || activePage === 'customer-master' || activePage === 'company-details';
   const isCertActive = activePage === 'work-completion' || activePage === 'work-completion-history' || activePage === 'work-completion-list';
   const isInvoiceActive = activePage === 'challan' || activePage === 'challan-list' || activePage === 'challans-list' || activePage === 'proforma-invoice' || activePage === 'proforma-invoice-history' || activePage === 'proforma-invoice-list' || activePage === 'proforma-invoices';
   const isCardActive = activePage === 'job-card' || activePage === 'job-card-history' || activePage === 'job-card-list';
@@ -218,6 +224,33 @@ export const Navbar = ({ activePage, setActivePage }) => {
               </p>
             </div>
           </div>
+
+          {/* Hide / Show Sidebar Menu Toggle Option */}
+          <button 
+            type="button"
+            onClick={toggleSidebarHidden}
+            className="btn btn-outline hide-menu-toggle-btn"
+            style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: '0.45rem', 
+              padding: '0.4rem 0.85rem', 
+              borderRadius: '10px', 
+              fontSize: '0.8rem', 
+              fontWeight: 700, 
+              borderColor: sidebarHidden ? 'rgba(52, 211, 153, 0.5)' : 'rgba(99, 102, 241, 0.4)', 
+              background: sidebarHidden ? 'linear-gradient(135deg, rgba(52, 211, 153, 0.2) 0%, rgba(16, 185, 129, 0.15) 100%)' : 'rgba(99, 102, 241, 0.08)', 
+              color: sidebarHidden ? '#34d399' : '#818cf8',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: sidebarHidden ? '0 0 14px rgba(52, 211, 153, 0.3)' : 'none',
+              marginLeft: '0.75rem'
+            }}
+            title={sidebarHidden ? "Click to Show / Open the Navigation Menu Bar" : "Click to Hide the Navigation Menu Bar"}
+          >
+            {sidebarHidden ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+            <span>{sidebarHidden ? 'Show Menu' : 'Hide Menu'}</span>
+          </button>
         </div>
 
         {/* Right Side: User Profile, Users & Roles, App Settings & Controls */}
@@ -438,6 +471,28 @@ export const Navbar = ({ activePage, setActivePage }) => {
                     >
                       <Building2 size={15} color="#34d399" />
                       <span>Customer Directory</span>
+                    </button>
+                  )}
+                  {canAccess('company-details') && (
+                    <button
+                      onClick={() => { setActivePage('company-details'); setTopMasterOpen(false); }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.55rem 0.75rem',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: activePage === 'company-details' ? 'rgba(56, 189, 248, 0.18)' : 'transparent',
+                        color: 'var(--text-main)',
+                        fontSize: '0.825rem',
+                        fontWeight: activePage === 'company-details' ? 700 : 500,
+                        cursor: 'pointer',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <ShieldCheck size={15} color="#38bdf8" />
+                      <span>Company Details</span>
                     </button>
                   )}
                 </div>
