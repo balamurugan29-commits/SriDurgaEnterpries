@@ -87,11 +87,7 @@ export const testServerConnection = async (targetUrl) => {
   }
 };
 
-const DEFAULT_INITIAL_ITEMS = [
-  { id: 1, serialNumber: 1, itemCode: '70.3', description: 'Supply of RCCB 4P, 63A, 100mA Sensitivity', quantity: 4, unit: 'No', rate: 4500, serviceCharge: 0, amount: 18000 },
-  { id: 2, serialNumber: 2, itemCode: '122', description: 'S&I of 50mm, 3Mtr GI Earth pipe including chamber', quantity: 3, unit: 'No', rate: 6200, serviceCharge: 0, amount: 18600 },
-  { id: 3, serialNumber: 3, itemCode: '24.7', description: 'Supply of 3P Power Contactor - 70A', quantity: 1, unit: 'No', rate: 8900, serviceCharge: 0, amount: 8900 },
-];
+const DEFAULT_INITIAL_ITEMS = [];
 
 const DEFAULT_INITIAL_CUSTOMERS = [
   { 

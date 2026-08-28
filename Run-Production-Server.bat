@@ -22,10 +22,16 @@ echo.
 echo Staff members on the office Wi-Fi can open: http://%LOCAL_IP%:8085
 echo.
 
-:: Check Java
-java -version >nul 2>&1
+:: Check Java 17
+set "JAVA_CMD=java"
+if exist "%~dp0jdk-17\bin\java.exe" set "JAVA_CMD=%~dp0jdk-17\bin\java.exe"
+if exist "%~dp0..\jdk-17\bin\java.exe" set "JAVA_CMD=%~dp0..\jdk-17\bin\java.exe"
+if exist "E:\office\jdk-17\bin\java.exe" set "JAVA_CMD=E:\office\jdk-17\bin\java.exe"
+if exist "C:\SriDurgaERP\jdk-17\bin\java.exe" set "JAVA_CMD=C:\SriDurgaERP\jdk-17\bin\java.exe"
+
+"%JAVA_CMD%" -version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [ERROR] Java is not installed or not in PATH! Please install Java 17.
+    echo [ERROR] Java 17 is not found! Please install Java 17 or place jdk-17 folder here.
     pause
     exit /b 1
 )
@@ -33,7 +39,7 @@ if %errorlevel% neq 0 (
 :: Launch JAR with constrained memory
 cd /d "%~dp0backend"
 if exist "target\sri-durga-backend-1.0.0.jar" (
-    java -Xms64m -Xmx256m -XX:+UseSerialGC -jar target\sri-durga-backend-1.0.0.jar
+    "%JAVA_CMD%" -Xms64m -Xmx256m -XX:+UseSerialGC -jar target\sri-durga-backend-1.0.0.jar
 ) else (
     echo [ERROR] Application JAR not found in backend\target!
     echo Please run Build-Production-App.bat first.

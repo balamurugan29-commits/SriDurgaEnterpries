@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import companyLogo from '../assets/companyLogo';
-import { Factory, Lock, User, KeyRound, AlertCircle, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Lock, User, AlertCircle, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 export const LoginPage = () => {
   const { login } = useAuth();
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -26,12 +27,6 @@ export const LoginPage = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickDemo = () => {
-    setUserId('admin');
-    setPassword('admin123');
-    setError('');
   };
 
   return (
@@ -88,6 +83,7 @@ export const LoginPage = () => {
                 placeholder="Enter your User ID"
                 value={userId}
                 onChange={e => setUserId(e.target.value)}
+                autoComplete="username"
                 required
               />
             </div>
@@ -98,14 +94,35 @@ export const LoginPage = () => {
             <div style={{ position: 'relative' }}>
               <Lock size={18} color="var(--text-subtle)" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 className="form-input"
-                style={{ paddingLeft: '2.75rem' }}
+                style={{ paddingLeft: '2.75rem', paddingRight: '2.75rem' }}
                 placeholder="Enter your password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
+                autoComplete="current-password"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '0.75rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-subtle)',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 
@@ -119,17 +136,6 @@ export const LoginPage = () => {
             <ArrowRight size={18} />
           </button>
         </form>
-
-        {/* Demo Quick Fill Button */}
-        <div style={{ marginTop: '1.75rem', paddingTop: '1.25rem', borderTop: '1px dashed var(--border-color)', textAlign: 'center' }}>
-          <button
-            type="button"
-            onClick={handleQuickDemo}
-            style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.25)', color: '#a5b4fc', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.775rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.375rem' }}
-          >
-            <ShieldCheck size={14} /> Auto-fill Demo Credentials (admin / admin123)
-          </button>
-        </div>
 
       </div>
     </div>
