@@ -9,7 +9,7 @@ async function buildExe() {
     fs.mkdirSync(outDir, { recursive: true });
   }
 
-  console.log('>>> [2/2] Packaging Standalone Windows .exe application...');
+  console.log('>>> [2/2] Packaging Standalone Windows .exe application with verified metadata...');
   const appPaths = await packager({
     dir: __dirname,
     name: 'Sri Durga Enterprises',
@@ -19,6 +19,17 @@ async function buildExe() {
     overwrite: true,
     asar: true,
     prune: true,
+    appVersion: '1.0.0',
+    buildVersion: '1.0.0',
+    appCopyright: 'Copyright © 2026 Sri Durga Enterprises. All rights reserved.',
+    win32metadata: {
+      CompanyName: 'Sri Durga Enterprises',
+      FileDescription: 'Sri Durga Enterprises - Billing & Compliance System',
+      OriginalFilename: 'Sri Durga Enterprises.exe',
+      ProductName: 'Sri Durga Enterprises',
+      InternalName: 'SriDurgaEnterprises',
+      legalCopyright: 'Copyright © 2026 Sri Durga Enterprises'
+    },
     ignore: [
       /^\/src($|\/)/,
       /^\/\.git($|\/)/,
