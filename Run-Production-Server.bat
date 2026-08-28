@@ -22,6 +22,16 @@ echo.
 echo Staff members on the office Wi-Fi can open: http://%LOCAL_IP%:8085
 echo.
 
+:: Check if port 8085 is already running
+netstat -ano | findstr ":8085" | findstr "LISTENING" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo [INFO] Sri Durga ERP Server is ALREADY ACTIVE and RUNNING on port 8085!
+    echo        Local URL : http://localhost:8085
+    echo        Staff URL : http://%LOCAL_IP%:8085
+    echo.
+    exit /b 0
+)
+
 :: Check Java 17
 set "JAVA_CMD=java"
 if exist "%~dp0jdk-17\bin\java.exe" set "JAVA_CMD=%~dp0jdk-17\bin\java.exe"
