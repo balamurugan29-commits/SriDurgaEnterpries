@@ -702,7 +702,7 @@ export const MasterPage = () => {
             <span>Item Folders & Categories</span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
             {/* Create Folder Button */}
             <button
               onClick={() => setFolderModal({ isOpen: true, mode: 'create', targetFolder: '', newFolderName: '', deleteItems: false, itemIds: [] })}
@@ -714,28 +714,31 @@ export const MasterPage = () => {
               <span>+ Create Folder</span>
             </button>
 
-            {/* Folder Actions when a custom folder is selected */}
+            {/* Always-visible Rename Folder Button */}
+            <button
+              onClick={() => {
+                const target = selectedFolder !== 'ALL' ? selectedFolder : (allAvailableFolders[0] || 'General');
+                setFolderModal({ isOpen: true, mode: 'rename', targetFolder: target, newFolderName: target, deleteItems: false, itemIds: [] });
+              }}
+              className="btn btn-outline"
+              style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem', color: '#fbbf24', borderColor: 'rgba(251, 191, 36, 0.4)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              title="Rename a Folder"
+            >
+              <Edit3 size={13} />
+              <span>Rename Folder</span>
+            </button>
+
+            {/* Folder Delete Button when a custom folder is selected */}
             {selectedFolder !== 'ALL' && selectedFolder !== 'General' && (
-              <>
-                <button
-                  onClick={() => setFolderModal({ isOpen: true, mode: 'rename', targetFolder: selectedFolder, newFolderName: selectedFolder, deleteItems: false, itemIds: [] })}
-                  className="btn btn-outline"
-                  style={{ fontSize: '0.78rem', padding: '0.4rem 0.65rem', color: '#fbbf24', borderColor: 'rgba(251, 191, 36, 0.4)' }}
-                  title="Rename Current Folder"
-                >
-                  <Edit3 size={13} />
-                  <span>Rename</span>
-                </button>
-                <button
-                  onClick={() => setFolderModal({ isOpen: true, mode: 'delete', targetFolder: selectedFolder, newFolderName: '', deleteItems: false, itemIds: [] })}
-                  className="btn btn-outline"
-                  style={{ fontSize: '0.78rem', padding: '0.4rem 0.65rem', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.4)' }}
-                  title="Delete Current Folder"
-                >
-                  <Trash2 size={13} />
-                  <span>Delete</span>
-                </button>
-              </>
+              <button
+                onClick={() => setFolderModal({ isOpen: true, mode: 'delete', targetFolder: selectedFolder, newFolderName: '', deleteItems: false, itemIds: [] })}
+                className="btn btn-outline"
+                style={{ fontSize: '0.78rem', padding: '0.4rem 0.65rem', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.4)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                title="Delete Current Folder"
+              >
+                <Trash2 size={13} />
+                <span>Delete</span>
+              </button>
             )}
           </div>
         </div>
@@ -767,36 +770,98 @@ export const MasterPage = () => {
             </span>
           </button>
 
-          {/* Individual Folder Pills */}
+          {/* Individual Folder Pills with Inline Rename & Delete */}
           {allAvailableFolders.map(folder => {
             const count = folderCounts[folder] || 0;
             const isSelected = selectedFolder.toLowerCase() === folder.toLowerCase();
 
             return (
-              <button
+              <div
                 key={folder}
-                onClick={() => { setSelectedFolder(folder); setCurrentPage(1); }}
                 style={{
-                  padding: '0.45rem 0.9rem',
                   borderRadius: '10px',
                   border: isSelected ? '1.5px solid #34d399' : '1px solid var(--border-color)',
                   background: isSelected ? 'linear-gradient(135deg, rgba(52, 211, 153, 0.25) 0%, rgba(5, 150, 105, 0.3) 100%)' : 'rgba(255, 255, 255, 0.03)',
-                  color: isSelected ? '#34d399' : 'var(--text-main)',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.45rem',
+                  padding: '2px',
                   transition: 'all 0.15s ease'
                 }}
               >
-                <Folder size={15} color={isSelected ? '#34d399' : 'var(--text-muted)'} />
-                <span>{folder}</span>
-                <span style={{ background: isSelected ? 'rgba(52, 211, 153, 0.25)' : 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '12px', fontSize: '0.72rem', color: isSelected ? '#34d399' : 'var(--text-muted)' }}>
-                  {count}
-                </span>
-              </button>
+                {/* Main Folder Click Area */}
+                <button
+                  onClick={() => { setSelectedFolder(folder); setCurrentPage(1); }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '0.4rem 0.65rem 0.4rem 0.75rem',
+                    color: isSelected ? '#34d399' : 'var(--text-main)',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem'
+                  }}
+                >
+                  <Folder size={15} color={isSelected ? '#34d399' : 'var(--text-muted)'} />
+                  <span>{folder}</span>
+                  <span style={{ background: isSelected ? 'rgba(52, 211, 153, 0.25)' : 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '12px', fontSize: '0.72rem', color: isSelected ? '#34d399' : 'var(--text-muted)' }}>
+                    {count}
+                  </span>
+                </button>
+
+                {/* Inline Rename Quick Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFolderModal({ isOpen: true, mode: 'rename', targetFolder: folder, newFolderName: folder, deleteItems: false, itemIds: [] });
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '0.35rem 0.45rem',
+                    color: '#fbbf24',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    borderRadius: '6px',
+                    opacity: 0.8
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'rgba(251, 191, 36, 0.18)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.8'; e.currentTarget.style.background = 'transparent'; }}
+                  title={`Rename '${folder}' folder`}
+                >
+                  <Edit3 size={12} />
+                </button>
+
+                {/* Inline Delete Quick Button (For custom folders) */}
+                {folder.toLowerCase() !== 'general' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFolderModal({ isOpen: true, mode: 'delete', targetFolder: folder, newFolderName: '', deleteItems: false, itemIds: [] });
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      padding: '0.35rem 0.45rem',
+                      color: '#ef4444',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      borderRadius: '6px',
+                      opacity: 0.7,
+                      marginRight: '2px'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'rgba(239, 68, 68, 0.18)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.background = 'transparent'; }}
+                    title={`Delete '${folder}' folder`}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                )}
+              </div>
             );
           })}
         </div>
@@ -1213,6 +1278,19 @@ export const MasterPage = () => {
 
             {folderModal.mode === 'rename' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label className="form-label">Folder to Rename</label>
+                  <select
+                    className="form-select"
+                    value={folderModal.targetFolder}
+                    onChange={e => setFolderModal(prev => ({ ...prev, targetFolder: e.target.value, newFolderName: e.target.value }))}
+                  >
+                    {allAvailableFolders.map(f => (
+                      <option key={f} value={f}>📁 {f}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <div>
                   <label className="form-label">New Folder Name *</label>
                   <input
