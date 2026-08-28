@@ -1,22 +1,33 @@
 @echo off
-title Sri Durga Enterprises Desktop
+title Sri Durga Enterprises ERP Desktop
 cd /d "%~dp0"
 
-:: Start frontend dev/preview server if not running
-set "PORT_CHECK="
-netstat -ano | findstr ":5173" >nul 2>&1
+:: Start production server on 8085 if not already running
+netstat -ano | findstr ":8085" >nul 2>&1
 if %errorlevel% neq 0 (
-    echo Starting Sri Durga Enterprises local server...
-    start /min "" cmd /c "cd /d \"%~dp0frontend\" && npm.cmd run dev"
-    timeout /t 2 /nobreak >nul
+    if exist "Start-Server-Silent.vbs" (
+        wscript.exe "Start-Server-Silent.vbs"
+    ) else (
+        start /min "" "Run-Production-Server.bat"
+    )
+    timeout /t 3 /nobreak >nul
 )
 
-:: Launch Native Windows Desktop App Window (No browser bars, full desktop app mode)
-set "EDGE_PATH=C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
-if not exist "%EDGE_PATH%" set "EDGE_PATH=C:\Program Files\Microsoft\Edge\Application\msedge.exe"
+:: Find Chrome or Edge for Native Standalone App Window Mode (Frameless, dedicated desktop app)
+set "APP_EXE="
 
-if exist "%EDGE_PATH%" (
-    start "" "%EDGE_PATH%" --app="http://localhost:5173" --window-size=1440,900 --user-data-dir="%LOCALAPPDATA%\SriDurgaDesktopApp"
+if exist "C:\Program Files\Google\Chrome\Application\chrome.exe" (
+    set "APP_EXE=C:\Program Files\Google\Chrome\Application\chrome.exe"
+) else if exist "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" (
+    set "APP_EXE=C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+) else if exist "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" (
+    set "APP_EXE=C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+) else if exist "C:\Program Files\Microsoft\Edge\Application\msedge.exe" (
+    set "APP_EXE=C:\Program Files\Microsoft\Edge\Application\msedge.exe"
+)
+
+if defined APP_EXE (
+    start "" "%APP_EXE%" --app="http://localhost:8085" --window-size=1440,900 --user-data-dir="%LOCALAPPDATA%\SriDurgaERPApp"
 ) else (
-    start "" "http://localhost:5173"
+    start "" "http://localhost:8085"
 )
