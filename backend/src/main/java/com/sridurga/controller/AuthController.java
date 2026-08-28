@@ -25,6 +25,15 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @GetMapping("/ping")
+    public ResponseEntity<?> ping() {
+        return ResponseEntity.ok(Map.of(
+            "status", "UP", 
+            "server", "Sri Durga Enterprises Central Server", 
+            "timestamp", System.currentTimeMillis()
+        ));
+    }
+
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         if (request.getUserId() == null || request.getUserId().trim().isEmpty() ||

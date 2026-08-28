@@ -36,11 +36,28 @@ api.interceptors.request.use((config) => {
 
 export const testServerConnection = async (targetUrl) => {
   const url = (targetUrl || getServerApiUrl()).replace(/\/+$/, '');
-  const testApi = axios.create({ baseURL: url, timeout: 5000 });
+  const testApi = axios.create({ baseURL: url, timeout: 15000 });
   try {
+    // 1. Try fast ping endpoint
+    try {
+      const pingRes = await testApi.get('/auth/ping');
+      if (pingRes.status === 200) {
+        return { success: true, status: 200, message: 'Connected successfully to Sri Durga Central Server!' };
+      }
+    } catch (e) {
+      // fallback to /items check
+    }
+
+    // 2. Fallback to items check
     const res = await testApi.get('/items');
-    return { success: true, status: res.status, message: 'Connected successfully to Sri Durga Server!' };
+    return { success: true, status: res.status, message: 'Connected successfully to Sri Durga Central Server!' };
   } catch (err) {
+    if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+      return { 
+        success: false, 
+        message: 'Connection timed out (15s). Please check: (1) Main Server PC is running, (2) Both PCs are on same Wi-Fi, (3) Firewall port 8085 is opened on Main PC.' 
+      };
+    }
     return { success: false, message: err.message || 'Cannot reach server' };
   }
 };
