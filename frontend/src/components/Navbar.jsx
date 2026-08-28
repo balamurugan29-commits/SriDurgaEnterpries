@@ -162,8 +162,6 @@ export const Navbar = ({ activePage, setActivePage }) => {
         gap: '0.5rem'
       }}
     >
-      {isUserMgmtOpen && <UserManagementModal onClose={() => setIsUserMgmtOpen(false)} />}
-      
       {/* Upper Main Brand & Controls Row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
         {/* Left Side: Brand Logo & Title */}

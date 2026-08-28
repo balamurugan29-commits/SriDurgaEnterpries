@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, 
   Users, 
@@ -76,6 +77,7 @@ const PERMISSION_GROUPS = [
 ];
 
 export const UserManagementModal = ({ isOpen, onClose, currentUser }) => {
+  const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.userId?.toLowerCase() === 'admin';
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('list'); // 'list', 'form'
@@ -129,12 +131,20 @@ export const UserManagementModal = ({ isOpen, onClose, currentUser }) => {
   };
 
   const handleOpenAddForm = () => {
+    if (!isAdmin) {
+      showToast('Access Restricted: Only Administrators can create new users.', 'error');
+      return;
+    }
     resetForm();
     setEditingUser(null);
     setActiveTab('form');
   };
 
   const handleOpenEditForm = (u) => {
+    if (!isAdmin) {
+      showToast('Access Restricted: Only Administrators can edit user permissions.', 'error');
+      return;
+    }
     setEditingUser(u);
     setUserId(u.userId);
     setFullName(u.fullName || '');
@@ -259,18 +269,24 @@ export const UserManagementModal = ({ isOpen, onClose, currentUser }) => {
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div 
       style={{ 
         position: 'fixed', 
-        inset: 0, 
-        zIndex: 100000, 
-        background: 'rgba(0,0,0,0.85)', 
-        backdropFilter: 'blur(8px)', 
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 999999, 
+        background: 'rgba(5, 8, 16, 0.82)', 
+        backdropFilter: 'blur(10px)', 
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center', 
-        padding: '1rem' 
+        padding: '1.25rem',
+        boxSizing: 'border-box'
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
@@ -278,15 +294,16 @@ export const UserManagementModal = ({ isOpen, onClose, currentUser }) => {
         className="glass-panel" 
         style={{ 
           width: '100%', 
-          maxWidth: '850px', 
-          maxHeight: '92vh',
+          maxWidth: '880px', 
+          maxHeight: '90vh',
           background: 'var(--bg-card-solid, #0f172a)', 
-          border: '1.5px solid rgba(99, 102, 241, 0.4)', 
+          border: '1.5px solid rgba(99, 102, 241, 0.45)', 
           borderRadius: '16px', 
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 25px 70px rgba(0,0,0,0.8)',
-          overflow: 'hidden'
+          boxShadow: '0 25px 80px rgba(0,0,0,0.85), 0 0 40px rgba(99, 102, 241, 0.2)',
+          overflow: 'hidden',
+          animation: 'fadeIn 0.2s ease-out'
         }}
       >
         {/* Toast Notification inside modal */}
@@ -315,7 +332,7 @@ export const UserManagementModal = ({ isOpen, onClose, currentUser }) => {
 
         {/* Modal Top Header */}
         <div style={{ 
-          padding: '1rem 1.5rem', 
+          padding: '1.15rem 1.5rem', 
           borderBottom: '1px solid var(--border-color)', 
           display: 'flex', 
           alignItems: 'center', 
@@ -323,15 +340,26 @@ export const UserManagementModal = ({ isOpen, onClose, currentUser }) => {
           background: 'rgba(30, 41, 59, 0.6)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(99, 102, 241, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8' }}>
-              <Shield size={20} />
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(99, 102, 241, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8' }}>
+              <Shield size={22} />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-                User Management & Permissions Portal
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                  User Management & Permissions Portal
+                </h2>
+                {isAdmin ? (
+                  <span style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: '6px', background: 'rgba(16, 185, 129, 0.2)', color: '#10b981', fontWeight: 800, border: '1px solid rgba(16, 185, 129, 0.4)' }}>
+                    ADMIN ACCESS
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: '6px', background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', fontWeight: 800, border: '1px solid rgba(239, 68, 68, 0.4)' }}>
+                    STAFF (READ ONLY)
+                  </span>
+                )}
+              </div>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
-                Create accounts, assign roles, and grant granular module access.
+                {isAdmin ? 'Create accounts, assign roles, and grant granular module access.' : 'Viewing registered system accounts. Only Administrators can modify users.'}
               </p>
             </div>
           </div>
@@ -360,14 +388,16 @@ export const UserManagementModal = ({ isOpen, onClose, currentUser }) => {
               <span>User Accounts ({users.length})</span>
             </button>
 
-            <button
-              onClick={handleOpenAddForm}
-              className={`btn ${activeTab === 'form' && !editingUser ? 'btn-secondary' : 'btn-outline'}`}
-              style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              <UserPlus size={15} />
-              <span>+ Create New User</span>
-            </button>
+            {isAdmin && (
+              <button
+                onClick={handleOpenAddForm}
+                className={`btn ${activeTab === 'form' && !editingUser ? 'btn-secondary' : 'btn-outline'}`}
+                style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <UserPlus size={15} />
+                <span>+ Create New User</span>
+              </button>
+            )}
           </div>
 
           <button
@@ -502,24 +532,33 @@ export const UserManagementModal = ({ isOpen, onClose, currentUser }) => {
 
                         {/* Actions Row */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.6rem' }}>
-                          <button
-                            onClick={() => handleOpenEditForm(u)}
-                            className="btn btn-outline"
-                            style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem', color: '#fbbf24', borderColor: 'rgba(251, 191, 36, 0.3)' }}
-                          >
-                            <Edit3 size={12} />
-                            <span>Edit & Permissions</span>
-                          </button>
+                          {isAdmin ? (
+                            <>
+                              <button
+                                onClick={() => handleOpenEditForm(u)}
+                                className="btn btn-outline"
+                                style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem', color: '#fbbf24', borderColor: 'rgba(251, 191, 36, 0.3)' }}
+                              >
+                                <Edit3 size={12} />
+                                <span>Edit & Permissions</span>
+                              </button>
 
-                          {!isMasterAdmin && (
-                            <button
-                              onClick={() => handleDeleteUser(u.id, u.fullName, u.userId)}
-                              className="btn btn-outline"
-                              style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)' }}
-                            >
-                              <Trash2 size={12} />
-                              <span>Delete</span>
-                            </button>
+                              {!isMasterAdmin && (
+                                <button
+                                  onClick={() => handleDeleteUser(u.id, u.fullName, u.userId)}
+                                  className="btn btn-outline"
+                                  style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                                >
+                                  <Trash2 size={12} />
+                                  <span>Delete</span>
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <Lock size={12} color="#94a3b8" />
+                              <span>Admin Access Required to Edit</span>
+                            </span>
                           )}
                         </div>
                       </div>
@@ -751,6 +790,7 @@ export const UserManagementModal = ({ isOpen, onClose, currentUser }) => {
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
