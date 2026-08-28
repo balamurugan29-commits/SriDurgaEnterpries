@@ -38,6 +38,13 @@ public class DatabaseMigrator {
         }
 
         try {
+            jdbcTemplate.execute("ALTER TABLE item_master ADD folder_name VARCHAR(255) DEFAULT 'General'");
+            System.out.println("Successfully added MS SQL Server column 'item_master.folder_name'!");
+        } catch (Exception e) {
+            System.out.println("Column alter notice (item_master folder_name): " + e.getMessage());
+        }
+
+        try {
             jdbcTemplate.execute("ALTER TABLE challan_items ALTER COLUMN description NVARCHAR(MAX)");
             System.out.println("Successfully updated MS SQL Server column 'challan_items.description' to NVARCHAR(MAX)!");
         } catch (Exception e) {

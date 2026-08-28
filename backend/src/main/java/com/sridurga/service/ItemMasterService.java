@@ -64,6 +64,7 @@ public class ItemMasterService {
         item.setUnit(dto.getUnit() != null && !dto.getUnit().trim().isEmpty() ? dto.getUnit().trim() : "No");
         item.setRate(dto.getRate() != null ? dto.getRate() : BigDecimal.ZERO);
         item.setServiceCharge(dto.getServiceCharge() != null ? dto.getServiceCharge() : BigDecimal.ZERO);
+        item.setFolderName(dto.getFolderName() != null && !dto.getFolderName().trim().isEmpty() ? dto.getFolderName().trim() : "General");
         
         // Amount auto calculation: Amount = Quantity * (Rate + Service Charge)
         item.calculateAmount();
@@ -99,6 +100,9 @@ public class ItemMasterService {
         }
         item.setRate(dto.getRate() != null ? dto.getRate() : BigDecimal.ZERO);
         item.setServiceCharge(dto.getServiceCharge() != null ? dto.getServiceCharge() : BigDecimal.ZERO);
+        if (dto.getFolderName() != null && !dto.getFolderName().trim().isEmpty()) {
+            item.setFolderName(dto.getFolderName().trim());
+        }
         
         // Amount auto calculation: Amount = Quantity * (Rate + Service Charge)
         item.calculateAmount();
@@ -118,10 +122,8 @@ public class ItemMasterService {
                     continue;
                 }
                 String code = dto.getItemCode().trim().toUpperCase();
-                if (code.length() > 100) code = code.substring(0, 100);
-
                 String desc = dto.getDescription() != null ? dto.getDescription().trim() : "";
-                if (desc.length() > 1950) desc = desc.substring(0, 1950);
+                String folder = dto.getFolderName() != null && !dto.getFolderName().trim().isEmpty() ? dto.getFolderName().trim() : "General";
 
                 Optional<ItemMaster> existingOpt = itemMasterRepository.findByItemCodeIgnoreCase(code);
                 ItemMaster item;
@@ -142,6 +144,9 @@ public class ItemMasterService {
                     if (dto.getQuantity() != null) {
                         item.setQuantity(dto.getQuantity());
                     }
+                    if (dto.getFolderName() != null && !dto.getFolderName().trim().isEmpty()) {
+                        item.setFolderName(folder);
+                    }
                     item.calculateAmount();
                 } else {
                     item = new ItemMaster();
@@ -153,6 +158,7 @@ public class ItemMasterService {
                     item.setUnit(dto.getUnit() != null && !dto.getUnit().trim().isEmpty() ? dto.getUnit().trim() : "No");
                     item.setRate(dto.getRate() != null ? dto.getRate() : BigDecimal.ZERO);
                     item.setServiceCharge(dto.getServiceCharge() != null ? dto.getServiceCharge() : BigDecimal.ZERO);
+                    item.setFolderName(folder);
                     item.calculateAmount();
                 }
                 ItemMaster saved = itemMasterRepository.save(item);
@@ -164,6 +170,44 @@ public class ItemMasterService {
         return results;
     }
 
+    public void bulkMoveToFolder(List<Long> itemIds, String targetFolder) {
+        if (itemIds == null || itemIds.isEmpty()) return;
+        String folder = targetFolder != null && !targetFolder.trim().isEmpty() ? targetFolder.trim() : "General";
+        List<ItemMaster> items = itemMasterRepository.findAllById(itemIds);
+        for (ItemMaster item : items) {
+            item.setFolderName(folder);
+        }
+        itemMasterRepository.saveAll(items);
+    }
+
+    public void renameFolder(String oldFolder, String newFolder) {
+        if (oldFolder == null || newFolder == null) return;
+        String target = newFolder.trim();
+        List<ItemMaster> items = itemMasterRepository.findAll();
+        for (ItemMaster item : items) {
+            if (oldFolder.equalsIgnoreCase(item.getFolderName())) {
+                item.setFolderName(target);
+            }
+        }
+        itemMasterRepository.saveAll(items);
+    }
+
+    public void deleteFolder(String folderName, boolean deleteItems) {
+        if (folderName == null) return;
+        List<ItemMaster> items = itemMasterRepository.findAll();
+        List<ItemMaster> targetItems = items.stream()
+                .filter(i -> folderName.equalsIgnoreCase(i.getFolderName()))
+                .collect(Collectors.toList());
+        if (deleteItems) {
+            itemMasterRepository.deleteAll(targetItems);
+        } else {
+            for (ItemMaster item : targetItems) {
+                item.setFolderName("General");
+            }
+            itemMasterRepository.saveAll(targetItems);
+        }
+    }
+
     public void deleteItem(Long id) {
         itemMasterRepository.deleteById(id);
     }
@@ -173,10 +217,10 @@ public class ItemMasterService {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (PrintWriter writer = new PrintWriter(out)) {
             // Write CSV Header
-            writer.println("Serial Number,Item Code,Description,Quantity,Unit,Rate (INR),Service Charge (INR),Amount (INR)");
+            writer.println("Serial Number,Item Code,Description,Quantity,Unit,Rate (INR),Service Charge (INR),Amount (INR),Folder");
             
             for (ItemMaster item : items) {
-                writer.println(String.format("%d,\"%s\",\"%s\",%.2f,\"%s\",%.2f,%.2f,%.2f",
+                writer.println(String.format("%d,\"%s\",\"%s\",%.2f,\"%s\",%.2f,%.2f,%.2f,\"%s\"",
                         item.getSerialNumber(),
                         escapeCsv(item.getItemCode()),
                         escapeCsv(item.getDescription()),
@@ -184,7 +228,8 @@ public class ItemMasterService {
                         escapeCsv(item.getUnit() != null ? item.getUnit() : "No"),
                         item.getRate(),
                         item.getServiceCharge() != null ? item.getServiceCharge() : BigDecimal.ZERO,
-                        item.getAmount()));
+                        item.getAmount(),
+                        escapeCsv(item.getFolderName() != null ? item.getFolderName() : "General")));
             }
             writer.flush();
             return new ByteArrayInputStream(out.toByteArray());
@@ -206,7 +251,8 @@ public class ItemMasterService {
                 item.getUnit() != null ? item.getUnit() : "No",
                 item.getRate(),
                 item.getServiceCharge() != null ? item.getServiceCharge() : BigDecimal.ZERO,
-                item.getAmount()
+                item.getAmount(),
+                item.getFolderName() != null ? item.getFolderName() : "General"
         );
     }
 }

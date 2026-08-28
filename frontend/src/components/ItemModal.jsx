@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, AlertCircle } from 'lucide-react';
+import { X, Save, AlertCircle, Folder, Plus } from 'lucide-react';
 import { formatUnitWithQty } from '../services/api';
 
-export const ItemModal = ({ isOpen, onClose, onSave, editItem, nextSno }) => {
+export const ItemModal = ({ isOpen, onClose, onSave, editItem, nextSno, availableFolders = [], defaultFolder = 'General' }) => {
   const [itemCode, setItemCode] = useState('');
   const [description, setDescription] = useState('');
   const [quantity, setQuantity] = useState('0');
@@ -10,6 +10,8 @@ export const ItemModal = ({ isOpen, onClose, onSave, editItem, nextSno }) => {
   const [rate, setRate] = useState('');
   const [serviceCharge, setServiceCharge] = useState('');
   const [serialNumber, setSerialNumber] = useState(1);
+  const [folderName, setFolderName] = useState('General');
+  const [isCustomFolder, setIsCustomFolder] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -21,6 +23,8 @@ export const ItemModal = ({ isOpen, onClose, onSave, editItem, nextSno }) => {
       setUnit(editItem.unit || 'No');
       setRate(editItem.rate !== undefined ? String(editItem.rate) : '');
       setServiceCharge(editItem.serviceCharge !== undefined ? String(editItem.serviceCharge) : '0.00');
+      setFolderName(editItem.folderName || 'General');
+      setIsCustomFolder(!availableFolders.includes(editItem.folderName || 'General'));
     } else {
       setSerialNumber(nextSno || 1);
       setItemCode('');
@@ -29,9 +33,11 @@ export const ItemModal = ({ isOpen, onClose, onSave, editItem, nextSno }) => {
       setUnit('No');
       setRate('');
       setServiceCharge('0.00');
+      setFolderName(defaultFolder || 'General');
+      setIsCustomFolder(false);
     }
     setError('');
-  }, [editItem, isOpen, nextSno]);
+  }, [editItem, isOpen, nextSno, defaultFolder]);
 
   if (!isOpen) return null;
 
@@ -56,6 +62,7 @@ export const ItemModal = ({ isOpen, onClose, onSave, editItem, nextSno }) => {
 
     const formattedUnit = formatUnitWithQty(unit, numQty);
     const calcAmount = numQty * (numRate + numServiceCharge);
+    const finalFolder = folderName.trim() || 'General';
 
     onSave({
       id: editItem ? editItem.id : undefined,
@@ -66,9 +73,12 @@ export const ItemModal = ({ isOpen, onClose, onSave, editItem, nextSno }) => {
       unit: formattedUnit,
       rate: numRate,
       serviceCharge: numServiceCharge,
+      folderName: finalFolder,
       amount: calcAmount
     });
   };
+
+  const folderOptions = Array.from(new Set(['General', ...availableFolders.filter(Boolean)]));
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
@@ -79,7 +89,7 @@ export const ItemModal = ({ isOpen, onClose, onSave, editItem, nextSno }) => {
               {editItem ? 'Edit Master Item' : 'Add New Item to Master Page'}
             </h2>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
-              Master Page Item Details (Code, Description, Qty, Unit, Rate, Service Charge)
+              Master Page Item Details (Folder, Code, Description, Qty, Unit, Rate, Service Charge)
             </p>
           </div>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.25rem' }}>
@@ -95,6 +105,51 @@ export const ItemModal = ({ isOpen, onClose, onSave, editItem, nextSno }) => {
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          
+          {/* Folder Selection Row */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', margin: 0 }}>
+                <Folder size={14} color="#38bdf8" />
+                <span>Folder / Category *</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCustomFolder(prev => !prev);
+                  if (!isCustomFolder) setFolderName('');
+                  else setFolderName(defaultFolder || 'General');
+                }}
+                style={{ background: 'none', border: 'none', color: '#38bdf8', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+              >
+                <Plus size={12} />
+                <span>{isCustomFolder ? 'Select Existing Folder' : '+ Create New Folder'}</span>
+              </button>
+            </div>
+
+            {isCustomFolder ? (
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Enter new folder name (e.g. Overhauling Motors, Electrical Spares)..."
+                value={folderName}
+                onChange={e => setFolderName(e.target.value)}
+                required
+                autoFocus
+              />
+            ) : (
+              <select
+                className="form-select"
+                value={folderName}
+                onChange={e => setFolderName(e.target.value)}
+              >
+                {folderOptions.map(f => (
+                  <option key={f} value={f}>📁 {f}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.875rem' }}>
             <div>
               <label className="form-label">S.No (Serial)</label>

@@ -131,9 +131,16 @@ const ItemCodeCombobox = React.memo(({ value, masterItems, isFetched, onChange, 
               onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
             >
               <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', textAlign: 'left' }}>
-                <span style={{ fontWeight: 700, color: '#818cf8', fontSize: '0.8rem' }}>
-                  {m.itemCode}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <span style={{ fontWeight: 700, color: '#818cf8', fontSize: '0.8rem' }}>
+                    {m.itemCode}
+                  </span>
+                  {m.folderName && m.folderName !== 'General' && (
+                    <span style={{ fontSize: '0.625rem', padding: '1px 5px', borderRadius: '4px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', fontWeight: 600 }}>
+                      📁 {m.folderName}
+                    </span>
+                  )}
+                </div>
                 <span style={{ fontSize: '0.675rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>
                   {m.description}
                 </span>

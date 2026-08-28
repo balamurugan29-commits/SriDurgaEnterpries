@@ -253,7 +253,8 @@ export const fetchItems = async (searchQuery = '') => {
       return res.data.map(item => ({
         ...item,
         unit: item.unit || formatUnitWithQty('No', item.quantity || 1),
-        serviceCharge: item.serviceCharge !== undefined && item.serviceCharge !== null ? Number(item.serviceCharge) : 0
+        serviceCharge: item.serviceCharge !== undefined && item.serviceCharge !== null ? Number(item.serviceCharge) : 0,
+        folderName: item.folderName || 'General'
       }));
     }
     return [];
@@ -275,7 +276,8 @@ export const fetchItemByCode = async (code) => {
       return {
         ...res.data,
         unit: res.data.unit || formatUnitWithQty('No', res.data.quantity || 1),
-        serviceCharge: res.data.serviceCharge !== undefined && res.data.serviceCharge !== null ? Number(res.data.serviceCharge) : 0
+        serviceCharge: res.data.serviceCharge !== undefined && res.data.serviceCharge !== null ? Number(res.data.serviceCharge) : 0,
+        folderName: res.data.folderName || 'General'
       };
     }
     return null;
@@ -306,6 +308,7 @@ export const createItem = async (itemData) => {
       unit: itemData.unit || formatUnitWithQty('No', qty),
       rate: rate,
       serviceCharge: sc,
+      folderName: itemData.folderName || 'General',
       amount: qty * (rate + sc)
     };
     items.push(newItem);
@@ -329,6 +332,7 @@ export const bulkCreateItems = async (itemsList) => {
       const sc = Number(itemData.serviceCharge) || 0;
       const qty = Number(itemData.quantity) || 0;
       const unit = itemData.unit || formatUnitWithQty('No', qty);
+      const folderName = itemData.folderName || 'General';
 
       if (existingIdx !== -1) {
         items[existingIdx] = {
@@ -338,6 +342,7 @@ export const bulkCreateItems = async (itemsList) => {
           unit,
           serviceCharge: sc,
           quantity: qty,
+          folderName: itemData.folderName || items[existingIdx].folderName || 'General',
           amount: qty * ((rate || items[existingIdx].rate) + sc)
         };
       } else {
@@ -350,6 +355,7 @@ export const bulkCreateItems = async (itemsList) => {
           unit,
           rate: rate,
           serviceCharge: sc,
+          folderName,
           amount: qty * (rate + sc)
         });
       }
@@ -380,6 +386,7 @@ export const updateItem = async (id, itemData) => {
         unit,
         serviceCharge: sc,
         quantity: qty,
+        folderName: itemData.folderName || items[index].folderName || 'General',
         amount: qty * (rate + sc)
       };
       items[index] = updated;
@@ -400,6 +407,64 @@ export const deleteItem = async (id) => {
     items = items.filter(i => i.id !== id).map((item, idx) => ({ ...item, serialNumber: idx + 1 }));
     saveStoredItems(items);
     return { message: 'Item deleted successfully' };
+  }
+};
+
+export const moveItemsToFolder = async (itemIds, folderName) => {
+  try {
+    const res = await api.post('/items/move-folder', { itemIds, folderName });
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for moveItemsToFolder');
+    const items = getStoredItems();
+    const updated = items.map(item => {
+      if (itemIds.includes(item.id)) {
+        return { ...item, folderName: folderName || 'General' };
+      }
+      return item;
+    });
+    saveStoredItems(updated);
+    return { message: 'Items moved successfully' };
+  }
+};
+
+export const renameFolder = async (oldFolder, newFolder) => {
+  try {
+    const res = await api.post('/items/rename-folder', { oldFolder, newFolder });
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for renameFolder');
+    const items = getStoredItems();
+    const updated = items.map(item => {
+      if (item.folderName && item.folderName.toLowerCase() === oldFolder.toLowerCase()) {
+        return { ...item, folderName: newFolder };
+      }
+      return item;
+    });
+    saveStoredItems(updated);
+    return { message: 'Folder renamed successfully' };
+  }
+};
+
+export const deleteFolder = async (folderName, deleteItems = false) => {
+  try {
+    const res = await api.post('/items/delete-folder', { folderName, deleteItems });
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for deleteFolder');
+    let items = getStoredItems();
+    if (deleteItems) {
+      items = items.filter(item => !item.folderName || item.folderName.toLowerCase() !== folderName.toLowerCase());
+    } else {
+      items = items.map(item => {
+        if (item.folderName && item.folderName.toLowerCase() === folderName.toLowerCase()) {
+          return { ...item, folderName: 'General' };
+        }
+        return item;
+      });
+    }
+    saveStoredItems(items);
+    return { message: 'Folder deleted successfully' };
   }
 };
 

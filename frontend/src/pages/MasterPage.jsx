@@ -1,13 +1,51 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { fetchItems, createItem, updateItem, deleteItem, bulkCreateItems, formatUnitWithQty } from '../services/api';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { 
+  fetchItems, 
+  createItem, 
+  updateItem, 
+  deleteItem, 
+  bulkCreateItems, 
+  formatUnitWithQty,
+  moveItemsToFolder,
+  renameFolder as apiRenameFolder,
+  deleteFolder as apiDeleteFolder
+} from '../services/api';
 import { ItemModal } from '../components/ItemModal';
 import { ExportDesignerModal } from '../components/ExportDesignerModal';
 import { Toast } from '../components/Toast';
-import { Search, Plus, Download, Upload, Edit3, Trash2, Database, RefreshCw, Layers, FilterX, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertTriangle, CheckCircle2, ShieldAlert, X, ChevronRight as BreadcrumbChevron } from 'lucide-react';
+import { 
+  Search, 
+  Plus, 
+  Download, 
+  Upload, 
+  Edit3, 
+  Trash2, 
+  Database, 
+  RefreshCw, 
+  Layers, 
+  FilterX, 
+  ChevronLeft, 
+  ChevronRight, 
+  ChevronsLeft, 
+  ChevronsRight, 
+  AlertTriangle, 
+  CheckCircle2, 
+  ShieldAlert, 
+  X, 
+  ChevronRight as BreadcrumbChevron,
+  Folder,
+  FolderPlus,
+  FolderOpen,
+  FolderEdit,
+  FolderX as FolderXIcon,
+  MoveRight,
+  CheckSquare
+} from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const ITEM_MASTER_COLUMNS = [
   { key: 'serialNumber', label: 'S.NO.' },
+  { key: 'folderName', label: 'FOLDER' },
   { key: 'itemCode', label: 'ITEM CODE' },
   { key: 'description', label: 'DESCRIPTION' },
   { key: 'quantity', label: 'QTY' },
@@ -16,6 +54,8 @@ const ITEM_MASTER_COLUMNS = [
   { key: 'serviceCharge', label: 'SERVICE CHARGE (₹)' },
   { key: 'amount', label: 'AMOUNT (₹)' }
 ];
+
+const CUSTOM_FOLDERS_STORAGE_KEY = 'sri_durga_custom_folders';
 
 export const MasterPage = () => {
   const [items, setItems] = useState([]);
@@ -28,6 +68,23 @@ export const MasterPage = () => {
   const [editItemData, setEditItemData] = useState(null);
   const [toast, setToast] = useState({ message: '', type: 'success' });
   const fileInputRef = useRef(null);
+
+  // Folder Management State
+  const [selectedFolder, setSelectedFolder] = useState('ALL'); // 'ALL', 'General', or custom folder name
+  const [customFolders, setCustomFolders] = useState(() => {
+    const saved = localStorage.getItem(CUSTOM_FOLDERS_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : ['General'];
+  });
+
+  // Folder Action Modals (Create, Rename, Delete, Move)
+  const [folderModal, setFolderModal] = useState({
+    isOpen: false,
+    mode: 'create', // 'create', 'rename', 'delete', 'move'
+    targetFolder: '',
+    newFolderName: '',
+    deleteItems: false,
+    itemIds: []
+  });
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -48,6 +105,16 @@ export const MasterPage = () => {
       setItems(data || []);
       setSelectedItemIds([]);
       setCurrentPage(1);
+
+      // Auto-discover folder names from items
+      if (data && data.length > 0) {
+        const itemFolders = data.map(i => i.folderName || 'General').filter(Boolean);
+        setCustomFolders(prev => {
+          const merged = Array.from(new Set([...prev, ...itemFolders]));
+          localStorage.setItem(CUSTOM_FOLDERS_STORAGE_KEY, JSON.stringify(merged));
+          return merged;
+        });
+      }
     } catch (err) {
       setToast({ message: 'Failed to load Master Page items: ' + err.message, type: 'error' });
     } finally {
@@ -59,12 +126,35 @@ export const MasterPage = () => {
     loadItems(searchQuery);
   }, [searchQuery]);
 
+  // Compute Distinct Folders and Counts
+  const folderCounts = useMemo(() => {
+    const counts = {};
+    items.forEach(i => {
+      const f = i.folderName || 'General';
+      counts[f] = (counts[f] || 0) + 1;
+    });
+    return counts;
+  }, [items]);
+
+  const allAvailableFolders = useMemo(() => {
+    const set = new Set(['General', ...customFolders, ...Object.keys(folderCounts)]);
+    return Array.from(set).filter(Boolean);
+  }, [customFolders, folderCounts]);
+
+  // Filter items by Selected Folder
+  const folderFilteredItems = useMemo(() => {
+    if (selectedFolder === 'ALL') return items;
+    return items.filter(i => (i.folderName || 'General').toLowerCase() === selectedFolder.toLowerCase());
+  }, [items, selectedFolder]);
+
   // Select All Checkbox Handler
+  const isAllSelected = folderFilteredItems.length > 0 && selectedItemIds.length === folderFilteredItems.length;
+
   const handleSelectAllToggle = () => {
-    if (selectedItemIds.length === items.length && items.length > 0) {
+    if (isAllSelected) {
       setSelectedItemIds([]);
     } else {
-      setSelectedItemIds(items.map(i => i.id));
+      setSelectedItemIds(folderFilteredItems.map(i => i.id));
     }
   };
 
@@ -91,6 +181,125 @@ export const MasterPage = () => {
       loadItems(searchQuery);
     } catch (err) {
       setToast({ message: 'Bulk deletion failed: ' + err.message, type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Bulk Move Selected Items to Folder
+  const handleOpenMoveModal = () => {
+    if (selectedItemIds.length === 0) return;
+    setFolderModal({
+      isOpen: true,
+      mode: 'move',
+      targetFolder: selectedFolder !== 'ALL' ? selectedFolder : 'General',
+      newFolderName: '',
+      deleteItems: false,
+      itemIds: selectedItemIds
+    });
+  };
+
+  const handleConfirmMove = async () => {
+    const target = folderModal.newFolderName.trim() || folderModal.targetFolder.trim() || 'General';
+    try {
+      setLoading(true);
+      await moveItemsToFolder(folderModal.itemIds, target);
+      
+      // Add target folder to list if not present
+      if (!allAvailableFolders.includes(target)) {
+        const updated = Array.from(new Set([...customFolders, target]));
+        setCustomFolders(updated);
+        localStorage.setItem(CUSTOM_FOLDERS_STORAGE_KEY, JSON.stringify(updated));
+      }
+
+      setToast({ message: `Successfully moved ${folderModal.itemIds.length} item(s) to folder '${target}'!`, type: 'success' });
+      setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteItems: false, itemIds: [] });
+      setSelectedItemIds([]);
+      await loadItems(searchQuery);
+    } catch (err) {
+      setToast({ message: 'Move failed: ' + err.message, type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Create Folder Handler
+  const handleCreateFolder = () => {
+    const name = folderModal.newFolderName.trim();
+    if (!name) {
+      setToast({ message: 'Please enter a folder name', type: 'error' });
+      return;
+    }
+    if (allAvailableFolders.some(f => f.toLowerCase() === name.toLowerCase())) {
+      setToast({ message: `Folder '${name}' already exists!`, type: 'error' });
+      return;
+    }
+    const updated = Array.from(new Set([...customFolders, name]));
+    setCustomFolders(updated);
+    localStorage.setItem(CUSTOM_FOLDERS_STORAGE_KEY, JSON.stringify(updated));
+    setSelectedFolder(name);
+    setToast({ message: `Folder '${name}' created successfully!`, type: 'success' });
+    setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteItems: false, itemIds: [] });
+  };
+
+  // Rename Folder Handler
+  const handleRenameFolder = async () => {
+    const oldName = folderModal.targetFolder;
+    const newName = folderModal.newFolderName.trim();
+    if (!newName || newName === oldName) {
+      setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteItems: false, itemIds: [] });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await apiRenameFolder(oldName, newName);
+      
+      const updated = customFolders.map(f => f.toLowerCase() === oldName.toLowerCase() ? newName : f);
+      setCustomFolders(Array.from(new Set(updated)));
+      localStorage.setItem(CUSTOM_FOLDERS_STORAGE_KEY, JSON.stringify(Array.from(new Set(updated))));
+
+      if (selectedFolder.toLowerCase() === oldName.toLowerCase()) {
+        setSelectedFolder(newName);
+      }
+
+      setToast({ message: `Folder renamed from '${oldName}' to '${newName}'!`, type: 'success' });
+      setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteItems: false, itemIds: [] });
+      await loadItems(searchQuery);
+    } catch (err) {
+      setToast({ message: 'Rename failed: ' + err.message, type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Delete Folder Handler
+  const handleDeleteFolder = async () => {
+    const target = folderModal.targetFolder;
+    if (!target || target === 'General') {
+      setToast({ message: 'Cannot delete default General folder', type: 'error' });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await apiDeleteFolder(target, folderModal.deleteItems);
+
+      const updated = customFolders.filter(f => f.toLowerCase() !== target.toLowerCase());
+      setCustomFolders(updated);
+      localStorage.setItem(CUSTOM_FOLDERS_STORAGE_KEY, JSON.stringify(updated));
+
+      setSelectedFolder('ALL');
+      setToast({ 
+        message: folderModal.deleteItems 
+          ? `Folder '${target}' and its items were deleted.` 
+          : `Folder '${target}' deleted. Items moved to 'General'.`, 
+        type: 'success' 
+      });
+      setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteItems: false, itemIds: [] });
+      await loadItems(searchQuery);
+    } catch (err) {
+      setToast({ message: 'Delete folder failed: ' + err.message, type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -160,7 +369,7 @@ export const MasterPage = () => {
     }
   };
 
-  // Process Batch Import Helper (Uploads in chunks of 200 items with full description & unit support)
+  // Process Batch Import Helper
   const processBatchImport = async (itemsToUpload, modeLabel = 'items') => {
     if (!itemsToUpload || itemsToUpload.length === 0) {
       setToast({ message: 'No items to upload.', type: 'info' });
@@ -214,7 +423,7 @@ export const MasterPage = () => {
 
         // Header column detection
         let headerRowIndex = 0;
-        let sNoIdx = -1, itemCodeIdx = -1, descIdx = -1, qtyIdx = -1, unitIdx = -1, rateIdx = -1, scIdx = -1;
+        let sNoIdx = -1, itemCodeIdx = -1, descIdx = -1, qtyIdx = -1, unitIdx = -1, rateIdx = -1, scIdx = -1, folderIdx = -1;
 
         for (let r = 0; r < Math.min(5, rows.length); r++) {
           const row = rows[r];
@@ -227,6 +436,7 @@ export const MasterPage = () => {
             else if (h.includes('unit') || h.includes('uom')) unitIdx = colIdx;
             else if (h.includes('service') || h.includes('sc') || h.includes('service charge')) scIdx = colIdx;
             else if (h.includes('rate') || h.includes('price') || h.includes('unit price')) rateIdx = colIdx;
+            else if (h.includes('folder') || h.includes('category') || h.includes('group')) folderIdx = colIdx;
           });
           if (itemCodeIdx !== -1 || descIdx !== -1) {
             headerRowIndex = r;
@@ -251,6 +461,8 @@ export const MasterPage = () => {
         const duplicateItemsList = [];
         const newItemsList = [];
 
+        const defaultAssignedFolder = selectedFolder !== 'ALL' ? selectedFolder : 'General';
+
         for (let i = headerRowIndex + 1; i < rows.length; i++) {
           const row = rows[i];
           if (!row || row.length === 0) continue;
@@ -261,6 +473,7 @@ export const MasterPage = () => {
           let rawUnit = unitIdx !== -1 && row[unitIdx] !== undefined ? String(row[unitIdx]).trim() : 'No';
           let rawRate = row[rateIdx] !== undefined ? String(row[rateIdx]).trim() : '0';
           let rawSc = scIdx !== -1 && row[scIdx] !== undefined ? String(row[scIdx]).trim() : '0';
+          let rawFolder = folderIdx !== -1 && row[folderIdx] !== undefined ? String(row[folderIdx]).trim() : defaultAssignedFolder;
 
           if (!rawCode && !rawDesc) continue;
 
@@ -278,6 +491,7 @@ export const MasterPage = () => {
           const cleanRate = parseFloat(rawRate.replace(/[^0-9.-]+/g, '')) || 0;
           const cleanSc = parseFloat(rawSc.replace(/[^0-9.-]+/g, '')) || 0;
           const cleanUnit = formatUnitWithQty(rawUnit, cleanQty);
+          const cleanFolder = rawFolder || defaultAssignedFolder;
 
           const itemObj = {
             serialNumber: parsedItems.length + 1,
@@ -287,6 +501,7 @@ export const MasterPage = () => {
             unit: cleanUnit,
             rate: cleanRate,
             serviceCharge: cleanSc,
+            folderName: cleanFolder,
             amount: cleanQty * (cleanRate + cleanSc)
           };
 
@@ -340,12 +555,10 @@ export const MasterPage = () => {
   };
 
   // Pagination Slice
-  const totalItemsCount = items.length;
+  const totalItemsCount = folderFilteredItems.length;
   const totalPages = Math.ceil(totalItemsCount / pageSize) || 1;
   const startIndex = (currentPage - 1) * pageSize;
-  const currentPagedItems = items.slice(startIndex, startIndex + pageSize);
-
-  const isAllSelected = selectedItemIds.length === items.length && items.length > 0;
+  const currentPagedItems = folderFilteredItems.slice(startIndex, startIndex + pageSize);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -444,325 +657,664 @@ export const MasterPage = () => {
               <span style={{ fontWeight: 600 }}>Master Page</span>
               <BreadcrumbChevron size={12} />
               <span style={{ color: '#818cf8', fontWeight: 700 }}>Item Master Inventory Catalog</span>
+              {selectedFolder !== 'ALL' && (
+                <>
+                  <BreadcrumbChevron size={12} />
+                  <span style={{ color: '#38bdf8', fontWeight: 800 }}>📁 {selectedFolder}</span>
+                </>
+              )}
             </div>
             <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               Item Master Catalog Management
             </h2>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-              Central item specifications, units, rates, and automatic service charge repository.
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+              Central item specifications, folders, units, rates, and automatic service charge repository.
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <span className="badge badge-code" style={{ color: '#34d399', borderColor: 'rgba(16, 185, 129, 0.4)', background: 'rgba(16, 185, 129, 0.15)', fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}>
-            Catalog: <strong>{totalItemsCount}</strong> Items Active
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.4rem 0.85rem', borderRadius: '10px' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#34d399' }}>
+              Catalog: {items.length} Items Active
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Top Search & Actions Bar (Perfect Alignment) */}
-      <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-        
-        {/* Search Input */}
-        <div style={{ flex: '1', minWidth: '280px', maxWidth: '500px' }}>
-          <div style={{ position: 'relative' }}>
-            <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input
-              type="text"
-              className="form-input"
-              style={{ paddingLeft: '2.75rem', paddingRight: searchQuery ? '2.5rem' : '1rem' }}
-              placeholder="Search by Item Code (e.g. W101) or Description..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-              >
-                <FilterX size={16} />
-              </button>
+      {/* FOLDER NAVIGATION / CATEGORY MANAGEMENT BAR */}
+      <div 
+        className="glass-panel" 
+        style={{ 
+          padding: '1rem 1.25rem', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '0.85rem',
+          background: 'rgba(15, 23, 42, 0.75)',
+          border: '1.5px solid rgba(56, 189, 248, 0.25)',
+          borderRadius: '14px'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: 800, color: '#38bdf8' }}>
+            <FolderOpen size={18} />
+            <span>Item Folders & Categories</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {/* Create Folder Button */}
+            <button
+              onClick={() => setFolderModal({ isOpen: true, mode: 'create', targetFolder: '', newFolderName: '', deleteItems: false, itemIds: [] })}
+              className="btn btn-outline"
+              style={{ fontSize: '0.78rem', padding: '0.4rem 0.8rem', borderColor: 'rgba(56, 189, 248, 0.4)', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              title="Create New Folder"
+            >
+              <FolderPlus size={14} />
+              <span>+ Create Folder</span>
+            </button>
+
+            {/* Folder Actions when a custom folder is selected */}
+            {selectedFolder !== 'ALL' && selectedFolder !== 'General' && (
+              <>
+                <button
+                  onClick={() => setFolderModal({ isOpen: true, mode: 'rename', targetFolder: selectedFolder, newFolderName: selectedFolder, deleteItems: false, itemIds: [] })}
+                  className="btn btn-outline"
+                  style={{ fontSize: '0.78rem', padding: '0.4rem 0.65rem', color: '#fbbf24', borderColor: 'rgba(251, 191, 36, 0.4)' }}
+                  title="Rename Current Folder"
+                >
+                  <Edit3 size={13} />
+                  <span>Rename</span>
+                </button>
+                <button
+                  onClick={() => setFolderModal({ isOpen: true, mode: 'delete', targetFolder: selectedFolder, newFolderName: '', deleteItems: false, itemIds: [] })}
+                  className="btn btn-outline"
+                  style={{ fontSize: '0.78rem', padding: '0.4rem 0.65rem', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.4)' }}
+                  title="Delete Current Folder"
+                >
+                  <Trash2 size={13} />
+                  <span>Delete</span>
+                </button>
+              </>
             )}
           </div>
         </div>
 
-        {/* Action Buttons Group */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        {/* Scrollable Folder Pills */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {/* All Items Pill */}
+          <button
+            onClick={() => { setSelectedFolder('ALL'); setCurrentPage(1); }}
+            style={{
+              padding: '0.45rem 0.9rem',
+              borderRadius: '10px',
+              border: selectedFolder === 'ALL' ? '1.5px solid #38bdf8' : '1px solid var(--border-color)',
+              background: selectedFolder === 'ALL' ? 'linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(3, 105, 161, 0.3) 100%)' : 'rgba(255, 255, 255, 0.03)',
+              color: selectedFolder === 'ALL' ? '#38bdf8' : 'var(--text-main)',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Folder size={15} color={selectedFolder === 'ALL' ? '#38bdf8' : 'var(--text-muted)'} />
+            <span>All Items</span>
+            <span style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '12px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+              {items.length}
+            </span>
+          </button>
+
+          {/* Individual Folder Pills */}
+          {allAvailableFolders.map(folder => {
+            const count = folderCounts[folder] || 0;
+            const isSelected = selectedFolder.toLowerCase() === folder.toLowerCase();
+
+            return (
+              <button
+                key={folder}
+                onClick={() => { setSelectedFolder(folder); setCurrentPage(1); }}
+                style={{
+                  padding: '0.45rem 0.9rem',
+                  borderRadius: '10px',
+                  border: isSelected ? '1.5px solid #34d399' : '1px solid var(--border-color)',
+                  background: isSelected ? 'linear-gradient(135deg, rgba(52, 211, 153, 0.25) 0%, rgba(5, 150, 105, 0.3) 100%)' : 'rgba(255, 255, 255, 0.03)',
+                  color: isSelected ? '#34d399' : 'var(--text-main)',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Folder size={15} color={isSelected ? '#34d399' : 'var(--text-muted)'} />
+                <span>{folder}</span>
+                <span style={{ background: isSelected ? 'rgba(52, 211, 153, 0.25)' : 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '12px', fontSize: '0.72rem', color: isSelected ? '#34d399' : 'var(--text-muted)' }}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Main Action Bar */}
+      <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between' }}>
+        
+        {/* Search Input */}
+        <div style={{ position: 'relative', flex: 1, minWidth: '280px', maxWidth: '420px' }}>
+          <Search size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+          <input
+            type="text"
+            className="form-input"
+            style={{ paddingLeft: '2.5rem', fontSize: '0.85rem', width: '100%' }}
+            placeholder={selectedFolder !== 'ALL' ? `Search in '${selectedFolder}'...` : "Search by Item Code (e.g. W101) or Description..."}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
+          
+          {/* BULK MOVE TO FOLDER BUTTON */}
           {selectedItemIds.length > 0 && (
-            <button 
-              onClick={handleBulkDeleteSelected} 
+            <button
+              onClick={handleOpenMoveModal}
+              className="btn btn-secondary"
+              style={{ fontSize: '0.85rem', padding: '0.55rem 0.95rem', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              title="Move selected items to another folder"
+            >
+              <Folder size={15} />
+              <span>Move to Folder ({selectedItemIds.length})</span>
+            </button>
+          )}
+
+          {selectedItemIds.length > 0 && (
+            <button
+              onClick={handleBulkDeleteSelected}
               className="btn btn-danger"
-              style={{ fontSize: '0.85rem' }}
+              style={{ fontSize: '0.85rem', padding: '0.55rem 0.85rem' }}
               title="Delete all selected items"
             >
-              <Trash2 size={16} />
+              <Trash2 size={15} />
               <span>Delete Selected ({selectedItemIds.length})</span>
             </button>
           )}
 
+          {/* Export Designer Button */}
           <button 
-            onClick={() => setExportModalOpen(true)} 
-            className="btn btn-outline" 
-            style={{ border: '1px solid rgba(16, 185, 129, 0.4)', color: '#34d399' }} 
-            title="Open Export Designer for Excel / PDF"
+            onClick={() => setExportModalOpen(true)}
+            className="btn btn-outline"
+            style={{ fontSize: '0.85rem', padding: '0.55rem 0.85rem', borderColor: 'rgba(52, 211, 153, 0.4)', color: '#34d399' }}
+            title="Custom export to Excel / PDF"
           >
-            <Download size={16} />
+            <Download size={15} />
             <span>Export Designer</span>
           </button>
 
-          <button 
-            onClick={handleTriggerUpload} 
-            className="btn btn-outline" 
-            style={{ border: '1px solid rgba(99, 102, 241, 0.4)', color: '#818cf8' }} 
-            title="Upload Bulk Items from Excel/CSV"
+          {/* Upload Excel Button */}
+          <button
+            onClick={handleTriggerUpload}
+            className="btn btn-outline"
+            style={{ fontSize: '0.85rem', padding: '0.55rem 0.85rem' }}
             disabled={uploading}
+            title={selectedFolder !== 'ALL' ? `Upload Excel directly into '${selectedFolder}'` : "Upload Excel/CSV Catalog File"}
           >
-            {uploading ? <RefreshCw size={16} className="animate-spin" /> : <Upload size={16} />}
+            <Upload size={15} />
             <span>{uploading ? 'Uploading...' : 'Upload Excel'}</span>
           </button>
-          
-          <button onClick={handleOpenAddModal} className="btn btn-primary">
+
+          {/* Add New Item Button */}
+          <button
+            onClick={handleOpenAddModal}
+            className="btn btn-primary"
+            style={{ fontSize: '0.85rem', padding: '0.55rem 1.15rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            title={selectedFolder !== 'ALL' ? `Add item to '${selectedFolder}'` : "Add single new item"}
+          >
             <Plus size={16} />
             <span>+ Add New Item</span>
           </button>
 
-          <button onClick={() => loadItems(searchQuery)} className="btn btn-outline" title="Refresh catalog">
-            <RefreshCw size={15} />
+          {/* Refresh Button */}
+          <button
+            onClick={() => loadItems(searchQuery)}
+            className="btn btn-outline"
+            style={{ padding: '0.55rem', fontSize: '0.85rem' }}
+            title="Refresh Catalog"
+          >
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
-
       </div>
 
-      {/* Main Items Catalog Table */}
-      <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
+      {/* Catalog Table Panel */}
+      <div className="glass-panel" style={{ padding: '1.25rem', overflowX: 'auto' }}>
         
-        {/* Table Header Bar */}
-        <div style={{ padding: '1rem 1.5rem', background: 'rgba(15, 23, 42, 0.6)', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Layers size={20} color="#818cf8" />
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'white', margin: 0 }}>
-              Master Items Inventory Catalog
-            </h3>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            {selectedItemIds.length > 0 && (
-              <span className="badge badge-code" style={{ color: '#818cf8', borderColor: 'rgba(99, 102, 241, 0.4)', background: 'rgba(99, 102, 241, 0.15)' }}>
-                {selectedItemIds.length} Selected
-              </span>
-            )}
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              <span>Show</span>
-              <select 
-                value={pageSize} 
-                onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-                className="form-select"
-                style={{ width: 'auto', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
-              >
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-                <option value={200}>200</option>
-                <option value={500}>500</option>
-              </select>
-              <span>per page</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Table Container */}
-        <div className="custom-table-container" style={{ border: 'none', borderRadius: 0, maxHeight: '65vh', overflowY: 'auto' }}>
-          <table className="custom-table" style={{ position: 'relative' }}>
-            <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#0f172a' }}>
-              <tr>
-                <th style={{ width: '45px', textAlign: 'center', paddingLeft: '1rem' }}>
-                  <input
-                    type="checkbox"
-                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#6366f1' }}
-                    checked={isAllSelected}
-                    onChange={handleSelectAllToggle}
-                    title="Select All Catalog Items"
-                  />
-                </th>
-                <th style={{ width: '60px', textAlign: 'center' }}>S.No</th>
-                <th style={{ width: '140px' }}>Item Code</th>
-                <th>Description</th>
-                <th style={{ width: '80px', textAlign: 'right' }}>Qty</th>
-                <th style={{ width: '90px', textAlign: 'center' }}>Unit</th>
-                <th style={{ width: '120px', textAlign: 'right' }}>Rate (₹)</th>
-                <th style={{ width: '140px', textAlign: 'right' }}>Service Charge (₹)</th>
-                <th style={{ width: '130px', textAlign: 'right' }}>Amount (₹)</th>
-                <th style={{ width: '110px', textAlign: 'center' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={10} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 0.5rem auto' }} />
-                    <p style={{ margin: 0 }}>Loading master items database...</p>
-                  </td>
-                </tr>
-              ) : currentPagedItems.length === 0 ? (
-                <tr>
-                  <td colSpan={10} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    No items found. Click 'Add Item' or 'Upload Excel' to add records.
-                  </td>
-                </tr>
-              ) : (
-                currentPagedItems.map((item, index) => {
-                  const isSelected = selectedItemIds.includes(item.id);
-                  const displaySNo = startIndex + index + 1;
-                  const itemUnitDisplay = formatUnitWithQty(item.unit || 'No', item.quantity || 1);
-
-                  return (
-                    <tr key={item.id} style={{ background: isSelected ? 'rgba(99, 102, 241, 0.12)' : undefined }}>
-                      <td style={{ textAlign: 'center', paddingLeft: '1rem' }}>
-                        <input
-                          type="checkbox"
-                          style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#6366f1' }}
-                          checked={isSelected}
-                          onChange={() => handleSelectItemToggle(item.id)}
-                        />
-                      </td>
-
-                      <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)' }}>
-                        {displaySNo}
-                      </td>
-
-                      <td>
-                        <span className="badge badge-code">
-                          {item.itemCode}
-                        </span>
-                      </td>
-
-                      <td style={{ maxWidth: '400px', wordBreak: 'break-word', color: 'var(--text-main)', lineHeight: 1.4 }}>
-                        {item.description}
-                      </td>
-
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                        {item.quantity || 1}
-                      </td>
-
-                      <td style={{ textAlign: 'center' }}>
-                        <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', borderColor: 'rgba(16, 185, 129, 0.3)', fontSize: '0.75rem', padding: '0.2rem 0.5rem', fontWeight: 700 }}>
-                          {itemUnitDisplay}
-                        </span>
-                      </td>
-
-                      <td style={{ textAlign: 'right', fontWeight: 600, color: '#e5e7eb' }}>
-                        ₹{Number(item.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </td>
-
-                      <td style={{ textAlign: 'right', fontWeight: 600, color: Number(item.serviceCharge) > 0 ? '#fbbf24' : 'var(--text-subtle)' }}>
-                        {Number(item.serviceCharge) > 0 ? `+ ₹${Number(item.serviceCharge).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '₹0.00'}
-                      </td>
-
-                      <td style={{ textAlign: 'right' }}>
-                        <span className="badge badge-amount">
-                          ₹{Number(item.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                        </span>
-                      </td>
-
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                          <button
-                            onClick={() => handleOpenEditModal(item)}
-                            className="btn btn-outline"
-                            style={{ padding: '0.35rem 0.5rem', color: '#818cf8', borderColor: 'rgba(99, 102, 241, 0.3)' }}
-                            title="Edit Item"
-                          >
-                            <Edit3 size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteItem(item.id, item.itemCode)}
-                            className="btn btn-danger"
-                            style={{ padding: '0.35rem 0.5rem' }}
-                            title="Delete Item"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination Footer Controls */}
-        {totalItemsCount > pageSize && (
-          <div style={{ padding: '0.875rem 1.5rem', background: 'rgba(15, 23, 42, 0.6)', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Showing <strong>{startIndex + 1}</strong> to <strong>{Math.min(startIndex + pageSize, totalItemsCount)}</strong> of <strong>{totalItemsCount}</strong> items
+        {/* Table Header Controls: Sub-title & Page Size Selector */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.875rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-main)' }}>
+            <Layers size={16} color="#818cf8" />
+            <span>
+              {selectedFolder === 'ALL' ? 'Master Items Inventory Catalog' : `Folder: ${selectedFolder}`}
             </span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              ({folderFilteredItems.length} items found)
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            <span>Show</span>
+            <select
+              className="form-select"
+              style={{ width: 'auto', padding: '0.25rem 0.6rem', fontSize: '0.8rem' }}
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+            >
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="250">250</option>
+              <option value="500">500</option>
+            </select>
+            <span>per page</span>
+          </div>
+        </div>
+
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+          <thead>
+            <tr style={{ background: 'rgba(30, 41, 59, 0.6)', borderBottom: '1.5px solid var(--border-color)', color: 'var(--text-muted)' }}>
+              <th style={{ padding: '10px', width: '40px', textAlign: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  onChange={handleSelectAllToggle}
+                  style={{ cursor: 'pointer' }}
+                  title="Select All"
+                />
+              </th>
+              <th style={{ padding: '10px', width: '50px', textAlign: 'center' }}>S.NO</th>
+              <th style={{ padding: '10px', width: '12%', textAlign: 'center' }}>FOLDER</th>
+              <th style={{ padding: '10px', width: '10%', textAlign: 'center' }}>ITEM CODE</th>
+              <th style={{ padding: '10px', textAlign: 'left' }}>DESCRIPTION</th>
+              <th style={{ padding: '10px', width: '60px', textAlign: 'center' }}>QTY</th>
+              <th style={{ padding: '10px', width: '70px', textAlign: 'center' }}>UNIT</th>
+              <th style={{ padding: '10px', width: '100px', textAlign: 'right' }}>RATE (₹)</th>
+              <th style={{ padding: '10px', width: '120px', textAlign: 'right' }}>SERVICE CHARGE (₹)</th>
+              <th style={{ padding: '10px', width: '100px', textAlign: 'right' }}>AMOUNT (₹)</th>
+              <th style={{ padding: '10px', width: '90px', textAlign: 'center' }}>ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={11} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                  Loading catalog items...
+                </td>
+              </tr>
+            ) : currentPagedItems.length === 0 ? (
+              <tr>
+                <td colSpan={11} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                  {searchQuery ? `No items matched '${searchQuery}'` : `No items found in folder '${selectedFolder}'.`}
+                </td>
+              </tr>
+            ) : (
+              currentPagedItems.map((item, idx) => {
+                const isSelected = selectedItemIds.includes(item.id);
+                const overallSNo = startIndex + idx + 1;
+
+                return (
+                  <tr
+                    key={item.id || idx}
+                    style={{
+                      borderBottom: '1px solid rgba(255,255,255,0.06)',
+                      background: isSelected ? 'rgba(99, 102, 241, 0.08)' : undefined
+                    }}
+                    onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
+                    onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <td style={{ padding: '10px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleSelectItemToggle(item.id)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    </td>
+                    <td style={{ padding: '10px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      {item.serialNumber || overallSNo}
+                    </td>
+                    <td style={{ padding: '10px', textAlign: 'center' }}>
+                      <span style={{ 
+                        fontSize: '0.725rem', 
+                        padding: '2px 8px', 
+                        borderRadius: '12px', 
+                        background: 'rgba(56, 189, 248, 0.12)', 
+                        color: '#38bdf8', 
+                        border: '1px solid rgba(56, 189, 248, 0.25)',
+                        fontWeight: 600,
+                        whiteSpace: 'nowrap'
+                      }}>
+                        📁 {item.folderName || 'General'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px', textAlign: 'center' }}>
+                      <span style={{ 
+                        background: 'rgba(99, 102, 241, 0.15)', 
+                        color: '#818cf8', 
+                        padding: '2px 8px', 
+                        borderRadius: '6px', 
+                        fontWeight: 800, 
+                        fontSize: '0.8rem' 
+                      }}>
+                        {item.itemCode}
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px', lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>
+                      {item.description}
+                    </td>
+                    <td style={{ padding: '10px', textAlign: 'center', fontWeight: 600 }}>
+                      {item.quantity}
+                    </td>
+                    <td style={{ padding: '10px', textAlign: 'center' }}>
+                      <span style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem' }}>
+                        {item.unit || 'No'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px', textAlign: 'right', fontWeight: 700 }}>
+                      ₹{Number(item.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td style={{ padding: '10px', textAlign: 'right', color: item.serviceCharge > 0 ? '#fbbf24' : 'var(--text-muted)' }}>
+                      ₹{Number(item.serviceCharge || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td style={{ padding: '10px', textAlign: 'right', fontWeight: 800, color: '#34d399' }}>
+                      ₹{Number(item.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td style={{ padding: '10px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                        <button
+                          onClick={() => handleOpenEditModal(item)}
+                          className="btn btn-outline"
+                          style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }}
+                          title="Edit Item"
+                        >
+                          <Edit3 size={13} color="#818cf8" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteItem(item.id, item.itemCode)}
+                          className="btn btn-outline"
+                          style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem', borderColor: 'rgba(239,68,68,0.3)' }}
+                          title="Delete Item"
+                        >
+                          <Trash2 size={13} color="#ef4444" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+
+        {/* Pagination Bar */}
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.25rem', flexWrap: 'wrap', gap: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              Showing <strong>{startIndex + 1}</strong> to <strong>{Math.min(startIndex + pageSize, totalItemsCount)}</strong> of <strong>{totalItemsCount}</strong> items
+            </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <button 
-                onClick={() => setCurrentPage(1)} 
-                disabled={currentPage === 1} 
-                className="btn btn-outline" 
-                style={{ padding: '0.3rem 0.5rem' }}
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="btn btn-outline"
+                style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
                 title="First Page"
               >
-                <ChevronsLeft size={16} />
+                <ChevronsLeft size={14} />
               </button>
-
-              <button 
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
-                disabled={currentPage === 1} 
-                className="btn btn-outline" 
-                style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="btn btn-outline"
+                style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+                title="Previous Page"
               >
-                <ChevronLeft size={16} /> Prev
+                <ChevronLeft size={14} />
               </button>
 
-              <span style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', color: '#818cf8', fontWeight: 700 }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, padding: '0 0.5rem', color: 'var(--text-main)' }}>
                 Page {currentPage} of {totalPages}
               </span>
 
-              <button 
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
-                disabled={currentPage === totalPages} 
-                className="btn btn-outline" 
-                style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="btn btn-outline"
+                style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+                title="Next Page"
               >
-                Next <ChevronRight size={16} />
+                <ChevronRight size={14} />
               </button>
-
-              <button 
-                onClick={() => setCurrentPage(totalPages)} 
-                disabled={currentPage === totalPages} 
-                className="btn btn-outline" 
-                style={{ padding: '0.3rem 0.5rem' }}
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="btn btn-outline"
+                style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
                 title="Last Page"
               >
-                <ChevronsRight size={16} />
+                <ChevronsRight size={14} />
               </button>
             </div>
           </div>
         )}
-
       </div>
 
+      {/* Item Modal (Add / Edit) */}
       <ItemModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveItem}
-        item={editItemData}
+        editItem={editItemData}
+        nextSno={items.length + 1}
+        availableFolders={allAvailableFolders}
+        defaultFolder={selectedFolder !== 'ALL' ? selectedFolder : 'General'}
       />
 
+      {/* Export Designer Modal */}
       <ExportDesignerModal
         isOpen={exportModalOpen}
         onClose={() => setExportModalOpen(false)}
-        title="Master Items Inventory Catalog"
-        data={selectedItemIds.length > 0 ? items.filter(i => selectedItemIds.includes(i.id)) : items}
+        title="Item Master Inventory Catalog"
+        data={folderFilteredItems}
         availableColumns={ITEM_MASTER_COLUMNS}
       />
+
+      {/* FOLDER ACTION MODAL (Create / Rename / Delete / Move) */}
+      {folderModal.isOpen && (
+        <div 
+          style={{ 
+            position: 'fixed', 
+            inset: 0, 
+            zIndex: 10000, 
+            background: 'rgba(0,0,0,0.8)', 
+            backdropFilter: 'blur(6px)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            padding: '1rem' 
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteItems: false, itemIds: [] }); }}
+        >
+          <div 
+            className="glass-panel" 
+            style={{ 
+              width: '100%', 
+              maxWidth: '480px', 
+              background: 'var(--bg-card-solid)', 
+              border: '1.5px solid rgba(56, 189, 248, 0.4)', 
+              borderRadius: '16px', 
+              padding: '1.5rem',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.7)'
+            }}
+          >
+            {/* Modal Title */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.85rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#38bdf8', fontWeight: 800, fontSize: '1.1rem' }}>
+                <Folder size={20} />
+                <span>
+                  {folderModal.mode === 'create' && 'Create New Folder'}
+                  {folderModal.mode === 'rename' && `Rename Folder '${folderModal.targetFolder}'`}
+                  {folderModal.mode === 'delete' && `Delete Folder '${folderModal.targetFolder}'`}
+                  {folderModal.mode === 'move' && `Move ${folderModal.itemIds.length} Items to Folder`}
+                </span>
+              </div>
+              <button 
+                onClick={() => setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteItems: false, itemIds: [] })} 
+                className="btn btn-outline" 
+                style={{ padding: '0.35rem' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            {folderModal.mode === 'create' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label className="form-label">Folder Name *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. Overhauling Motors, Electrical Spares, HT Rewinding..."
+                    value={folderModal.newFolderName}
+                    onChange={e => setFolderModal(prev => ({ ...prev, newFolderName: e.target.value }))}
+                    autoFocus
+                  />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button onClick={() => setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteItems: false, itemIds: [] })} className="btn btn-outline">
+                    Cancel
+                  </button>
+                  <button onClick={handleCreateFolder} className="btn btn-primary">
+                    Create Folder
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {folderModal.mode === 'rename' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label className="form-label">New Folder Name *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Enter new folder name..."
+                    value={folderModal.newFolderName}
+                    onChange={e => setFolderModal(prev => ({ ...prev, newFolderName: e.target.value }))}
+                    autoFocus
+                  />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button onClick={() => setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteItems: false, itemIds: [] })} className="btn btn-outline">
+                    Cancel
+                  </button>
+                  <button onClick={handleRenameFolder} className="btn btn-secondary">
+                    Save Name
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {folderModal.mode === 'delete' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-main)', margin: 0, lineHeight: 1.5 }}>
+                  Are you sure you want to delete folder <strong>'{folderModal.targetFolder}'</strong>?
+                </p>
+
+                <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.825rem' }}>
+                    <input
+                      type="radio"
+                      name="deleteChoice"
+                      checked={!folderModal.deleteItems}
+                      onChange={() => setFolderModal(prev => ({ ...prev, deleteItems: false }))}
+                    />
+                    <span>Move items to <strong>'General'</strong> folder (Recommended)</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.825rem', color: '#f87171' }}>
+                    <input
+                      type="radio"
+                      name="deleteChoice"
+                      checked={folderModal.deleteItems}
+                      onChange={() => setFolderModal(prev => ({ ...prev, deleteItems: true }))}
+                    />
+                    <span>Delete all items in this folder permanently</span>
+                  </label>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button onClick={() => setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteItems: false, itemIds: [] })} className="btn btn-outline">
+                    Cancel
+                  </button>
+                  <button onClick={handleDeleteFolder} className="btn btn-danger">
+                    Confirm Delete
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {folderModal.mode === 'move' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label className="form-label">Select Target Folder</label>
+                  <select
+                    className="form-select"
+                    value={folderModal.targetFolder}
+                    onChange={e => setFolderModal(prev => ({ ...prev, targetFolder: e.target.value }))}
+                  >
+                    {allAvailableFolders.map(f => (
+                      <option key={f} value={f}>📁 {f}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    Or Create New Folder & Move:
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Type new folder name..."
+                    value={folderModal.newFolderName}
+                    onChange={e => setFolderModal(prev => ({ ...prev, newFolderName: e.target.value }))}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button onClick={() => setFolderModal({ isOpen: false, mode: 'create', targetFolder: '', newFolderName: '', deleteItems: false, itemIds: [] })} className="btn btn-outline">
+                    Cancel
+                  </button>
+                  <button onClick={handleConfirmMove} className="btn btn-primary">
+                    Move Items
+                  </button>
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
     </div>
   );
 };

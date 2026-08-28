@@ -19,4 +19,5 @@ public class ItemDto {
     private BigDecimal rate;
     private BigDecimal serviceCharge;
     private BigDecimal amount;
+    private String folderName;
 }

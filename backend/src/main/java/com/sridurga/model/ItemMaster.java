@@ -40,6 +40,9 @@ public class ItemMaster {
     @Column(name = "service_charge", precision = 18, scale = 2)
     private BigDecimal serviceCharge = BigDecimal.ZERO;
 
+    @Column(name = "folder_name", length = 255)
+    private String folderName = "General";
+
     @Column(nullable = false, precision = 18, scale = 2)
     private BigDecimal amount = BigDecimal.ZERO;
 
