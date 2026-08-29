@@ -176,15 +176,26 @@ export const JobCardPage = ({ editingJobCard, onCancelEdit }) => {
     assembledBy: '',
     testedBy: '',
 
-    // Attachment / PDF / Photo Upload
+    // 1. Diagram / Equipment Photo (Prints on Job Card)
     diagramPhoto: '',
+    diagramPhotoName: '',
+    diagramPhotoSize: '',
     attachmentName: '',
     attachmentType: '',
-    attachmentSize: ''
+
+    // 2. Extra Document / PDF Attachment (Datasheets / Specs / Test Reports)
+    extraAttachment: '',
+    extraAttachmentName: '',
+    extraAttachmentType: '',
+    extraAttachmentSize: ''
   };
 
   const [formData, setFormData] = useState(initialFormState);
-  const fileInputRef = useRef(null);
+  const photoInputRef = useRef(null);
+  const pdfInputRef = useRef(null);
+  const [isPhotoDragging, setIsPhotoDragging] = useState(false);
+  const [isPdfDragging, setIsPdfDragging] = useState(false);
+  const [modalPreview, setModalPreview] = useState(null); // { url, name, type, title }
 
   const loadInitialData = async () => {
     try {
@@ -221,24 +232,22 @@ export const JobCardPage = ({ editingJobCard, onCancelEdit }) => {
     setPrintModalOpen(true);
   };
 
-  const processFile = (file) => {
+  // -------------------------------------------------------------
+  // 1. DIAGRAM & EQUIPMENT PHOTO HANDLERS (Images)
+  // -------------------------------------------------------------
+  const processPhotoFile = (file) => {
     if (!file) return;
 
-    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-    const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(file.name);
-    const isDoc = /\.(doc|docx|xls|xlsx|txt|rtf)$/i.test(file.name);
-
-    if (!isPdf && !isImage && !isDoc) {
-      setToast({ message: 'Please upload a PDF document, Image (PNG, JPG, WEBP), or technical attachment.', type: 'error' });
+    if (!file.type.startsWith('image/') && !/\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(file.name)) {
+      setToast({ message: 'Please select a valid image file (PNG, JPG, JPEG, WEBP) for the Diagram/Photo.', type: 'error' });
       return;
     }
 
-    if (file.size > 15 * 1024 * 1024) {
-      setToast({ message: 'File size exceeds 15MB limit. Please select a smaller file.', type: 'error' });
+    if (file.size > 10 * 1024 * 1024) {
+      setToast({ message: 'Photo size exceeds 10MB limit. Please choose a smaller image.', type: 'error' });
       return;
     }
 
-    const type = isPdf ? 'pdf' : isImage ? 'image' : 'doc';
     const sizeStr = file.size > 1024 * 1024 
       ? (file.size / (1024 * 1024)).toFixed(2) + ' MB'
       : (file.size / 1024).toFixed(0) + ' KB';
@@ -250,71 +259,123 @@ export const JobCardPage = ({ editingJobCard, onCancelEdit }) => {
         setFormData(prev => ({
           ...prev,
           diagramPhoto: base64,
+          diagramPhotoName: file.name,
+          diagramPhotoSize: sizeStr,
           attachmentName: file.name,
-          attachmentType: type,
-          attachmentSize: sizeStr
+          attachmentType: 'image'
         }));
-        setToast({ 
-          message: `${isPdf ? 'PDF Document' : 'Attachment'} "${file.name}" attached successfully!`, 
-          type: 'success' 
-        });
+        setToast({ message: `Equipment Photo "${file.name}" attached successfully!`, type: 'success' });
       }
     };
     reader.readAsDataURL(file);
   };
 
-  const handleFileUpload = (e) => {
+  const handlePhotoUpload = (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      processFile(file);
-    }
+    if (file) processPhotoFile(file);
   };
 
-  const handleDrop = (e) => {
+  const handlePhotoDrop = (e) => {
     e.preventDefault();
-    setIsDragging(false);
+    setIsPhotoDragging(false);
     const file = e.dataTransfer.files?.[0];
-    if (file) {
-      processFile(file);
-    }
+    if (file) processPhotoFile(file);
   };
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDownloadAttachment = () => {
+  const handleDownloadPhoto = () => {
     if (!formData.diagramPhoto) return;
     const link = document.createElement('a');
     link.href = formData.diagramPhoto;
-    const defaultName = formData.attachmentType === 'pdf' || formData.diagramPhoto.startsWith('data:application/pdf')
-      ? `${formData.jobNo ? formData.jobNo.replace(/\//g, '_') : 'JobCard'}_Document.pdf`
-      : `${formData.jobNo ? formData.jobNo.replace(/\//g, '_') : 'JobCard'}_Photo.png`;
-    link.download = formData.attachmentName || defaultName;
+    link.download = formData.diagramPhotoName || `${formData.jobNo ? formData.jobNo.replace(/\//g, '_') : 'JobCard'}_Photo.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    setToast({ message: `Downloading attachment...`, type: 'info' });
   };
 
-  const handleRemoveAttachment = () => {
+  const handleRemovePhoto = () => {
     setFormData(prev => ({
       ...prev,
       diagramPhoto: '',
-      attachmentName: '',
-      attachmentType: '',
-      attachmentSize: ''
+      diagramPhotoName: '',
+      diagramPhotoSize: ''
     }));
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    if (photoInputRef.current) photoInputRef.current.value = '';
+    setToast({ message: 'Diagram / Photo removed', type: 'info' });
+  };
+
+  // -------------------------------------------------------------
+  // 2. EXTRA PDF & DOCUMENT ATTACHMENT HANDLERS (PDF / Docs)
+  // -------------------------------------------------------------
+  const processPdfFile = (file) => {
+    if (!file) return;
+
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isDoc = /\.(doc|docx|xls|xlsx|txt|rtf)$/i.test(file.name);
+
+    if (!isPdf && !isDoc && !file.type.startsWith('image/')) {
+      setToast({ message: 'Please upload a PDF document or technical datasheet file.', type: 'error' });
+      return;
     }
-    setToast({ message: 'Attachment removed', type: 'info' });
+
+    if (file.size > 25 * 1024 * 1024) {
+      setToast({ message: 'File size exceeds 25MB limit. Please choose a smaller document.', type: 'error' });
+      return;
+    }
+
+    const type = isPdf ? 'pdf' : file.type.startsWith('image/') ? 'image' : 'doc';
+    const sizeStr = file.size > 1024 * 1024 
+      ? (file.size / (1024 * 1024)).toFixed(2) + ' MB'
+      : (file.size / 1024).toFixed(0) + ' KB';
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result;
+      if (base64) {
+        setFormData(prev => ({
+          ...prev,
+          extraAttachment: base64,
+          extraAttachmentName: file.name,
+          extraAttachmentType: type,
+          extraAttachmentSize: sizeStr
+        }));
+        setToast({ message: `Extra Document "${file.name}" attached successfully!`, type: 'success' });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePdfUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) processPdfFile(file);
+  };
+
+  const handlePdfDrop = (e) => {
+    e.preventDefault();
+    setIsPdfDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) processPdfFile(file);
+  };
+
+  const handleDownloadPdf = () => {
+    if (!formData.extraAttachment) return;
+    const link = document.createElement('a');
+    link.href = formData.extraAttachment;
+    link.download = formData.extraAttachmentName || `${formData.jobNo ? formData.jobNo.replace(/\//g, '_') : 'JobCard'}_Attachment.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleRemovePdf = () => {
+    setFormData(prev => ({
+      ...prev,
+      extraAttachment: '',
+      extraAttachmentName: '',
+      extraAttachmentType: '',
+      extraAttachmentSize: ''
+    }));
+    if (pdfInputRef.current) pdfInputRef.current.value = '';
+    setToast({ message: 'Extra PDF Document removed', type: 'info' });
   };
 
   const handleCustomerSelect = (name) => {
@@ -874,323 +935,343 @@ export const JobCardPage = ({ editingJobCard, onCancelEdit }) => {
           )}
         </div>
 
-        {/* Section 4: Attachments (PDF / Diagrams / Photos) */}
+        {/* Section 4: Diagram Photo & Extra PDF Attachment */}
         <div className="glass-panel" style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Paperclip size={18} color="#10b981" />
+              <Paperclip size={18} color="#818cf8" />
               <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'white', margin: 0 }}>
-                4. Attachments (PDF Document / Diagrams / Photos)
+                4. Diagram Photo & Extra Attachments (PDF / Documents)
               </h3>
             </div>
-            {formData.diagramPhoto && (
-              (formData.attachmentType === 'pdf' || formData.diagramPhoto.startsWith('data:application/pdf')) ? (
-                <span style={{ fontSize: '0.75rem', color: '#f43f5e', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(244, 63, 94, 0.15)', padding: '0.25rem 0.75rem', borderRadius: '9999px', border: '1px solid rgba(244, 63, 94, 0.35)' }}>
-                  <FileText size={14} /> PDF Document Attached
-                </span>
-              ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {formData.diagramPhoto && (
                 <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(16, 185, 129, 0.15)', padding: '0.25rem 0.75rem', borderRadius: '9999px', border: '1px solid rgba(16, 185, 129, 0.35)' }}>
-                  <CheckCircle2 size={14} /> Photo / Diagram Attached
+                  <ImageIcon size={13} /> Photo / Diagram Attached
                 </span>
-              )
-            )}
+              )}
+              {formData.extraAttachment && (
+                <span style={{ fontSize: '0.75rem', color: '#f43f5e', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(244, 63, 94, 0.15)', padding: '0.25rem 0.75rem', borderRadius: '9999px', border: '1px solid rgba(244, 63, 94, 0.35)' }}>
+                  <FileText size={13} /> Extra PDF Attached
+                </span>
+              )}
+            </div>
           </div>
 
+          {/* Hidden File Pickers */}
           <input 
             type="file" 
-            ref={fileInputRef} 
-            accept=".pdf,image/*,.png,.jpg,.jpeg,.webp,.doc,.docx" 
+            ref={photoInputRef} 
+            accept="image/*" 
             style={{ display: 'none' }} 
-            onChange={handleFileUpload} 
+            onChange={handlePhotoUpload} 
+          />
+          <input 
+            type="file" 
+            ref={pdfInputRef} 
+            accept=".pdf,application/pdf,.doc,.docx,.xls,.xlsx" 
+            style={{ display: 'none' }} 
+            onChange={handlePdfUpload} 
           />
 
-          {!formData.diagramPhoto ? (
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              style={{
-                border: isDragging ? '2px dashed #38bdf8' : '2px dashed rgba(16, 185, 129, 0.4)',
-                borderRadius: '14px',
-                padding: '2.5rem 1.5rem',
-                textAlign: 'center',
-                background: isDragging ? 'rgba(56, 189, 248, 0.12)' : 'rgba(16, 185, 129, 0.03)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '1rem'
-              }}
-              onMouseEnter={(e) => {
-                if (!isDragging) {
-                  e.currentTarget.style.borderColor = '#10b981';
-                  e.currentTarget.style.background = 'rgba(16, 185, 129, 0.08)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isDragging) {
-                  e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-                  e.currentTarget.style.background = 'rgba(16, 185, 129, 0.03)';
-                }
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ width: '52px', height: '52px', borderRadius: '12px', background: 'rgba(244, 63, 94, 0.15)', border: '1px solid rgba(244, 63, 94, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f43f5e' }}>
-                  <FileText size={28} />
+          {/* Dual Attachment Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem', alignItems: 'stretch' }}>
+            
+            {/* 4A. DIAGRAM & EQUIPMENT PHOTO */}
+            <div style={{ border: '1.5px solid rgba(16, 185, 129, 0.3)', borderRadius: '14px', padding: '1.25rem', background: 'rgba(16, 185, 129, 0.02)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px dashed rgba(16, 185, 129, 0.25)', paddingBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <ImageIcon size={16} color="#10b981" />
+                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#34d399' }}>
+                    4A. Diagram & Equipment Photo
+                  </span>
                 </div>
-                <div style={{ width: '52px', height: '52px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981' }}>
-                  <ImageIcon size={28} />
-                </div>
+                <span style={{ fontSize: '0.675rem', color: '#94a3b8', background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '4px' }}>
+                  Prints on Job Card
+                </span>
               </div>
 
-              <div>
-                <p style={{ margin: 0, fontWeight: 800, fontSize: '1.05rem', color: '#f8fafc' }}>
-                  Drag & Drop or Click to Upload PDF Document or Equipment Photo
-                </p>
-                <p style={{ margin: '6px 0 0 0', fontSize: '0.825rem', color: 'var(--text-muted)' }}>
-                  Attach PDF technical datasheets, inspection reports, winding diagrams, motor nameplates, or photos (PDF, PNG, JPG, WEBP up to 15MB)
-                </p>
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                <button 
-                  type="button" 
-                  className="btn btn-outline" 
-                  style={{ borderColor: 'rgba(244, 63, 94, 0.4)', color: '#f43f5e', background: 'rgba(244, 63, 94, 0.08)', fontSize: '0.825rem', padding: '0.45rem 1.1rem', fontWeight: 600 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    fileInputRef.current?.click();
+              {!formData.diagramPhoto ? (
+                <div 
+                  onClick={() => photoInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setIsPhotoDragging(true); }}
+                  onDragLeave={(e) => { e.preventDefault(); setIsPhotoDragging(false); }}
+                  onDrop={handlePhotoDrop}
+                  style={{
+                    border: isPhotoDragging ? '2px dashed #10b981' : '1.5px dashed rgba(16, 185, 129, 0.4)',
+                    borderRadius: '12px',
+                    padding: '2rem 1.25rem',
+                    textAlign: 'center',
+                    background: isPhotoDragging ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.03)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.75rem',
+                    minHeight: '200px'
                   }}
                 >
-                  <FileText size={15} />
-                  <span>Upload PDF Document</span>
-                </button>
-
-                <button 
-                  type="button" 
-                  className="btn btn-outline" 
-                  style={{ borderColor: 'rgba(16, 185, 129, 0.4)', color: '#10b981', background: 'rgba(16, 185, 129, 0.08)', fontSize: '0.825rem', padding: '0.45rem 1.1rem', fontWeight: 600 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    fileInputRef.current?.click();
-                  }}
-                >
-                  <Camera size={15} />
-                  <span>Upload Photo / Diagram</span>
-                </button>
-              </div>
-            </div>
-          ) : (formData.attachmentType === 'pdf' || formData.diagramPhoto.startsWith('data:application/pdf')) ? (
-            /* PDF Document Attachment Container */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div style={{ 
-                display: 'flex', 
-                flexWrap: 'wrap', 
-                gap: '1.25rem', 
-                alignItems: 'center', 
-                justifyContent: 'space-between',
-                padding: '1.25rem',
-                background: 'rgba(244, 63, 94, 0.06)',
-                border: '1.5px solid rgba(244, 63, 94, 0.35)',
-                borderRadius: '14px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: '260px' }}>
-                  <div style={{ width: '56px', height: '56px', borderRadius: '12px', background: 'rgba(244, 63, 94, 0.2)', border: '1px solid rgba(244, 63, 94, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f43f5e', flexShrink: 0 }}>
-                    <FileText size={32} />
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981' }}>
+                    <Camera size={24} />
                   </div>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc', wordBreak: 'break-word' }}>
-                        {formData.attachmentName || 'Job_Card_Specification_Document.pdf'}
-                      </h4>
-                      <span className="badge" style={{ background: '#f43f5e', color: '#fff', fontSize: '0.65rem', fontWeight: 800 }}>
-                        PDF DOCUMENT
-                      </span>
-                    </div>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '0.775rem', color: '#cbd5e1' }}>
-                      {formData.attachmentSize ? `File Size: ${formData.attachmentSize} • ` : ''}Ready & Attached to Job Card
-                    </p>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap' }}>
-                  <button 
-                    type="button" 
-                    onClick={() => setPreviewModalOpen(true)}
-                    className="btn btn-outline"
-                    style={{ fontSize: '0.8rem', padding: '0.5rem 0.9rem', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.4)', background: 'rgba(56, 189, 248, 0.1)' }}
-                    title="View PDF Document Reader"
-                  >
-                    <Eye size={15} />
-                    <span>View / Open PDF</span>
-                  </button>
-
-                  <button 
-                    type="button" 
-                    onClick={handleDownloadAttachment}
-                    className="btn btn-outline"
-                    style={{ fontSize: '0.8rem', padding: '0.5rem 0.9rem', color: '#34d399', borderColor: 'rgba(52, 211, 153, 0.4)', background: 'rgba(52, 211, 153, 0.1)' }}
-                    title="Download PDF File"
-                  >
-                    <Download size={15} />
-                    <span>Download PDF</span>
-                  </button>
-
-                  <button 
-                    type="button" 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="btn btn-outline"
-                    style={{ fontSize: '0.8rem', padding: '0.5rem 0.9rem' }}
-                    title="Replace with another PDF or Photo"
-                  >
-                    <Upload size={14} />
-                    <span>Replace</span>
-                  </button>
-
-                  <button 
-                    type="button" 
-                    onClick={handleRemoveAttachment}
-                    className="btn btn-outline"
-                    style={{ fontSize: '0.8rem', padding: '0.5rem 0.9rem', borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171', background: 'rgba(239, 68, 68, 0.1)' }}
-                    title="Remove Attachment"
-                  >
-                    <Trash size={14} />
-                    <span>Remove</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Live Interactive PDF Viewer Frame */}
-              <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(244, 63, 94, 0.3)', background: '#1e293b' }}>
-                <div style={{ padding: '0.5rem 1rem', background: 'rgba(15, 23, 42, 0.8)', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f43f5e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Interactive PDF Document Preview
-                  </span>
-                  <button 
-                    type="button" 
-                    onClick={() => setPreviewModalOpen(true)}
-                    className="btn btn-outline" 
-                    style={{ padding: '2px 8px', fontSize: '0.7rem', height: 'auto', color: '#38bdf8' }}
-                  >
-                    <Maximize2 size={12} /> Expand Reader
-                  </button>
-                </div>
-                <iframe 
-                  src={formData.diagramPhoto} 
-                  title="PDF Attachment Viewer" 
-                  style={{ width: '100%', height: '380px', border: 'none', background: '#fff' }}
-                />
-              </div>
-            </div>
-          ) : (
-            /* Image / Diagram Attachment Container */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-start' }}>
-                {/* Photo Preview Container */}
-                <div 
-                  onClick={() => setPreviewModalOpen(true)}
-                  style={{ 
-                    position: 'relative', 
-                    borderRadius: '12px', 
-                    overflow: 'hidden', 
-                    border: '1.5px solid rgba(16, 185, 129, 0.4)', 
-                    background: '#0f172a',
-                    maxWidth: '360px',
-                    cursor: 'pointer',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.4)'
-                  }}
-                  title="Click to view fullscreen image"
-                >
-                  <img 
-                    src={formData.diagramPhoto} 
-                    alt="Uploaded Diagram / Equipment" 
-                    style={{ 
-                      width: '100%', 
-                      maxHeight: '260px', 
-                      objectFit: 'contain', 
-                      display: 'block' 
-                    }} 
-                  />
-                  <div style={{ 
-                    position: 'absolute', 
-                    bottom: 0, 
-                    left: 0, 
-                    right: 0, 
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)', 
-                    padding: '8px 12px', 
-                    color: '#f8fafc', 
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}>
-                    <span>{formData.attachmentName || 'Equipment Photo'}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#38bdf8', fontSize: '0.7rem' }}>
-                      <Maximize2 size={12} /> View
-                    </span>
-                  </div>
-                </div>
-
-                {/* Control Actions */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1, minWidth: '220px' }}>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600, color: '#f8fafc' }}>
-                      Image / Diagram Attached to Job Card
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: '#f8fafc' }}>
+                      Upload Diagram / Equipment Photo
                     </p>
                     <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      This image will automatically be included and rendered in the official Job Card print layout.
+                      Winding diagrams or motor nameplates (PNG, JPG, WEBP up to 10MB)
                     </p>
                   </div>
+                  <button 
+                    type="button" 
+                    className="btn btn-outline" 
+                    style={{ borderColor: 'rgba(16, 185, 129, 0.5)', color: '#10b981', fontSize: '0.75rem', padding: '0.35rem 0.85rem' }}
+                    onClick={(e) => { e.stopPropagation(); photoInputRef.current?.click(); }}
+                  >
+                    <Camera size={13} />
+                    <span>Browse Photo</span>
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                  <div 
+                    onClick={() => setModalPreview({
+                      url: formData.diagramPhoto,
+                      name: formData.diagramPhotoName || 'Equipment_Photo.png',
+                      type: 'image',
+                      title: 'Equipment Photo & Winding Diagram'
+                    })}
+                    style={{
+                      position: 'relative',
+                      borderRadius: '10px',
+                      overflow: 'hidden',
+                      border: '1.5px solid rgba(16, 185, 129, 0.4)',
+                      background: '#0f172a',
+                      maxHeight: '220px',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
+                    }}
+                    title="Click to view fullscreen"
+                  >
+                    <img 
+                      src={formData.diagramPhoto} 
+                      alt="Diagram / Equipment" 
+                      style={{ width: '100%', height: '180px', objectFit: 'contain', display: 'block' }}
+                    />
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)', padding: '6px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#f8fafc', fontSize: '0.725rem' }}>
+                      <span style={{ fontWeight: 600, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {formData.diagramPhotoName || 'Equipment Photo'}
+                      </span>
+                      <span style={{ color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.675rem' }}>
+                        <Maximize2 size={11} /> View
+                      </span>
+                    </div>
+                  </div>
 
-                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <button 
                       type="button" 
-                      onClick={() => setPreviewModalOpen(true)}
+                      onClick={() => setModalPreview({
+                        url: formData.diagramPhoto,
+                        name: formData.diagramPhotoName || 'Equipment_Photo.png',
+                        type: 'image',
+                        title: 'Equipment Photo & Winding Diagram'
+                      })}
                       className="btn btn-outline" 
-                      style={{ fontSize: '0.8rem', padding: '0.5rem 1rem', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.4)' }}
+                      style={{ flex: 1, fontSize: '0.75rem', padding: '0.4rem 0.6rem', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.4)' }}
                     >
-                      <Eye size={14} />
-                      <span>Fullscreen View</span>
+                      <Eye size={13} /> <span>View</span>
                     </button>
 
                     <button 
                       type="button" 
-                      onClick={handleDownloadAttachment}
+                      onClick={handleDownloadPhoto}
                       className="btn btn-outline" 
-                      style={{ fontSize: '0.8rem', padding: '0.5rem 1rem', color: '#34d399', borderColor: 'rgba(52, 211, 153, 0.4)' }}
+                      style={{ flex: 1, fontSize: '0.75rem', padding: '0.4rem 0.6rem', color: '#34d399', borderColor: 'rgba(52, 211, 153, 0.4)' }}
                     >
-                      <Download size={14} />
-                      <span>Download</span>
+                      <Download size={13} /> <span>Download</span>
                     </button>
 
                     <button 
                       type="button" 
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => photoInputRef.current?.click()}
                       className="btn btn-outline" 
-                      style={{ fontSize: '0.8rem', padding: '0.5rem 1rem' }}
+                      style={{ flex: 1, fontSize: '0.75rem', padding: '0.4rem 0.6rem' }}
                     >
-                      <Upload size={14} />
-                      <span>Replace</span>
+                      <Upload size={13} /> <span>Replace</span>
                     </button>
 
                     <button 
                       type="button" 
-                      onClick={handleRemoveAttachment}
+                      onClick={handleRemovePhoto}
                       className="btn btn-outline" 
-                      style={{ fontSize: '0.8rem', padding: '0.5rem 1rem', borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171' }}
+                      style={{ fontSize: '0.75rem', padding: '0.4rem 0.6rem', borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171' }}
                     >
-                      <Trash size={14} />
-                      <span>Remove</span>
+                      <Trash size={13} />
                     </button>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
-          )}
+
+            {/* 4B. EXTRA PDF & DOCUMENT ATTACHMENT */}
+            <div style={{ border: '1.5px solid rgba(244, 63, 94, 0.3)', borderRadius: '14px', padding: '1.25rem', background: 'rgba(244, 63, 94, 0.02)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px dashed rgba(244, 63, 94, 0.25)', paddingBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <FileText size={16} color="#f43f5e" />
+                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#f43f5e' }}>
+                    4B. Extra PDF & Document Attachment
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.675rem', color: '#f43f5e', background: 'rgba(244,63,94,0.12)', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
+                  PDF / Datasheet / Report
+                </span>
+              </div>
+
+              {!formData.extraAttachment ? (
+                <div 
+                  onClick={() => pdfInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setIsPdfDragging(true); }}
+                  onDragLeave={(e) => { e.preventDefault(); setIsPdfDragging(false); }}
+                  onDrop={handlePdfDrop}
+                  style={{
+                    border: isPdfDragging ? '2px dashed #f43f5e' : '1.5px dashed rgba(244, 63, 94, 0.4)',
+                    borderRadius: '12px',
+                    padding: '2rem 1.25rem',
+                    textAlign: 'center',
+                    background: isPdfDragging ? 'rgba(244, 63, 94, 0.12)' : 'rgba(244, 63, 94, 0.03)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.75rem',
+                    minHeight: '200px'
+                  }}
+                >
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(244, 63, 94, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f43f5e' }}>
+                    <FileText size={24} />
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: '#f8fafc' }}>
+                      Upload Extra PDF / Datasheet
+                    </p>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Technical specs, customer PO, test sheets (PDF up to 25MB)
+                    </p>
+                  </div>
+                  <button 
+                    type="button" 
+                    className="btn btn-outline" 
+                    style={{ borderColor: 'rgba(244, 63, 94, 0.5)', color: '#f43f5e', fontSize: '0.75rem', padding: '0.35rem 0.85rem' }}
+                    onClick={(e) => { e.stopPropagation(); pdfInputRef.current?.click(); }}
+                  >
+                    <UploadCloud size={13} />
+                    <span>Browse PDF File</span>
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                  <div 
+                    onClick={() => setModalPreview({
+                      url: formData.extraAttachment,
+                      name: formData.extraAttachmentName || 'JobCard_Document.pdf',
+                      type: formData.extraAttachmentType || 'pdf',
+                      title: 'Extra Document / Technical Attachment'
+                    })}
+                    style={{
+                      padding: '1rem',
+                      borderRadius: '10px',
+                      background: 'rgba(244, 63, 94, 0.08)',
+                      border: '1.5px solid rgba(244, 63, 94, 0.35)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.875rem',
+                      cursor: 'pointer'
+                    }}
+                    title="Click to open interactive PDF reader"
+                  >
+                    <div style={{ width: '42px', height: '42px', borderRadius: '8px', background: '#fee2e2', border: '1px solid #ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#b91c1c', fontSize: '12px', flexShrink: 0 }}>
+                      PDF
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f8fafc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {formData.extraAttachmentName || 'JobCard_Attachment.pdf'}
+                      </div>
+                      <div style={{ fontSize: '0.725rem', color: '#cbd5e1' }}>
+                        {formData.extraAttachmentSize ? `${formData.extraAttachmentSize} • ` : ''}Ready & Attached
+                      </div>
+                    </div>
+                    <button 
+                      type="button" 
+                      className="btn btn-outline" 
+                      style={{ padding: '4px 8px', fontSize: '0.7rem', color: '#38bdf8' }}
+                    >
+                      <Maximize2 size={12} /> Open
+                    </button>
+                  </div>
+
+                  {/* Inline PDF Preview Frame */}
+                  {formData.extraAttachment.startsWith('data:application/pdf') && (
+                    <div style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(244,63,94,0.25)', height: '140px', background: '#fff' }}>
+                      <iframe 
+                        src={formData.extraAttachment} 
+                        title="PDF Quick Preview" 
+                        style={{ width: '100%', height: '100%', border: 'none' }}
+                      />
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button 
+                      type="button" 
+                      onClick={() => setModalPreview({
+                        url: formData.extraAttachment,
+                        name: formData.extraAttachmentName || 'JobCard_Document.pdf',
+                        type: formData.extraAttachmentType || 'pdf',
+                        title: 'Extra Document / Technical Attachment'
+                      })}
+                      className="btn btn-outline" 
+                      style={{ flex: 1, fontSize: '0.75rem', padding: '0.4rem 0.6rem', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.4)' }}
+                    >
+                      <Eye size={13} /> <span>Open Reader</span>
+                    </button>
+
+                    <button 
+                      type="button" 
+                      onClick={handleDownloadPdf}
+                      className="btn btn-outline" 
+                      style={{ flex: 1, fontSize: '0.75rem', padding: '0.4rem 0.6rem', color: '#34d399', borderColor: 'rgba(52, 211, 153, 0.4)' }}
+                    >
+                      <Download size={13} /> <span>Download</span>
+                    </button>
+
+                    <button 
+                      type="button" 
+                      onClick={() => pdfInputRef.current?.click()}
+                      className="btn btn-outline" 
+                      style={{ flex: 1, fontSize: '0.75rem', padding: '0.4rem 0.6rem' }}
+                    >
+                      <Upload size={13} /> <span>Replace</span>
+                    </button>
+
+                    <button 
+                      type="button" 
+                      onClick={handleRemovePdf}
+                      className="btn btn-outline" 
+                      style={{ fontSize: '0.75rem', padding: '0.4rem 0.6rem', borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171' }}
+                    >
+                      <Trash size={13} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+          </div>
         </div>
 
         {/* Section 5: Test Details & Remarks */}
@@ -1322,8 +1403,8 @@ export const JobCardPage = ({ editingJobCard, onCancelEdit }) => {
         jobCard={selectedJobCardForPrint} 
       />
 
-      {/* Fullscreen Attachment / PDF Reader Modal */}
-      {previewModalOpen && formData.diagramPhoto && (
+      {/* Unified Fullscreen Attachment / PDF Reader Modal */}
+      {modalPreview && (
         <div 
           style={{
             position: 'fixed',
@@ -1337,7 +1418,7 @@ export const JobCardPage = ({ editingJobCard, onCancelEdit }) => {
             padding: '1.5rem',
             animation: 'fadeIn 0.2s ease-out'
           }}
-          onClick={() => setPreviewModalOpen(false)}
+          onClick={() => setModalPreview(null)}
         >
           <div 
             style={{
@@ -1368,20 +1449,20 @@ export const JobCardPage = ({ editingJobCard, onCancelEdit }) => {
                   width: '38px',
                   height: '38px',
                   borderRadius: '10px',
-                  background: (formData.attachmentType === 'pdf' || formData.diagramPhoto.startsWith('data:application/pdf')) ? 'rgba(244, 63, 94, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                  background: (modalPreview.type === 'pdf' || modalPreview.url.startsWith('data:application/pdf')) ? 'rgba(244, 63, 94, 0.2)' : 'rgba(16, 185, 129, 0.2)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: (formData.attachmentType === 'pdf' || formData.diagramPhoto.startsWith('data:application/pdf')) ? '#f43f5e' : '#10b981'
+                  color: (modalPreview.type === 'pdf' || modalPreview.url.startsWith('data:application/pdf')) ? '#f43f5e' : '#10b981'
                 }}>
-                  {(formData.attachmentType === 'pdf' || formData.diagramPhoto.startsWith('data:application/pdf')) ? <FileText size={20} /> : <ImageIcon size={20} />}
+                  {(modalPreview.type === 'pdf' || modalPreview.url.startsWith('data:application/pdf')) ? <FileText size={20} /> : <ImageIcon size={20} />}
                 </div>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>
-                    {formData.attachmentName || 'Job Card Attachment'}
+                    {modalPreview.name}
                   </h3>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Job Card: <strong style={{ color: '#818cf8' }}>{formData.jobNo || 'Draft'}</strong> &bull; {(formData.attachmentType === 'pdf' || formData.diagramPhoto.startsWith('data:application/pdf')) ? 'PDF Document Reader' : 'Full Image View'}
+                    Job Card: <strong style={{ color: '#818cf8' }}>{formData.jobNo || 'Draft'}</strong> &bull; {modalPreview.title}
                   </span>
                 </div>
               </div>
@@ -1389,7 +1470,14 @@ export const JobCardPage = ({ editingJobCard, onCancelEdit }) => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <button
                   type="button"
-                  onClick={handleDownloadAttachment}
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = modalPreview.url;
+                    link.download = modalPreview.name;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
                   className="btn btn-outline"
                   style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', color: '#34d399', borderColor: 'rgba(52, 211, 153, 0.4)' }}
                 >
@@ -1397,7 +1485,7 @@ export const JobCardPage = ({ editingJobCard, onCancelEdit }) => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPreviewModalOpen(false)}
+                  onClick={() => setModalPreview(null)}
                   className="btn btn-outline"
                   style={{ width: '36px', height: '36px', borderRadius: '50%', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   title="Close (Esc)"
@@ -1409,15 +1497,15 @@ export const JobCardPage = ({ editingJobCard, onCancelEdit }) => {
 
             {/* Modal Body */}
             <div style={{ flex: 1, padding: '1rem', overflowY: 'auto', background: '#020617', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '480px' }}>
-              {(formData.attachmentType === 'pdf' || formData.diagramPhoto.startsWith('data:application/pdf')) ? (
+              {(modalPreview.type === 'pdf' || modalPreview.url.startsWith('data:application/pdf')) ? (
                 <iframe 
-                  src={formData.diagramPhoto} 
-                  title="Full PDF Document Reader" 
+                  src={modalPreview.url} 
+                  title="PDF Attachment Reader" 
                   style={{ width: '100%', height: '70vh', border: 'none', borderRadius: '8px', background: '#fff' }}
                 />
               ) : (
                 <img 
-                  src={formData.diagramPhoto} 
+                  src={modalPreview.url} 
                   alt="Attachment Fullscreen" 
                   style={{ maxWidth: '100%', maxHeight: '72vh', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }} 
                 />

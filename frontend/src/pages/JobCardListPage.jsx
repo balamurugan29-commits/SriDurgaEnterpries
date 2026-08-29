@@ -376,17 +376,57 @@ export const JobCardListPage = ({ onEditJobCard, onNewJobCard }) => {
                     <td style={{ color: 'var(--text-subtle)' }}>{card.make || 'N/A'}</td>
                     <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{card.slNo || 'N/A'}</td>
                     <td style={{ textAlign: 'center' }}>
-                      {card.diagramPhoto ? (
-                        (card.attachmentType === 'pdf' || card.diagramPhoto.startsWith('data:application/pdf')) ? (
-                          <button onClick={() => setPreviewAttachment({ url: card.diagramPhoto, name: card.attachmentName || `${card.jobNo.replace(/\//g, '_')}_Document.pdf`, type: 'pdf', jobNo: card.jobNo })} className="btn btn-outline" style={{ padding: '0.25rem 0.55rem', fontSize: '0.725rem', color: '#f43f5e', borderColor: 'rgba(244, 63, 94, 0.4)', background: 'rgba(244, 63, 94, 0.12)', gap: '4px', fontWeight: 700 }}>
-                            <FileText size={12} /> <span>PDF</span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                        {card.diagramPhoto && (
+                          (card.attachmentType === 'pdf' || card.diagramPhoto.startsWith('data:application/pdf')) ? (
+                            <button 
+                              onClick={() => setPreviewAttachment({ 
+                                url: card.diagramPhoto, 
+                                name: card.attachmentName || `${card.jobNo.replace(/\//g, '_')}_Document.pdf`, 
+                                type: 'pdf', 
+                                jobNo: card.jobNo 
+                              })} 
+                              className="btn btn-outline" 
+                              style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', color: '#f43f5e', borderColor: 'rgba(244, 63, 94, 0.4)', background: 'rgba(244, 63, 94, 0.12)', gap: '3px', fontWeight: 700 }}
+                              title="View Document"
+                            >
+                              <FileText size={11} /> <span>PDF</span>
+                            </button>
+                          ) : (
+                            <button 
+                              onClick={() => setPreviewAttachment({ 
+                                url: card.diagramPhoto, 
+                                name: card.diagramPhotoName || card.attachmentName || `${card.jobNo.replace(/\//g, '_')}_Photo.png`, 
+                                type: 'image', 
+                                jobNo: card.jobNo 
+                              })} 
+                              className="btn btn-outline" 
+                              style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.4)', background: 'rgba(16, 185, 129, 0.12)', gap: '3px', fontWeight: 700 }}
+                              title="View Diagram / Photo"
+                            >
+                              <ImageIcon size={11} /> <span>Photo</span>
+                            </button>
+                          )
+                        )}
+                        {card.extraAttachment && (
+                          <button 
+                            onClick={() => setPreviewAttachment({ 
+                              url: card.extraAttachment, 
+                              name: card.extraAttachmentName || `${card.jobNo.replace(/\//g, '_')}_Extra.pdf`, 
+                              type: card.extraAttachmentType || 'pdf', 
+                              jobNo: card.jobNo 
+                            })} 
+                            className="btn btn-outline" 
+                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', color: '#f43f5e', borderColor: 'rgba(244, 63, 94, 0.4)', background: 'rgba(244, 63, 94, 0.12)', gap: '3px', fontWeight: 700 }}
+                            title={`View Extra Document: ${card.extraAttachmentName || 'PDF'}`}
+                          >
+                            <FileText size={11} /> <span>PDF Doc</span>
                           </button>
-                        ) : (
-                          <button onClick={() => setPreviewAttachment({ url: card.diagramPhoto, name: card.attachmentName || `${card.jobNo.replace(/\//g, '_')}_Photo.png`, type: 'image', jobNo: card.jobNo })} className="btn btn-outline" style={{ padding: '0.25rem 0.55rem', fontSize: '0.725rem', color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.4)', background: 'rgba(16, 185, 129, 0.12)', gap: '4px', fontWeight: 700 }}>
-                            <ImageIcon size={12} /> <span>Photo</span>
-                          </button>
-                        )
-                      ) : <span style={{ color: 'var(--text-subtle)', fontSize: '0.75rem' }}>-</span>}
+                        )}
+                        {!card.diagramPhoto && !card.extraAttachment && (
+                          <span style={{ color: 'var(--text-subtle)', fontSize: '0.75rem' }}>-</span>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>

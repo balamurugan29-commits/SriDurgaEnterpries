@@ -222,15 +222,31 @@ public class JobCard {
     @Column(name = "tested_by", length = 100)
     private String testedBy;
 
-    // Photo / Diagram / PDF Document Upload (Base64 string or URI)
+    // 1. Diagram / Equipment Photo (Base64 string or URI)
     @Column(name = "diagram_photo", columnDefinition = "NVARCHAR(MAX)")
     private String diagramPhoto;
+
+    @Column(name = "diagram_photo_name", length = 255)
+    private String diagramPhotoName;
 
     @Column(name = "attachment_name", length = 255)
     private String attachmentName;
 
     @Column(name = "attachment_type", length = 100)
     private String attachmentType;
+
+    // 2. Extra Document / PDF Attachment (PDF, technical spec, test certificates, etc.)
+    @Column(name = "extra_attachment", columnDefinition = "NVARCHAR(MAX)")
+    private String extraAttachment;
+
+    @Column(name = "extra_attachment_name", length = 255)
+    private String extraAttachmentName;
+
+    @Column(name = "extra_attachment_type", length = 100)
+    private String extraAttachmentType;
+
+    @Column(name = "extra_attachment_size", length = 50)
+    private String extraAttachmentSize;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();

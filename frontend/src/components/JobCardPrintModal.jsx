@@ -442,29 +442,41 @@ export const JobCardPrintModal = ({ isOpen, onClose, jobCard }) => {
                 </div>
 
                 {/* Right Side: Photo / Diagram / PDF Attachment Display if Uploaded */}
-                {jobCard.diagramPhoto && (
-                  <div style={{ width: '210px', marginLeft: '12px', flexShrink: 0, textAlign: 'center', border: '1px solid #000', padding: '4px', background: '#fafafa' }}>
-                    <div style={{ fontWeight: 'bold', fontSize: '10.5px', textDecoration: 'underline', marginBottom: '4px' }}>
-                      {(jobCard.attachmentType === 'pdf' || jobCard.diagramPhoto.startsWith('data:application/pdf')) ? 'Attached PDF Document' : 'Diagram / Equipment Photo'}
-                    </div>
-                    {(jobCard.attachmentType === 'pdf' || jobCard.diagramPhoto.startsWith('data:application/pdf')) ? (
-                      <div style={{ padding: '16px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                        <div style={{ width: '36px', height: '36px', borderRadius: '4px', background: '#fee2e2', border: '1px solid #ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#b91c1c', fontSize: '12px' }}>
+                {(jobCard.diagramPhoto || jobCard.extraAttachment) && (
+                  <div style={{ width: '220px', marginLeft: '12px', flexShrink: 0, textAlign: 'center', border: '1px solid #000', padding: '4px', background: '#fafafa', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    {jobCard.diagramPhoto ? (
+                      <>
+                        <div style={{ fontWeight: 'bold', fontSize: '10.5px', textDecoration: 'underline', marginBottom: '4px' }}>
+                          Diagram / Equipment Photo
+                        </div>
+                        <img 
+                          src={jobCard.diagramPhoto} 
+                          alt="Equipment / Winding Diagram" 
+                          style={{ width: '100%', maxHeight: jobCard.extraAttachment ? '150px' : '220px', objectFit: 'contain', display: 'block', margin: '0 auto' }} 
+                        />
+                      </>
+                    ) : (
+                      <div style={{ padding: '12px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '4px', background: '#fee2e2', border: '1px solid #ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#b91c1c', fontSize: '11px' }}>
                           PDF
                         </div>
-                        <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#000', wordBreak: 'break-word', maxWidth: '190px' }}>
-                          {jobCard.attachmentName || 'Technical_Specification.pdf'}
+                        <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#000', wordBreak: 'break-word', maxWidth: '200px' }}>
+                          {jobCard.extraAttachmentName || jobCard.attachmentName || 'Technical_Document.pdf'}
                         </span>
                         <span style={{ fontSize: '9px', color: '#475569' }}>
-                          (Document Attached to File)
+                          (PDF Attached)
                         </span>
                       </div>
-                    ) : (
-                      <img 
-                        src={jobCard.diagramPhoto} 
-                        alt="Equipment / Winding Diagram" 
-                        style={{ width: '100%', maxHeight: '220px', objectFit: 'contain', display: 'block', margin: '0 auto' }} 
-                      />
+                    )}
+
+                    {/* If both diagram photo and extra PDF are attached, show the extra document note below photo */}
+                    {jobCard.diagramPhoto && jobCard.extraAttachment && (
+                      <div style={{ marginTop: '4px', paddingTop: '4px', borderTop: '1px dashed #999', fontSize: '9px', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                        <span style={{ fontWeight: 'bold', color: '#b91c1c' }}>[PDF Attached]:</span>
+                        <span style={{ maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {jobCard.extraAttachmentName || 'Document.pdf'}
+                        </span>
+                      </div>
                     )}
                   </div>
                 )}
