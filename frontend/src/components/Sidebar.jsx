@@ -130,6 +130,60 @@ export const Sidebar = ({ activePage, setActivePage }) => {
     }
   };
 
+  // Auto-sync active page dropdown: open only active section and close all others
+  useEffect(() => {
+    if (activePage === 'master' || activePage === 'customer-master' || activePage === 'company-details') {
+      setMasterDropdownOpen(true);
+      setCertDropdownOpen(false);
+      setInvoiceDropdownOpen(false);
+      setCardDropdownOpen(false);
+      setPassDropdownOpen(false);
+      setAuditDropdownOpen(false);
+    } else if (activePage === 'work-completion' || activePage === 'work-completion-history' || activePage === 'work-completion-list') {
+      setCertDropdownOpen(true);
+      setMasterDropdownOpen(false);
+      setInvoiceDropdownOpen(false);
+      setCardDropdownOpen(false);
+      setPassDropdownOpen(false);
+      setAuditDropdownOpen(false);
+    } else if (activePage === 'challan' || activePage === 'challan-list' || activePage === 'challans-list' || activePage === 'proforma-invoice' || activePage === 'proforma-invoice-history' || activePage === 'proforma-invoice-list' || activePage === 'proforma-invoices') {
+      setInvoiceDropdownOpen(true);
+      setMasterDropdownOpen(false);
+      setCertDropdownOpen(false);
+      setCardDropdownOpen(false);
+      setPassDropdownOpen(false);
+      setAuditDropdownOpen(false);
+    } else if (activePage === 'job-card' || activePage === 'job-card-history' || activePage === 'job-card-list') {
+      setCardDropdownOpen(true);
+      setMasterDropdownOpen(false);
+      setInvoiceDropdownOpen(false);
+      setCertDropdownOpen(false);
+      setPassDropdownOpen(false);
+      setAuditDropdownOpen(false);
+    } else if (activePage === 'gate-pass' || activePage === 'gate-pass-list' || activePage === 'gate-pass-history') {
+      setPassDropdownOpen(true);
+      setMasterDropdownOpen(false);
+      setInvoiceDropdownOpen(false);
+      setCertDropdownOpen(false);
+      setCardDropdownOpen(false);
+      setAuditDropdownOpen(false);
+    } else if (activePage === 'sales-ledger' || activePage === 'purchase-ledger') {
+      setAuditDropdownOpen(true);
+      setMasterDropdownOpen(false);
+      setInvoiceDropdownOpen(false);
+      setCertDropdownOpen(false);
+      setCardDropdownOpen(false);
+      setPassDropdownOpen(false);
+    } else if (activePage === 'dashboard') {
+      setMasterDropdownOpen(false);
+      setInvoiceDropdownOpen(false);
+      setCertDropdownOpen(false);
+      setCardDropdownOpen(false);
+      setPassDropdownOpen(false);
+      setAuditDropdownOpen(false);
+    }
+  }, [activePage]);
+
   const handleMasterClick = () => {
     if (isCompact && !mobileMenuOpen) {
       setIconFlyoutOpen(!iconFlyoutOpen);
@@ -137,8 +191,17 @@ export const Sidebar = ({ activePage, setActivePage }) => {
       setInvoiceIconFlyoutOpen(false);
       setCardIconFlyoutOpen(false);
       setPassIconFlyoutOpen(false);
+      setAuditIconFlyoutOpen(false);
     } else {
-      setMasterDropdownOpen(!masterDropdownOpen);
+      const nextState = !masterDropdownOpen;
+      setMasterDropdownOpen(nextState);
+      if (nextState) {
+        setCertDropdownOpen(false);
+        setInvoiceDropdownOpen(false);
+        setCardDropdownOpen(false);
+        setPassDropdownOpen(false);
+        setAuditDropdownOpen(false);
+      }
     }
   };
 
@@ -149,8 +212,17 @@ export const Sidebar = ({ activePage, setActivePage }) => {
       setInvoiceIconFlyoutOpen(false);
       setCardIconFlyoutOpen(false);
       setPassIconFlyoutOpen(false);
+      setAuditIconFlyoutOpen(false);
     } else {
-      setCertDropdownOpen(!certDropdownOpen);
+      const nextState = !certDropdownOpen;
+      setCertDropdownOpen(nextState);
+      if (nextState) {
+        setMasterDropdownOpen(false);
+        setInvoiceDropdownOpen(false);
+        setCardDropdownOpen(false);
+        setPassDropdownOpen(false);
+        setAuditDropdownOpen(false);
+      }
     }
   };
 
@@ -161,8 +233,17 @@ export const Sidebar = ({ activePage, setActivePage }) => {
       setCertIconFlyoutOpen(false);
       setCardIconFlyoutOpen(false);
       setPassIconFlyoutOpen(false);
+      setAuditIconFlyoutOpen(false);
     } else {
-      setInvoiceDropdownOpen(!invoiceDropdownOpen);
+      const nextState = !invoiceDropdownOpen;
+      setInvoiceDropdownOpen(nextState);
+      if (nextState) {
+        setMasterDropdownOpen(false);
+        setCertDropdownOpen(false);
+        setCardDropdownOpen(false);
+        setPassDropdownOpen(false);
+        setAuditDropdownOpen(false);
+      }
     }
   };
 
@@ -173,8 +254,17 @@ export const Sidebar = ({ activePage, setActivePage }) => {
       setCertIconFlyoutOpen(false);
       setInvoiceIconFlyoutOpen(false);
       setPassIconFlyoutOpen(false);
+      setAuditIconFlyoutOpen(false);
     } else {
-      setCardDropdownOpen(!cardDropdownOpen);
+      const nextState = !cardDropdownOpen;
+      setCardDropdownOpen(nextState);
+      if (nextState) {
+        setMasterDropdownOpen(false);
+        setInvoiceDropdownOpen(false);
+        setCertDropdownOpen(false);
+        setPassDropdownOpen(false);
+        setAuditDropdownOpen(false);
+      }
     }
   };
 
@@ -185,8 +275,38 @@ export const Sidebar = ({ activePage, setActivePage }) => {
       setCertIconFlyoutOpen(false);
       setInvoiceIconFlyoutOpen(false);
       setCardIconFlyoutOpen(false);
+      setAuditIconFlyoutOpen(false);
     } else {
-      setPassDropdownOpen(!passDropdownOpen);
+      const nextState = !passDropdownOpen;
+      setPassDropdownOpen(nextState);
+      if (nextState) {
+        setMasterDropdownOpen(false);
+        setInvoiceDropdownOpen(false);
+        setCertDropdownOpen(false);
+        setCardDropdownOpen(false);
+        setAuditDropdownOpen(false);
+      }
+    }
+  };
+
+  const handleAuditClick = () => {
+    if (isCompact && !mobileMenuOpen) {
+      setAuditIconFlyoutOpen(!auditIconFlyoutOpen);
+      setIconFlyoutOpen(false);
+      setCertIconFlyoutOpen(false);
+      setInvoiceIconFlyoutOpen(false);
+      setCardIconFlyoutOpen(false);
+      setPassIconFlyoutOpen(false);
+    } else {
+      const nextState = !auditDropdownOpen;
+      setAuditDropdownOpen(nextState);
+      if (nextState) {
+        setMasterDropdownOpen(false);
+        setInvoiceDropdownOpen(false);
+        setCertDropdownOpen(false);
+        setCardDropdownOpen(false);
+        setPassDropdownOpen(false);
+      }
     }
   };
 
@@ -1352,13 +1472,7 @@ export const Sidebar = ({ activePage, setActivePage }) => {
         {/* 6. Audit Group (Sales Ledger & Purchase Ledger) */}
         <div style={{ position: 'relative' }} ref={auditFlyoutRef}>
           <button
-            onClick={() => {
-              if (isCompact && !mobileMenuOpen) {
-                setAuditIconFlyoutOpen(prev => !prev);
-              } else {
-                setAuditDropdownOpen(prev => !prev);
-              }
-            }}
+            onClick={handleAuditClick}
             className="has-tooltip"
             style={{
               display: 'flex',
