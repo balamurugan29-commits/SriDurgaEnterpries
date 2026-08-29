@@ -125,9 +125,9 @@ export const GatePassPrintModal = ({ isOpen, onClose, gatePass }) => {
     ? new Date(gatePass.gatePassDate).toLocaleDateString('en-GB')
     : new Date().toLocaleDateString('en-GB');
 
-  // Fill in empty rows to fill full A4 page perfectly (16 rows for full A4 height)
+  // Fill in empty rows to fill full A4 page perfectly (23 rows for full box ending ~2 inches above signatures)
   const items = gatePass.items || [];
-  const minRows = 16;
+  const minRows = 23;
   const displayItems = [...items];
   while (displayItems.length < minRows) {
     displayItems.push({
@@ -344,42 +344,45 @@ export const GatePassPrintModal = ({ isOpen, onClose, gatePass }) => {
                 </div>
               </div>
 
-              {/* Items Table (16 rows for complete full A4 page height) */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', border: '1.5px solid #000', marginBottom: '14px', fontSize: '12.5px' }}>
+              {/* Items Table - Complete Solid Dark Box Extending Down to ~2 Inches Above Signatures */}
+              <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid #000', marginBottom: '35px', fontSize: '12.5px' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1.5px solid #000', background: '#f8fafc' }}>
-                    <th style={{ borderRight: '1.5px solid #000', padding: '6px 4px', width: '45px', textAlign: 'center' }}>Sl.No</th>
-                    <th style={{ borderRight: '1.5px solid #000', padding: '6px 8px', textAlign: 'center' }}>DESCRIPTION</th>
-                    <th style={{ borderRight: '1.5px solid #000', padding: '6px 8px', width: '75px', textAlign: 'center' }}>Qty.</th>
-                    <th style={{ padding: '6px 8px', width: '120px', textAlign: 'center' }}>Remarks</th>
+                  <tr style={{ borderBottom: '2px solid #000', background: '#f8fafc' }}>
+                    <th style={{ borderRight: '1.5px solid #000', padding: '5px 4px', width: '45px', textAlign: 'center', fontWeight: 'bold' }}>Sl.No</th>
+                    <th style={{ borderRight: '1.5px solid #000', padding: '5px 8px', textAlign: 'center', fontWeight: 'bold' }}>DESCRIPTION</th>
+                    <th style={{ borderRight: '1.5px solid #000', padding: '5px 8px', width: '75px', textAlign: 'center', fontWeight: 'bold' }}>Qty.</th>
+                    <th style={{ padding: '5px 8px', width: '120px', textAlign: 'center', fontWeight: 'bold' }}>Remarks</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {displayItems.map((item, index) => (
-                    <tr key={index} style={{ borderBottom: '1px solid #ddd', height: '27px' }}>
-                      <td style={{ borderRight: '1.5px solid #000', padding: '4px', textAlign: 'center', verticalAlign: 'top' }}>
-                        {item.description ? item.serialNumber || index + 1 : ''}
-                      </td>
-                      <td style={{ borderRight: '1.5px solid #000', padding: '4px 8px', verticalAlign: 'top' }}>
-                        {item.description}
-                      </td>
-                      <td style={{ borderRight: '1.5px solid #000', padding: '4px 8px', textAlign: 'center', verticalAlign: 'top' }}>
-                        {item.quantity}
-                      </td>
-                      <td style={{ padding: '4px 8px', textAlign: 'center', verticalAlign: 'top' }}>
-                        {item.remarks}
-                      </td>
-                    </tr>
-                  ))}
+                  {displayItems.map((item, index) => {
+                    const isLast = index === displayItems.length - 1;
+                    return (
+                      <tr key={index} style={{ borderBottom: isLast ? 'none' : '1px solid #ddd', height: '22px' }}>
+                        <td style={{ borderRight: '1.5px solid #000', padding: '2px 4px', textAlign: 'center', verticalAlign: 'top' }}>
+                          {item.description ? item.serialNumber || index + 1 : ''}
+                        </td>
+                        <td style={{ borderRight: '1.5px solid #000', padding: '2px 8px', verticalAlign: 'top' }}>
+                          {item.description}
+                        </td>
+                        <td style={{ borderRight: '1.5px solid #000', padding: '2px 8px', textAlign: 'center', verticalAlign: 'top' }}>
+                          {item.quantity}
+                        </td>
+                        <td style={{ padding: '2px 8px', textAlign: 'center', verticalAlign: 'top' }}>
+                          {item.remarks}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
-            {/* Bottom Content Block (Transport Info + Signatures pinned to bottom) */}
-            <div>
+            {/* Bottom Content Block (Transport Info + ~2 Inches Gap + Signatures pinned to bottom) */}
+            <div style={{ marginTop: 'auto' }}>
               {/* Transport & Vehicle Details (Only Displays What is Entered) */}
               {hasTransportDetails && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginBottom: '20px', fontSize: '12px', padding: '2px 8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginBottom: '16px', fontSize: '12px', padding: '2px 8px' }}>
                   {vehicleNo && (
                     <div>
                       <strong>Vehicle No:</strong> {vehicleNo}
@@ -393,8 +396,8 @@ export const GatePassPrintModal = ({ isOpen, onClose, gatePass }) => {
                 </div>
               )}
 
-              {/* Signatures */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: hasTransportDetails ? '15px' : '30px', fontSize: '12.5px', fontWeight: 'bold' }}>
+              {/* Signatures with ~2 inches of clean space above "For SRI DURGA ENTERPRISES" */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: hasTransportDetails ? '10px' : '20px', fontSize: '12.5px', fontWeight: 'bold' }}>
                 <div>Receiver's Signature</div>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ marginBottom: '35px', fontWeight: 'normal', fontSize: '11.5px' }}>For {companyName}</div>
