@@ -1,8 +1,71 @@
-import React, { useEffect } from 'react';
-import { X, Printer, FileText } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, Printer, FileText, Loader2 } from 'lucide-react';
+import * as pdfjsLib from 'pdfjs-dist';
 import { companyLogoBase64 } from '../assets/companyLogo';
 
+// Configure PDF.js worker if in browser
+if (typeof window !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version || '3.11.174'}/pdf.worker.min.js`;
+  } catch (e) {
+    console.warn('PDF.js worker setup note:', e);
+  }
+}
+
+/**
+ * Extracts high-resolution page images from a base64/data URI PDF
+ */
+async function extractPdfPages(pdfDataUri) {
+  if (!pdfDataUri) return [];
+
+  // If already an image data URI, return as single page
+  if (pdfDataUri.startsWith('data:image/')) {
+    return [pdfDataUri];
+  }
+
+  try {
+    let base64 = pdfDataUri;
+    if (base64.includes(',')) {
+      base64 = base64.split(',')[1];
+    }
+    const binaryStr = atob(base64);
+    const len = binaryStr.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryStr.charCodeAt(i);
+    }
+
+    const loadingTask = pdfjsLib.getDocument({ data: bytes });
+    const pdf = await loadingTask.promise;
+    const numPages = pdf.numPages;
+    const pagePromises = [];
+
+    for (let i = 1; i <= numPages; i++) {
+      pagePromises.push(
+        (async (pageNumber) => {
+          const page = await pdf.getPage(pageNumber);
+          const viewport = page.getViewport({ scale: 2.0 }); // 2x scale for crisp print quality
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          return canvas.toDataURL('image/png');
+        })(i)
+      );
+    }
+
+    return await Promise.all(pagePromises);
+  } catch (err) {
+    console.error('Error extracting PDF attachment pages:', err);
+    return [];
+  }
+}
+
 export const JobCardPrintModal = ({ isOpen, onClose, jobCard }) => {
+  const [attachmentPages, setAttachmentPages] = useState([]);
+  const [loadingPages, setLoadingPages] = useState(false);
+
   // Listen for Escape key to close modal
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -16,6 +79,39 @@ export const JobCardPrintModal = ({ isOpen, onClose, jobCard }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Load and convert PDF attachment pages whenever jobCard changes
+  useEffect(() => {
+    let isMounted = true;
+    const loadAttachment = async () => {
+      // Find the extra attachment PDF or diagram if PDF
+      const rawAttachment = jobCard?.extraAttachment || (
+        jobCard?.diagramPhoto && (jobCard?.attachmentType === 'pdf' || jobCard?.diagramPhoto.startsWith('data:application/pdf'))
+          ? jobCard.diagramPhoto
+          : null
+      );
+
+      if (rawAttachment) {
+        setLoadingPages(true);
+        try {
+          const pages = await extractPdfPages(rawAttachment);
+          if (isMounted) setAttachmentPages(pages);
+        } catch (err) {
+          console.error('Failed to parse PDF attachment for printing:', err);
+        } finally {
+          if (isMounted) setLoadingPages(false);
+        }
+      } else {
+        setAttachmentPages([]);
+      }
+    };
+
+    if (isOpen && jobCard) {
+      loadAttachment();
+    }
+
+    return () => { isMounted = false; };
+  }, [isOpen, jobCard]);
+
   if (!isOpen || !jobCard) return null;
 
   const handlePrint = () => {
@@ -25,9 +121,9 @@ export const JobCardPrintModal = ({ isOpen, onClose, jobCard }) => {
       return;
     }
 
-    const printWindow = window.open('', '_blank', 'width=900,height=1050');
+    const printWindow = window.open('', '_blank', 'width=950,height=1050');
     if (printWindow) {
-      const htmlContent = printArea.outerHTML;
+      const htmlContent = printArea.innerHTML;
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
@@ -46,25 +142,12 @@ export const JobCardPrintModal = ({ isOpen, onClose, jobCard }) => {
                 font-family: Arial, sans-serif;
                 background: #ffffff;
                 color: #000000;
-                padding: 4mm 6mm;
+                margin: 0;
+                padding: 0;
                 font-size: 12px;
                 line-height: 1.35;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
-              }
-              #job-card-print-area {
-                width: 100%;
-                background: #ffffff;
-                color: #000000;
-                font-size: 12px;
-                line-height: 1.35;
-              }
-              .dotted-line {
-                border-bottom: 1px dotted #000000;
-                display: inline-block;
-                padding: 0 4px;
-                font-weight: bold;
-                color: #000000;
               }
               @page {
                 size: A4 portrait;
@@ -73,7 +156,50 @@ export const JobCardPrintModal = ({ isOpen, onClose, jobCard }) => {
               @media print {
                 body {
                   padding: 0;
+                  margin: 0;
                 }
+                .no-print {
+                  display: none !important;
+                }
+                .page-break {
+                  page-break-before: always !important;
+                  break-before: page !important;
+                }
+              }
+              .job-card-page-1 {
+                width: 100%;
+                min-height: 280mm;
+                padding: 12px 14px;
+                background: #ffffff;
+                color: #000000;
+                font-size: 12px;
+                line-height: 1.35;
+                border: 2px solid #000;
+                box-sizing: border-box;
+              }
+              .job-card-attachment-page {
+                page-break-before: always !important;
+                break-before: page !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                width: 100%;
+                min-height: 285mm;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justifyContent: center;
+                box-sizing: border-box;
+                padding: 4mm 0;
+                background: #ffffff;
+              }
+              .job-card-attachment-img {
+                max-width: 100%;
+                max-height: 280mm;
+                width: auto;
+                height: auto;
+                object-fit: contain;
+                display: block;
+                margin: 0 auto;
               }
             </style>
           </head>
@@ -83,7 +209,7 @@ export const JobCardPrintModal = ({ isOpen, onClose, jobCard }) => {
               window.onload = function() {
                 setTimeout(function() {
                   window.print();
-                }, 350);
+                }, 400);
               };
             </script>
           </body>
@@ -98,6 +224,8 @@ export const JobCardPrintModal = ({ isOpen, onClose, jobCard }) => {
   const formattedDate = jobCard.jobDate
     ? new Date(jobCard.jobDate).toLocaleDateString('en-GB')
     : new Date().toLocaleDateString('en-GB');
+
+  const totalPagesCount = 1 + attachmentPages.length;
 
   return (
     <div 
@@ -152,10 +280,10 @@ export const JobCardPrintModal = ({ isOpen, onClose, jobCard }) => {
             </div>
             <div>
               <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc', margin: 0, lineHeight: 1.2 }}>
-                Job Card Preview & Print
+                Job Card Preview & Multi-Page Print
               </h3>
               <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                Job No: <strong style={{ color: '#38bdf8' }}>{jobCard.jobNo}</strong> &bull; Customer: <strong style={{ color: '#34d399' }}>{jobCard.customerName || '-'}</strong>
+                Job No: <strong style={{ color: '#38bdf8' }}>{jobCard.jobNo}</strong> &bull; Pages: <strong style={{ color: '#34d399' }}>{totalPagesCount} {totalPagesCount === 1 ? 'Page' : 'Pages (Job Card + Attached PDF)'}</strong>
               </span>
             </div>
           </div>
@@ -193,26 +321,45 @@ export const JobCardPrintModal = ({ isOpen, onClose, jobCard }) => {
             overflowY: 'auto', 
             background: '#334155', 
             display: 'flex', 
-            justifyContent: 'center',
-            alignItems: 'flex-start'
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1.5rem'
           }}
         >
+          {loadingPages && (
+            <div style={{ background: 'rgba(15, 23, 42, 0.85)', padding: '0.6rem 1.25rem', borderRadius: '8px', border: '1px solid rgba(56, 189, 248, 0.4)', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.825rem' }}>
+              <Loader2 size={16} className="animate-spin" />
+              <span>Rendering attached PDF pages for high-definition consecutive printing...</span>
+            </div>
+          )}
+
           <div 
             id="job-card-print-area" 
             style={{ 
-              border: '2px solid #000', 
-              padding: '14px 18px', 
-              background: '#fff', 
-              fontSize: '12px', 
-              lineHeight: '1.38', 
-              color: '#000',
               width: '100%',
               maxWidth: '820px',
-              boxShadow: '0 8px 30px rgba(0, 0, 0, 0.35)',
-              borderRadius: '2px',
-              fontFamily: 'Arial, sans-serif'
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.5rem',
+              alignItems: 'center'
             }}
           >
+            {/* PAGE 1: Official Job Card Document */}
+            <div 
+              className="job-card-page-1"
+              style={{ 
+                border: '2px solid #000', 
+                padding: '14px 18px', 
+                background: '#fff', 
+                fontSize: '12px', 
+                lineHeight: '1.38', 
+                color: '#000',
+                width: '100%',
+                boxShadow: '0 8px 30px rgba(0, 0, 0, 0.35)',
+                borderRadius: '2px',
+                fontFamily: 'Arial, sans-serif'
+              }}
+            >
             {/* Top Header: Logo + "Sri Durga Enterprises" + JOB CARD Inverted Box */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', paddingBottom: '4px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -441,45 +588,23 @@ export const JobCardPrintModal = ({ isOpen, onClose, jobCard }) => {
                   </div>
                 </div>
 
-                {/* Right Side: Photo / Diagram / PDF Attachment Display if Uploaded */}
-                {(jobCard.diagramPhoto || jobCard.extraAttachment) && (
-                  <div style={{ width: '220px', marginLeft: '12px', flexShrink: 0, textAlign: 'center', border: '1px solid #000', padding: '4px', background: '#fafafa', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                    {jobCard.diagramPhoto ? (
-                      <>
-                        <div style={{ fontWeight: 'bold', fontSize: '10.5px', textDecoration: 'underline', marginBottom: '4px' }}>
-                          Diagram / Equipment Photo
-                        </div>
-                        <img 
-                          src={jobCard.diagramPhoto} 
-                          alt="Equipment / Winding Diagram" 
-                          style={{ width: '100%', maxHeight: jobCard.extraAttachment ? '150px' : '220px', objectFit: 'contain', display: 'block', margin: '0 auto' }} 
-                        />
-                      </>
-                    ) : (
-                      <div style={{ padding: '12px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '4px', background: '#fee2e2', border: '1px solid #ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#b91c1c', fontSize: '11px' }}>
-                          PDF
-                        </div>
-                        <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#000', wordBreak: 'break-word', maxWidth: '200px' }}>
-                          {jobCard.extraAttachmentName || jobCard.attachmentName || 'Technical_Document.pdf'}
-                        </span>
-                        <span style={{ fontSize: '9px', color: '#475569' }}>
-                          (PDF Attached)
-                        </span>
-                      </div>
-                    )}
-
-                    {/* If both diagram photo and extra PDF are attached, show the extra document note below photo */}
-                    {jobCard.diagramPhoto && jobCard.extraAttachment && (
-                      <div style={{ marginTop: '4px', paddingTop: '4px', borderTop: '1px dashed #999', fontSize: '9px', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                        <span style={{ fontWeight: 'bold', color: '#b91c1c' }}>[PDF Attached]:</span>
-                        <span style={{ maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {jobCard.extraAttachmentName || 'Document.pdf'}
-                        </span>
-                      </div>
-                    )}
+                {/* Right Side: Diagram / Equipment Photo Frame (Only for Diagram Photo) */}
+                <div style={{ width: '220px', marginLeft: '12px', flexShrink: 0, textAlign: 'center', border: '1px solid #000', padding: '4px', background: '#fafafa', minHeight: '180px', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '10.5px', textDecoration: 'underline', marginBottom: '4px' }}>
+                    Diagram / Equipment Photo
                   </div>
-                )}
+                  {jobCard.diagramPhoto && !jobCard.diagramPhoto.startsWith('data:application/pdf') && jobCard.attachmentType !== 'pdf' ? (
+                    <img 
+                      src={jobCard.diagramPhoto} 
+                      alt="Equipment / Winding Diagram" 
+                      style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', display: 'block', margin: 'auto' }} 
+                    />
+                  ) : (
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '10px', fontStyle: 'italic', minHeight: '140px' }}>
+                      (Diagram / Photo space)
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -509,7 +634,75 @@ export const JobCardPrintModal = ({ isOpen, onClose, jobCard }) => {
             </div>
 
           </div>
+
+          {/* SUBSEQUENT ATTACHMENT PAGES (Consecutive Full A4 Pages for Attached PDF) */}
+          {attachmentPages.map((pageImg, idx) => (
+            <div 
+              key={idx} 
+              className="job-card-attachment-page page-break"
+              style={{
+                pageBreakBefore: 'always',
+                breakBefore: 'page',
+                background: '#fff',
+                border: '1px solid #cbd5e1',
+                borderRadius: '2px',
+                padding: '12px 14px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                maxWidth: '820px',
+                width: '100%',
+                boxShadow: '0 8px 30px rgba(0, 0, 0, 0.35)',
+                boxSizing: 'border-box'
+              }}
+            >
+              {/* Non-printing preview page divider & header */}
+              <div 
+                className="no-print" 
+                style={{ 
+                  width: '100%', 
+                  padding: '6px 12px', 
+                  background: '#f1f5f9', 
+                  borderBottom: '1px solid #e2e8f0', 
+                  marginBottom: '10px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between', 
+                  fontSize: '11px', 
+                  color: '#475569', 
+                  fontWeight: 700 
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <FileText size={14} color="#f43f5e" />
+                  <span>Attached Document Page {idx + 1} of {attachmentPages.length} &bull; {jobCard.extraAttachmentName || 'Document.pdf'}</span>
+                </span>
+                <span style={{ background: '#e2e8f0', padding: '2px 8px', borderRadius: '4px', color: '#0f172a' }}>
+                  Print Page {idx + 2}
+                </span>
+              </div>
+
+              {/* Full high-resolution page image */}
+              <img 
+                src={pageImg} 
+                alt={`Attachment Page ${idx + 1}`} 
+                className="job-card-attachment-img"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '1000px',
+                  width: 'auto',
+                  height: 'auto',
+                  objectFit: 'contain',
+                  display: 'block',
+                  margin: '0 auto'
+                }}
+              />
+            </div>
+          ))}
+
         </div>
+      </div>
 
         {/* BOTTOM FIXED ACTION TOOLBAR: Print Button + Close Button */}
         <div 
