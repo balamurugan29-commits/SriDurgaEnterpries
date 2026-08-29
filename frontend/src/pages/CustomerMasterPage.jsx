@@ -37,8 +37,8 @@ const CUSTOMER_COLUMNS = [
   { key: 'vendorCode', label: 'VENDOR CODE' },
   { key: 'sacCode', label: 'SAC / HSN CODE' },
   { key: 'contractNo', label: 'CONTRACT NUMBER' },
-  { key: 'contractPeriod', label: 'CONTRACT PERIOD (C. PERIOD)' },
-  { key: 'bgNo', label: 'B.G. NUMBER & VALIDITY' }
+  { key: 'contractPeriod', label: 'CON. PERIOD' },
+  { key: 'bgNo', label: 'B.G. NO' }
 ];
 
 export const CustomerMasterPage = () => {
@@ -469,11 +469,11 @@ export const CustomerMasterPage = () => {
                     <div style={{ fontSize: '0.9rem', color: '#38bdf8', fontWeight: 700 }}>{viewCustomer.contractNo || 'N/A'}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Contract Period (C. Period)</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '2px' }}>CON. Period</div>
                     <div style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 600 }}>{viewCustomer.contractPeriod || 'N/A'}</div>
                   </div>
                   <div style={{ gridColumn: 'span 2' }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '2px' }}>B.G. Number & Validity</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '2px' }}>B.G. No</div>
                     <div style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: 600 }}>{viewCustomer.bgNo || 'N/A'}</div>
                   </div>
                 </div>

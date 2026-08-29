@@ -682,7 +682,7 @@ export const InvoiceImageUploadModal = ({
 
                   {/* Contract Period */}
                   <div>
-                    <label className="form-label">Contract Period</label>
+                    <label className="form-label">CON. Period</label>
                     <input
                       type="text"
                       className="form-input"
@@ -691,9 +691,9 @@ export const InvoiceImageUploadModal = ({
                     />
                   </div>
 
-                  {/* B.G. Number & Validity */}
+                  {/* B.G. No */}
                   <div style={{ gridColumn: 'span 2' }}>
-                    <label className="form-label">B.G. Number & Validity</label>
+                    <label className="form-label">B.G. No</label>
                     <input
                       type="text"
                       className="form-input"

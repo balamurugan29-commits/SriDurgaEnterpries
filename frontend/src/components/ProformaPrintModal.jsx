@@ -507,10 +507,10 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                             {/* Rows 3 to 9: Rendered ONLY on Page 1 */}
                             {isFirstPage && (
                               <>
-                                {/* Row 3: Contract Period (C. Period) & Vendor Code */}
+                                {/* Row 3: CON. Period & Vendor Code */}
                                 <tr style={{ borderBottom: '1px solid #000' }}>
                                   <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                    Contract Period (C. Period)
+                                    CON. Period
                                   </td>
                                   <td style={{ padding: '3.5px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     {proforma.contractPeriod || companyDetails?.contractPeriod || '01.05.2024 to 30.04.2027'}
@@ -539,10 +539,10 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                                   </td>
                                 </tr>
 
-                                {/* Row 5: B.G. Number & Validity & PAN */}
+                                {/* Row 5: B.G. No & PAN */}
                                 <tr style={{ borderBottom: '1px solid #000' }}>
                                   <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                    B.G. Number & Validity
+                                    B.G. No
                                   </td>
                                   <td style={{ padding: '3.5px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     {proforma.bgNo || companyDetails?.bgNo || '8110IPEBG240001  Validity Upto : 30.09.2027'}

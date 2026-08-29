@@ -262,7 +262,7 @@ export const CustomerModal = ({ isOpen, onClose, onSave, customer }) => {
               </div>
 
               <div>
-                <label className="form-label">Customer Contract Period</label>
+                <label className="form-label">CON. Period</label>
                 <input
                   type="text"
                   className="form-input"
@@ -273,7 +273,7 @@ export const CustomerModal = ({ isOpen, onClose, onSave, customer }) => {
               </div>
 
               <div style={{ gridColumn: 'span 2' }}>
-                <label className="form-label">BG Number (B.G. Number & Validity)</label>
+                <label className="form-label">B.G. No</label>
                 <input
                   type="text"
                   className="form-input"

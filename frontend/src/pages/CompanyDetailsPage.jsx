@@ -479,10 +479,10 @@ export const CompanyDetailsPage = () => {
                 />
               </div>
 
-              {/* Contract Period (C. Period) */}
+              {/* CON. Period */}
               <div>
                 <label className="form-label" style={{ fontWeight: 700, color: '#fbbf24' }}>
-                  Contract Period (C. Period)
+                  CON. Period
                 </label>
                 <input
                   type="text"
@@ -500,10 +500,10 @@ export const CompanyDetailsPage = () => {
                 />
               </div>
 
-              {/* B.G. Number & Validity */}
+              {/* B.G. No */}
               <div style={{ gridColumn: 'span 2' }}>
                 <label className="form-label" style={{ fontWeight: 700, color: '#fbbf24' }}>
-                  B.G. Number & Validity
+                  B.G. No
                 </label>
                 <input
                   type="text"
@@ -827,7 +827,7 @@ export const CompanyDetailsPage = () => {
                     <td style={{ width: '25%', padding: '2px 4px' }}>1 of 1</td>
                   </tr>
                   <tr style={{ borderBottom: '1px solid #000' }}>
-                    <td style={{ padding: '2px 4px', fontWeight: 'bold', borderRight: '1px solid #000' }}>C. Period</td>
+                    <td style={{ padding: '2px 4px', fontWeight: 'bold', borderRight: '1px solid #000' }}>CON. Period</td>
                     <td style={{ padding: '2px 4px', borderRight: '1px solid #000' }}>{formData.contractPeriod || '01.05.2024 to 30.04.2027'}</td>
                     <td style={{ padding: '2px 4px', fontWeight: 'bold', borderRight: '1px solid #000' }}>Vendor Code</td>
                     <td style={{ padding: '2px 4px' }}>{formData.vendorCode || '840305'}</td>
@@ -839,7 +839,7 @@ export const CompanyDetailsPage = () => {
                     <td style={{ padding: '2px 4px', fontWeight: 'bold', background: '#dbe2ea' }}>{formData.gstin || '-'}</td>
                   </tr>
                   <tr style={{ borderBottom: '1px solid #000' }}>
-                    <td style={{ padding: '2px 4px', fontWeight: 'bold', borderRight: '1px solid #000' }}>B.G. No. & Validity</td>
+                    <td style={{ padding: '2px 4px', fontWeight: 'bold', borderRight: '1px solid #000' }}>B.G. No</td>
                     <td style={{ padding: '2px 4px', borderRight: '1px solid #000' }}>{formData.bgNo || '8110IPEBG240001 Validity : 30.09.2027'}</td>
                     <td style={{ padding: '2px 4px', fontWeight: 'bold', borderRight: '1px solid #000', background: '#dbe2ea' }}>PAN</td>
                     <td style={{ padding: '2px 4px', fontWeight: 'bold', background: '#dbe2ea' }}>{formData.pan || '-'}</td>

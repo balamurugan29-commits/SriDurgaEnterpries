@@ -260,9 +260,9 @@ export const MultiInvoiceExportModal = ({ isOpen, onClose, selectedChallans = []
                         <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>1 of 1</td>
                       </tr>
 
-                      {/* Row 3: C. Period & Vendor Code */}
+                      {/* Row 3: CON. Period & Vendor Code */}
                       <tr style={{ borderBottom: '1px solid #000' }}>
-                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>C. Period</td>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>CON. Period</td>
                         <td style={{ padding: '3px 6px', borderRight: '1px solid #000' }}>{challan.contractPeriod || '01.05.2024 to 30.04.2027'}</td>
                         <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>Vendor Code</td>
                         <td style={{ padding: '3px 6px' }}>{challan.vendorCode || '840305'}</td>
@@ -276,9 +276,9 @@ export const MultiInvoiceExportModal = ({ isOpen, onClose, selectedChallans = []
                         <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{challan.gstin || '34ABDFS4476N1ZN'}</td>
                       </tr>
 
-                      {/* Row 5: B.G. NO. & PAN */}
+                      {/* Row 5: B.G. No & PAN */}
                       <tr style={{ borderBottom: '1px solid #000' }}>
-                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>B.G. NO.</td>
+                        <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>B.G. No</td>
                         <td style={{ padding: '3px 6px', borderRight: '1px solid #000' }}>{challan.bgNo || '8110IPEBG240001  Validity Upto : 30.09.2027'}</td>
                         <td style={{ padding: '3px 6px', fontWeight: 'bold', borderRight: '1px solid #000' }}>PAN</td>
                         <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>{challan.pan || 'ABDFS4476N'}</td>

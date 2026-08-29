@@ -186,7 +186,7 @@ export function generateTaxInvoicePrintHtml(challan) {
               </tr>
               ${isFirstPage ? `
                 <tr>
-                  <td style="font-weight: 700;">Contract Period (C. Period)</td>
+                  <td style="font-weight: 700;">CON. Period</td>
                   <td>${contractPeriod}</td>
                   <td style="font-weight: 700;">Vendor Code</td>
                   <td>${vendorCode || '-'}</td>
@@ -198,7 +198,7 @@ export function generateTaxInvoicePrintHtml(challan) {
                   <td style="font-weight: 800;">${gstin}</td>
                 </tr>
                 <tr>
-                  <td style="font-weight: 700;">B.G. Number & Validity</td>
+                  <td style="font-weight: 700;">B.G. No</td>
                   <td>${bgNo}</td>
                   <td style="font-weight: 700;">PAN</td>
                   <td style="font-weight: 800;">${pan}</td>
