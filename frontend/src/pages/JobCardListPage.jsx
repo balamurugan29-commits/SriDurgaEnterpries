@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { fetchJobCards, deleteJobCard } from '../services/api';
 import { JobCardPrintModal } from '../components/JobCardPrintModal';
 import { Toast } from '../components/Toast';
-import { ClipboardList, Search, RefreshCw, Printer, Edit3, Trash2, Plus, ChevronRight, Filter, FilterX, Calendar, Hash, User, Wrench } from 'lucide-react';
+import { ClipboardList, Search, RefreshCw, Printer, Edit3, Trash2, Plus, ChevronRight, Filter, FilterX, Calendar, Hash, User, Wrench, Paperclip, FileText, Image as ImageIcon, Download, Eye, X } from 'lucide-react';
 
 export const JobCardListPage = ({ onEditJobCard, onNewJobCard }) => {
   const [jobCards, setJobCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedJobCardForPrint, setSelectedJobCardForPrint] = useState(null);
   const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [previewAttachment, setPreviewAttachment] = useState(null);
   const [toast, setToast] = useState({ message: '', type: 'success' });
 
   // Filter States
@@ -53,6 +54,16 @@ export const JobCardListPage = ({ onEditJobCard, onNewJobCard }) => {
   const handleOpenPrintPreview = (card) => {
     setSelectedJobCardForPrint(card);
     setPrintModalOpen(true);
+  };
+
+  const handleDownloadAttachment = (attachment) => {
+    if (!attachment?.url) return;
+    const link = document.createElement('a');
+    link.href = attachment.url;
+    link.download = attachment.name || `JobCard_${attachment.jobNo || 'Document'}.${attachment.type === 'pdf' ? 'pdf' : 'png'}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleResetFilters = () => {
@@ -144,7 +155,6 @@ export const JobCardListPage = ({ onEditJobCard, onNewJobCard }) => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          {/* FILTER BUTTON WITH ACTIVE BADGE */}
           <button 
             onClick={() => setShowFilters(prev => !prev)} 
             className={`btn ${showFilters || activeFilterCount > 0 ? 'btn-primary' : 'btn-outline'}`}
@@ -193,7 +203,6 @@ export const JobCardListPage = ({ onEditJobCard, onNewJobCard }) => {
       {/* EXPANDABLE FILTER PANEL */}
       {showFilters && (
         <div className="glass-panel animate-modal-entry" style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1.5px solid rgba(56, 189, 248, 0.35)', background: 'rgba(15, 23, 42, 0.95)' }}>
-          {/* Filter Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#38bdf8', fontWeight: 800, fontSize: '0.95rem' }}>
               <Filter size={18} />
@@ -217,9 +226,7 @@ export const JobCardListPage = ({ onEditJobCard, onNewJobCard }) => {
             )}
           </div>
 
-          {/* Filter Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.875rem' }}>
-            {/* 1. Global Live Search */}
             <div>
               <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>Search Keywords</label>
               <div style={{ position: 'relative' }}>
@@ -235,7 +242,6 @@ export const JobCardListPage = ({ onEditJobCard, onNewJobCard }) => {
               </div>
             </div>
 
-            {/* 2. Job Number */}
             <div>
               <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem', color: '#fbbf24' }}>Job Card No</label>
               <div style={{ position: 'relative' }}>
@@ -251,7 +257,6 @@ export const JobCardListPage = ({ onEditJobCard, onNewJobCard }) => {
               </div>
             </div>
 
-            {/* 3. Customer Filter */}
             <div>
               <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>Customer Name</label>
               <div style={{ position: 'relative' }}>
@@ -267,7 +272,6 @@ export const JobCardListPage = ({ onEditJobCard, onNewJobCard }) => {
               </div>
             </div>
 
-            {/* 4. Equipment Filter */}
             <div>
               <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>Equipment / Motor</label>
               <div style={{ position: 'relative' }}>
@@ -283,7 +287,6 @@ export const JobCardListPage = ({ onEditJobCard, onNewJobCard }) => {
               </div>
             </div>
 
-            {/* 5. From Date */}
             <div>
               <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>From Date</label>
               <div style={{ position: 'relative' }}>
@@ -298,7 +301,6 @@ export const JobCardListPage = ({ onEditJobCard, onNewJobCard }) => {
               </div>
             </div>
 
-            {/* 6. To Date */}
             <div>
               <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.35rem' }}>To Date</label>
               <div style={{ position: 'relative' }}>
@@ -318,7 +320,6 @@ export const JobCardListPage = ({ onEditJobCard, onNewJobCard }) => {
 
       {/* Records Table */}
       <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
-        
         <div style={{ padding: '1rem 1.5rem', background: 'rgba(15, 23, 42, 0.6)', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
             <span style={{ fontSize: '0.9rem', color: '#f8fafc', fontWeight: 700 }}>
@@ -330,96 +331,68 @@ export const JobCardListPage = ({ onEditJobCard, onNewJobCard }) => {
               </span>
             )}
           </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <button onClick={loadJobCards} className="btn btn-outline" style={{ fontSize: '0.8rem' }}>
-              <RefreshCw size={14} /> Refresh
-            </button>
-          </div>
+          <button onClick={loadJobCards} className="btn btn-outline" style={{ fontSize: '0.8rem' }}>
+            <RefreshCw size={14} /> Refresh
+          </button>
         </div>
 
         <div className="custom-table-container" style={{ border: 'none', borderRadius: 0 }}>
           <table className="custom-table">
             <thead>
               <tr>
-                <th style={{ width: '60px', textAlign: 'center' }}>S.No</th>
-                <th style={{ width: '140px' }}>Job No</th>
-                <th style={{ width: '120px' }}>Date</th>
+                <th style={{ width: '50px', textAlign: 'center' }}>S.No</th>
+                <th style={{ width: '130px' }}>Job No</th>
+                <th style={{ width: '110px' }}>Date</th>
                 <th>Customer</th>
                 <th>Equipment Description</th>
-                <th style={{ width: '130px' }}>Make</th>
-                <th style={{ width: '130px' }}>Sl.No</th>
+                <th style={{ width: '110px' }}>Make</th>
+                <th style={{ width: '110px' }}>Sl.No</th>
+                <th style={{ width: '110px', textAlign: 'center' }}>Attachment</th>
                 <th style={{ width: '160px', textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <td colSpan={9} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                     <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 0.5rem auto' }} />
                     <p style={{ margin: 0 }}>Loading Job Card records...</p>
                   </td>
                 </tr>
               ) : filteredJobCards.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <td colSpan={9} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                     No Job Cards found matching the filter criteria.
                   </td>
                 </tr>
               ) : (
                 filteredJobCards.map((card, idx) => (
                   <tr key={card.id || idx}>
-                    <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)' }}>
-                      {idx + 1}
-                    </td>
-                    <td>
-                      <span className="badge badge-code" style={{ color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.4)', background: 'rgba(245, 158, 11, 0.15)' }}>
-                        {card.jobNo}
-                      </span>
-                    </td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                      {card.jobDate}
-                    </td>
-                    <td style={{ fontWeight: 600, color: 'white' }}>
-                      {card.customerName || 'N/A'}
-                    </td>
-                    <td style={{ color: 'var(--text-main)' }}>
-                      {card.equipment || 'N/A'} {card.ratingHp ? `(${card.ratingHp} HP)` : ''}
-                    </td>
-                    <td style={{ color: 'var(--text-subtle)' }}>
-                      {card.make || 'N/A'}
-                    </td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                      {card.slNo || 'N/A'}
+                    <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)' }}>{idx + 1}</td>
+                    <td><span className="badge badge-code" style={{ color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.4)', background: 'rgba(245, 158, 11, 0.15)' }}>{card.jobNo}</span></td>
+                    <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{card.jobDate}</td>
+                    <td style={{ fontWeight: 600, color: 'white' }}>{card.customerName || 'N/A'}</td>
+                    <td style={{ color: 'var(--text-main)' }}>{card.equipment || 'N/A'} {card.ratingHp ? `(${card.ratingHp} HP)` : ''}</td>
+                    <td style={{ color: 'var(--text-subtle)' }}>{card.make || 'N/A'}</td>
+                    <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{card.slNo || 'N/A'}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      {card.diagramPhoto ? (
+                        (card.attachmentType === 'pdf' || card.diagramPhoto.startsWith('data:application/pdf')) ? (
+                          <button onClick={() => setPreviewAttachment({ url: card.diagramPhoto, name: card.attachmentName || `${card.jobNo.replace(/\//g, '_')}_Document.pdf`, type: 'pdf', jobNo: card.jobNo })} className="btn btn-outline" style={{ padding: '0.25rem 0.55rem', fontSize: '0.725rem', color: '#f43f5e', borderColor: 'rgba(244, 63, 94, 0.4)', background: 'rgba(244, 63, 94, 0.12)', gap: '4px', fontWeight: 700 }}>
+                            <FileText size={12} /> <span>PDF</span>
+                          </button>
+                        ) : (
+                          <button onClick={() => setPreviewAttachment({ url: card.diagramPhoto, name: card.attachmentName || `${card.jobNo.replace(/\//g, '_')}_Photo.png`, type: 'image', jobNo: card.jobNo })} className="btn btn-outline" style={{ padding: '0.25rem 0.55rem', fontSize: '0.725rem', color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.4)', background: 'rgba(16, 185, 129, 0.12)', gap: '4px', fontWeight: 700 }}>
+                            <ImageIcon size={12} /> <span>Photo</span>
+                          </button>
+                        )
+                      ) : <span style={{ color: 'var(--text-subtle)', fontSize: '0.75rem' }}>-</span>}
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
-                        <button 
-                          onClick={() => handleOpenPrintPreview(card)} 
-                          className="btn btn-primary" 
-                          style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }} 
-                          title="View & Print Job Card PDF"
-                        >
-                          <Printer size={13} /> Print
-                        </button>
-
-                        <button 
-                          onClick={() => onEditJobCard && onEditJobCard(card)} 
-                          className="btn btn-outline" 
-                          style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', color: '#818cf8', borderColor: 'rgba(99, 102, 241, 0.3)' }} 
-                          title="Edit Job Card"
-                        >
-                          <Edit3 size={13} /> Edit
-                        </button>
-
-                        <button 
-                          onClick={() => handleDelete(card)} 
-                          className="btn btn-danger" 
-                          style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }} 
-                          title="Delete Job Card"
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                        <button onClick={() => handleOpenPrintPreview(card)} className="btn btn-primary" style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }} title="View & Print Job Card PDF"><Printer size={13} /> Print</button>
+                        <button onClick={() => onEditJobCard && onEditJobCard(card)} className="btn btn-outline" style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', color: '#818cf8', borderColor: 'rgba(99, 102, 241, 0.3)' }} title="Edit Job Card"><Edit3 size={13} /> Edit</button>
+                        <button onClick={() => handleDelete(card)} className="btn btn-danger" style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem' }} title="Delete Job Card"><Trash2 size={13} /></button>
                       </div>
                     </td>
                   </tr>
@@ -430,12 +403,40 @@ export const JobCardListPage = ({ onEditJobCard, onNewJobCard }) => {
         </div>
       </div>
 
+      {previewAttachment && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 999999, background: 'rgba(15, 23, 42, 0.88)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', animation: 'fadeIn 0.2s ease-out' }} onClick={() => setPreviewAttachment(null)}>
+          <div style={{ background: 'var(--bg-card, #0f172a)', border: '1.5px solid var(--border-color-accent, rgba(99, 102, 241, 0.4))', borderRadius: '16px', width: '100%', maxWidth: '960px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 60px rgba(0,0,0,0.6)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-color)', background: 'rgba(15, 23, 42, 0.6)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: previewAttachment.type === 'pdf' ? 'rgba(244, 63, 94, 0.2)' : 'rgba(16, 185, 129, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: previewAttachment.type === 'pdf' ? '#f43f5e' : '#10b981' }}>
+                  {previewAttachment.type === 'pdf' ? <FileText size={20} /> : <ImageIcon size={20} />}
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#f8fafc' }}>{previewAttachment.name}</h3>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Job Card: <strong style={{ color: '#818cf8' }}>{previewAttachment.jobNo}</strong> &bull; {previewAttachment.type === 'pdf' ? 'PDF Document Viewer' : 'Photo Viewer'}</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button type="button" onClick={() => handleDownloadAttachment(previewAttachment)} className="btn btn-outline" style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', color: '#34d399', borderColor: 'rgba(52, 211, 153, 0.4)' }}><Download size={14} /> Download</button>
+                <button type="button" onClick={() => setPreviewAttachment(null)} className="btn btn-outline" style={{ width: '36px', height: '36px', borderRadius: '50%', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Close (Esc)"><X size={16} /></button>
+              </div>
+            </div>
+            <div style={{ flex: 1, padding: '1rem', overflowY: 'auto', background: '#020617', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '480px' }}>
+              {previewAttachment.type === 'pdf' ? (
+                <iframe src={previewAttachment.url} title="PDF Attachment Viewer" style={{ width: '100%', height: '70vh', border: 'none', borderRadius: '8px', background: '#fff' }} />
+              ) : (
+                <img src={previewAttachment.url} alt="Attachment Fullscreen" style={{ maxWidth: '100%', maxHeight: '72vh', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }} />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <JobCardPrintModal 
         isOpen={printModalOpen} 
         onClose={() => setPrintModalOpen(false)} 
         jobCard={selectedJobCardForPrint} 
       />
-
     </div>
   );
 };
