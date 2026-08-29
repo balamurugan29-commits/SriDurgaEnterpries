@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Printer, CheckCircle, FileText, Download } from 'lucide-react';
 import { companyLogoBase64 } from '../assets/companyLogo';
 
