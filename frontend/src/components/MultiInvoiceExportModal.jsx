@@ -35,6 +35,11 @@ function numberToWordsINR(amount) {
 }
 
 export const MultiInvoiceExportModal = ({ isOpen, onClose, selectedChallans = [] }) => {
+  const [showDeclaration, setShowDeclaration] = useState(() => {
+    const saved = localStorage.getItem('sri_durga_print_show_declaration');
+    return saved !== null ? saved === 'true' : true;
+  });
+
   if (!isOpen || !selectedChallans || selectedChallans.length === 0) return null;
 
   // Ultra-reliable Batch Print Handler with Strict 1-Invoice-Per-Page Break
@@ -140,6 +145,35 @@ export const MultiInvoiceExportModal = ({ isOpen, onClose, selectedChallans = []
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <label 
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '0.45rem', 
+                background: showDeclaration ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.08)', 
+                border: showDeclaration ? '1.5px solid #34d399' : '1px solid rgba(255, 255, 255, 0.15)',
+                padding: '0.45rem 0.85rem', 
+                borderRadius: '8px', 
+                cursor: 'pointer',
+                userSelect: 'none',
+                transition: 'all 0.2s ease'
+              }}
+              title="Toggle to Show or Hide statutory Declaration in batch printout"
+            >
+              <input
+                type="checkbox"
+                checked={showDeclaration}
+                onChange={(e) => {
+                  setShowDeclaration(e.target.checked);
+                  localStorage.setItem('sri_durga_print_show_declaration', String(e.target.checked));
+                }}
+                style={{ width: '15px', height: '15px', accentColor: '#10b981', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: showDeclaration ? '#ffffff' : '#94a3b8' }}>
+                Declaration
+              </span>
+            </label>
+
             <button onClick={handlePrintAll} className="btn btn-primary" style={{ padding: '0.6rem 1.25rem', fontSize: '0.9rem', fontWeight: 700 }}>
               <Printer size={16} />
               <span>Print All / Save Multipage PDF</span>
@@ -449,6 +483,18 @@ export const MultiInvoiceExportModal = ({ isOpen, onClose, selectedChallans = []
                       </tr>
                     </tbody>
                   </table>
+
+                  {/* Declaration Section */}
+                  {showDeclaration && (
+                    <div style={{ borderBottom: '1px solid #000', padding: '5px 12px', textAlign: 'center', background: '#ffffff' }}>
+                      <div style={{ fontWeight: 'bold', textDecoration: 'underline', fontSize: '11px', marginBottom: '2px', letterSpacing: '0.5px' }}>
+                        DECLARATION
+                      </div>
+                      <div style={{ fontSize: '10.5px', fontWeight: 500, lineHeight: '1.35', color: '#000' }}>
+                        We hereby certifying that all the clause of the contract agreement including statutory clauses, Remittance of EPF payment have been complied.
+                      </div>
+                    </div>
+                  )}
 
                   {/* Bank Details & Authorised Signatory Footer */}
                   <div style={{ display: 'flex', fontSize: '10.5px' }}>

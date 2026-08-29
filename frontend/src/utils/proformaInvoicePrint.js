@@ -32,8 +32,12 @@ export function numberToWordsINR(amount) {
   return words ? `(Rupees : ${words} Only)` : '(Rupees : Zero Only)';
 }
 
-export function generateProformaInvoicePrintHtml(proforma) {
+export function generateProformaInvoicePrintHtml(proforma, options = {}) {
   if (!proforma) return '';
+
+  const showDeclaration = options.showDeclaration !== undefined 
+    ? options.showDeclaration 
+    : (typeof window !== 'undefined' ? localStorage.getItem('sri_durga_print_show_declaration') !== 'false' : true);
 
   const cleanProformaNo = proforma.proformaNumber || 'PC/01/26-27';
   
@@ -317,6 +321,16 @@ export function generateProformaInvoicePrintHtml(proforma) {
                 <tr class="rupees-words-row">
                   <td colspan="2" style="font-weight: 800; padding: 4px 6px;">${wordsInRupees}</td>
                 </tr>
+                ${showDeclaration ? `
+                  <tr style="border-top: 1px solid #000; border-bottom: 1px solid #000; text-align: center; background: #ffffff;">
+                    <td colspan="2" style="padding: 5px 12px; text-align: center;">
+                      <div style="font-weight: 700; text-decoration: underline; font-size: 11px; margin-bottom: 2px; letter-spacing: 0.5px;">DECLARATION</div>
+                      <div style="font-size: 10.5px; font-weight: 500; line-height: 1.35; color: #000;">
+                        We hereby certifying that all the clause of the contract agreement including statutory clauses, Remittance of EPF payment have been complied.
+                      </div>
+                    </td>
+                  </tr>
+                ` : ''}
                 <tr class="signature-bank-row">
                   <td style="border-right: 1px solid #000; font-size: 11px; padding: 4px 6px; line-height: 1.3;">
                     <div>Bank Account Details for Payment:</div>

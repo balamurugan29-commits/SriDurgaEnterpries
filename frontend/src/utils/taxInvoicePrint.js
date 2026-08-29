@@ -31,8 +31,12 @@ export function numberToWordsINR(amount) {
   return words ? `(Rupees : ${words} Only)` : '(Rupees : Zero Only)';
 }
 
-export function generateTaxInvoicePrintHtml(challan) {
+export function generateTaxInvoicePrintHtml(challan, options = {}) {
   if (!challan) return '';
+
+  const showDeclaration = options.showDeclaration !== undefined 
+    ? options.showDeclaration 
+    : (typeof window !== 'undefined' ? localStorage.getItem('sri_durga_print_show_declaration') !== 'false' : true);
 
   const cleanChallanNo = challan.challanNumber ? String(challan.challanNumber).replace(/^SD-TAX-/, '') : '01/26-27';
   
@@ -342,6 +346,16 @@ export function generateTaxInvoicePrintHtml(challan) {
                 </div>
               </div>
             </div>
+
+            <!-- Declaration Section -->
+            ${showDeclaration ? `
+              <div style="border-bottom: 1px solid #000; padding: 5px 12px; text-align: center; background: #ffffff;">
+                <div style="font-weight: 700; text-decoration: underline; font-size: 11px; margin-bottom: 2px; letter-spacing: 0.5px;">DECLARATION</div>
+                <div style="font-size: 10.5px; font-weight: 500; line-height: 1.35; color: #000;">
+                  We hereby certifying that all the clause of the contract agreement including statutory clauses, Remittance of EPF payment have been complied.
+                </div>
+              </div>
+            ` : ''}
 
             <!-- Footer: E & O.E, Bank Account Details, Signatory -->
             <div style="display: flex; font-size: 11px; min-height: 80px;">

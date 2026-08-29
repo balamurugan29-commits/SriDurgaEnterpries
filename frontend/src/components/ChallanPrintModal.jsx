@@ -41,6 +41,10 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
     const saved = localStorage.getItem('sri_durga_print_show_item_number');
     return saved !== null ? saved === 'true' : true;
   });
+  const [showDeclaration, setShowDeclaration] = useState(() => {
+    const saved = localStorage.getItem('sri_durga_print_show_declaration');
+    return saved !== null ? saved === 'true' : true;
+  });
   const [companyDetails, setCompanyDetails] = useState(() => {
     const cached = localStorage.getItem('sri_durga_company_details');
     if (cached) {
@@ -769,7 +773,6 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                                   <span style={{ fontWeight: '600' }}>{igst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
                               )}
-
                               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 8px', fontWeight: 'bold', fontSize: '12.5px' }}>
                                 <span>GROSS AMOUNT</span>
                                 <span>Rs. {grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -777,8 +780,20 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                             </div>
                           </div>
 
+                          {/* Optional Declaration Section - Matches user's exact photo reference */}
+                          {showDeclaration && (
+                            <div style={{ borderBottom: '1px solid #000', padding: '5px 12px', textAlign: 'center', background: '#ffffff' }}>
+                              <div style={{ fontWeight: 'bold', textDecoration: 'underline', fontSize: '11px', marginBottom: '2px', letterSpacing: '0.5px' }}>
+                                DECLARATION
+                              </div>
+                              <div style={{ fontSize: '10.5px', fontWeight: 500, lineHeight: '1.35', color: '#000' }}>
+                                We hereby certifying that all the clause of the contract agreement including statutory clauses, Remittance of EPF payment have been complied.
+                              </div>
+                            </div>
+                          )}
+
                           {/* Footer Terms, Bank Details & Signatures */}
-                          <div style={{ display: 'flex', fontSize: '11.5px', minHeight: '85px' }}>
+                          <div style={{ display: 'flex', fontSize: '11.5px', minHeight: '80px' }}>
                             {/* Col 1: E & O.E */}
                             <div style={{ width: '15%', borderRight: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}>
                               <u style={{ fontWeight: 'bold', fontSize: '12px' }}>E & O.E</u>
@@ -920,8 +935,8 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
             </div>
           </div>
 
-          {/* Middle: Item Number Selector Option */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {/* Middle: Item Number & Declaration Selector Options */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
             <label 
               style={{ 
                 display: 'inline-flex', 
@@ -948,6 +963,35 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
               />
               <span style={{ fontSize: '0.8rem', fontWeight: 700, color: showItemNumber ? '#ffffff' : '#94a3b8' }}>
                 Item Number
+              </span>
+            </label>
+
+            <label 
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '0.45rem', 
+                background: showDeclaration ? 'rgba(16, 185, 129, 0.25)' : 'rgba(30, 41, 59, 0.8)', 
+                border: showDeclaration ? '1.5px solid #34d399' : '1px solid rgba(255, 255, 255, 0.15)',
+                padding: '0.42rem 0.85rem', 
+                borderRadius: '8px', 
+                cursor: 'pointer',
+                userSelect: 'none',
+                transition: 'all 0.2s ease'
+              }}
+              title="Toggle to Show or Hide statutory Declaration in Tax Invoice printout"
+            >
+              <input
+                type="checkbox"
+                checked={showDeclaration}
+                onChange={(e) => {
+                  setShowDeclaration(e.target.checked);
+                  localStorage.setItem('sri_durga_print_show_declaration', String(e.target.checked));
+                }}
+                style={{ width: '15px', height: '15px', accentColor: '#10b981', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: showDeclaration ? '#ffffff' : '#94a3b8' }}>
+                Declaration
               </span>
             </label>
           </div>
