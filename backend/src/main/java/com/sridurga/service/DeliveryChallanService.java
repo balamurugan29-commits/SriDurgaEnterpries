@@ -105,6 +105,9 @@ public class DeliveryChallanService {
         challan.setCustomerAddress(request.getCustomerAddress());
         challan.setCustomerPhone(request.getCustomerPhone());
         challan.setVendorCode(request.getVendorCode());
+        challan.setContractNo(request.getContractNo());
+        challan.setContractPeriod(request.getContractPeriod());
+        challan.setBgNo(request.getBgNo());
         challan.setPoNumber(request.getPoNumber());
         challan.setPoDate(request.getPoDate());
         challan.setEpfCode(request.getEpfCode());

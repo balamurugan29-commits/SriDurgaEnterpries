@@ -47,6 +47,10 @@ public class CompanyDetailsService {
         existing.setBranch(updated.getBranch() != null ? updated.getBranch().trim() : "");
         existing.setAccountNumber(updated.getAccountNumber() != null ? updated.getAccountNumber().trim() : "");
         existing.setIfscCode(updated.getIfscCode() != null ? updated.getIfscCode().trim() : "");
+        existing.setContractNo(updated.getContractNo() != null ? updated.getContractNo().trim() : "");
+        existing.setContractPeriod(updated.getContractPeriod() != null ? updated.getContractPeriod().trim() : "");
+        existing.setBgNo(updated.getBgNo() != null ? updated.getBgNo().trim() : "");
+        existing.setVendorCode(updated.getVendorCode() != null ? updated.getVendorCode().trim() : "");
 
         return repository.save(existing);
     }

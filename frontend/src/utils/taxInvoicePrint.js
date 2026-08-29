@@ -179,21 +179,27 @@ export function generateTaxInvoicePrintHtml(challan) {
                 <td style="width: 25%; font-weight: 800; font-size: 13px;">${formattedDate}</td>
               </tr>
               <tr>
-                <td style="font-weight: 700;">Vendor Code</td>
-                <td>${vendorCode || '-'}</td>
+                <td style="font-weight: 700;">Contract No.</td>
+                <td>${contractNo || '-'}</td>
                 <td style="font-weight: 700;">Page</td>
                 <td style="font-weight: 700;">${page.pageNum} of ${page.totalPages}</td>
               </tr>
               ${isFirstPage ? `
                 <tr>
+                  <td style="font-weight: 700;">Contract Period (C. Period)</td>
+                  <td>${contractPeriod}</td>
+                  <td style="font-weight: 700;">Vendor Code</td>
+                  <td>${vendorCode || '-'}</td>
+                </tr>
+                <tr>
                   <td style="font-weight: 700;">P.O. No.</td>
-                  <td style="font-weight: 700;">${poNo || 'NA'}</td>
+                  <td style="font-weight: 700;">${poNo || 'NA'} ${challan.poDate ? `Dt: ${new Date(challan.poDate).toLocaleDateString('en-GB')}` : ''}</td>
                   <td style="font-weight: 700;">GSTIN</td>
                   <td style="font-weight: 800;">${gstin}</td>
                 </tr>
                 <tr>
-                  <td style="font-weight: 700;">P.O. Date</td>
-                  <td>${challan.poDate ? new Date(challan.poDate).toLocaleDateString('en-GB') : (challan.poNumber ? '-' : 'NA')}</td>
+                  <td style="font-weight: 700;">B.G. Number & Validity</td>
+                  <td>${bgNo}</td>
                   <td style="font-weight: 700;">PAN</td>
                   <td style="font-weight: 800;">${pan}</td>
                 </tr>

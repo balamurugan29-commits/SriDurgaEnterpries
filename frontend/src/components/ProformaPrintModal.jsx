@@ -488,13 +488,13 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                               </td>
                             </tr>
 
-                            {/* Row 2: Vendor Code & Page */}
+                            {/* Row 2: Contract No. & Page */}
                             <tr style={{ borderBottom: '1px solid #000' }}>
                               <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                Vendor Code
+                                Contract No.
                               </td>
                               <td style={{ padding: '3.5px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                {proforma.vendorCode || '-'}
+                                {proforma.contractNo || companyDetails?.contractNo || '9010038288'}
                               </td>
                               <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
                                 Page
@@ -504,16 +504,32 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                               </td>
                             </tr>
 
-                            {/* Rows 3 to 8: Rendered ONLY on Page 1 */}
+                            {/* Rows 3 to 9: Rendered ONLY on Page 1 */}
                             {isFirstPage && (
                               <>
-                                {/* Row 3: P.O. No. & GSTIN */}
+                                {/* Row 3: Contract Period (C. Period) & Vendor Code */}
+                                <tr style={{ borderBottom: '1px solid #000' }}>
+                                  <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    Contract Period (C. Period)
+                                  </td>
+                                  <td style={{ padding: '3.5px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    {proforma.contractPeriod || companyDetails?.contractPeriod || '01.05.2024 to 30.04.2027'}
+                                  </td>
+                                  <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
+                                    Vendor Code
+                                  </td>
+                                  <td style={{ padding: '3.5px 6px', fontSize: '12px' }}>
+                                    {proforma.vendorCode || companyDetails?.vendorCode || '840305'}
+                                  </td>
+                                </tr>
+
+                                {/* Row 4: P.O. No. & GSTIN */}
                                 <tr style={{ borderBottom: '1px solid #000' }}>
                                   <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     P.O. No.
                                   </td>
                                   <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                    {proforma.poNumber || 'NA'}
+                                    {proforma.poNumber || '5060173862'} {proforma.poDate ? `Dt: ${new Date(proforma.poDate).toLocaleDateString('en-GB')}` : ''}
                                   </td>
                                   <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     GSTIN
@@ -523,13 +539,13 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                                   </td>
                                 </tr>
 
-                                {/* Row 4: P.O. Date & PAN */}
+                                {/* Row 5: B.G. Number & Validity & PAN */}
                                 <tr style={{ borderBottom: '1px solid #000' }}>
                                   <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                    P.O. Date
+                                    B.G. Number & Validity
                                   </td>
                                   <td style={{ padding: '3.5px 6px', borderRight: '1px solid #000', fontSize: '12px' }}>
-                                    {proforma.poDate ? new Date(proforma.poDate).toLocaleDateString('en-GB') : (proforma.poNumber ? '-' : 'NA')}
+                                    {proforma.bgNo || companyDetails?.bgNo || '8110IPEBG240001  Validity Upto : 30.09.2027'}
                                   </td>
                                   <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     PAN
@@ -539,7 +555,7 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                                   </td>
                                 </tr>
 
-                                {/* Row 5: EPF Code & State Code */}
+                                {/* Row 6: EPF Code & State Code */}
                                 <tr style={{ borderBottom: '1px solid #000' }}>
                                   <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     EPF Code
@@ -555,7 +571,7 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                                   </td>
                                 </tr>
 
-                                {/* Row 6: ESI CODE & Invoice Value */}
+                                {/* Row 7: ESI CODE & Invoice Value */}
                                 <tr style={{ borderBottom: '1px solid #000' }}>
                                   <td style={{ padding: '3.5px 6px', fontWeight: 'bold', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     ESI CODE

@@ -414,7 +414,7 @@ export const CompanyDetailsPage = () => {
               </div>
 
               {/* ESI Code */}
-              <div style={{ gridColumn: 'span 2' }}>
+              <div>
                 <label className="form-label">
                   ESI Code
                 </label>
@@ -434,6 +434,91 @@ export const CompanyDetailsPage = () => {
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px', display: 'block' }}>
                   Employee State Insurance statutory registration code
                 </span>
+              </div>
+
+              {/* Vendor Code */}
+              <div>
+                <label className="form-label">
+                  Default Vendor Code
+                </label>
+                <input
+                  type="text"
+                  disabled={!isEditing}
+                  className="form-input"
+                  placeholder="e.g. 840305"
+                  value={formData.vendorCode || ''}
+                  onChange={e => handleChange('vendorCode', e.target.value)}
+                  style={{ 
+                    opacity: !isEditing ? 0.85 : 1,
+                    background: !isEditing ? 'rgba(0,0,0,0.2)' : undefined,
+                    cursor: !isEditing ? 'default' : 'text'
+                  }}
+                />
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px', display: 'block' }}>
+                  Default ONGC/Client Vendor Code
+                </span>
+              </div>
+
+              {/* Contract Number */}
+              <div>
+                <label className="form-label">
+                  Default Contract Number
+                </label>
+                <input
+                  type="text"
+                  disabled={!isEditing}
+                  className="form-input"
+                  placeholder="e.g. 9010038288"
+                  value={formData.contractNo || ''}
+                  onChange={e => handleChange('contractNo', e.target.value)}
+                  style={{ 
+                    opacity: !isEditing ? 0.85 : 1,
+                    background: !isEditing ? 'rgba(0,0,0,0.2)' : undefined,
+                    cursor: !isEditing ? 'default' : 'text'
+                  }}
+                />
+              </div>
+
+              {/* Contract Period (C. Period) */}
+              <div>
+                <label className="form-label" style={{ fontWeight: 700, color: '#fbbf24' }}>
+                  Contract Period (C. Period)
+                </label>
+                <input
+                  type="text"
+                  disabled={!isEditing}
+                  className="form-input"
+                  placeholder="e.g. 01.05.2024 to 30.04.2027"
+                  value={formData.contractPeriod || ''}
+                  onChange={e => handleChange('contractPeriod', e.target.value)}
+                  style={{ 
+                    opacity: !isEditing ? 0.85 : 1,
+                    background: !isEditing ? 'rgba(0,0,0,0.2)' : undefined,
+                    cursor: !isEditing ? 'default' : 'text',
+                    borderColor: 'rgba(245, 158, 11, 0.4)'
+                  }}
+                />
+              </div>
+
+              {/* B.G. Number & Validity */}
+              <div style={{ gridColumn: 'span 2' }}>
+                <label className="form-label" style={{ fontWeight: 700, color: '#fbbf24' }}>
+                  B.G. Number & Validity
+                </label>
+                <input
+                  type="text"
+                  disabled={!isEditing}
+                  className="form-input"
+                  placeholder="e.g. 8110IPEBG240001  Validity Upto : 30.09.2027"
+                  value={formData.bgNo || ''}
+                  onChange={e => handleChange('bgNo', e.target.value)}
+                  style={{ 
+                    opacity: !isEditing ? 0.85 : 1,
+                    background: !isEditing ? 'rgba(0,0,0,0.2)' : undefined,
+                    cursor: !isEditing ? 'default' : 'text',
+                    borderColor: 'rgba(245, 158, 11, 0.4)'
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -736,14 +821,26 @@ export const CompanyDetailsPage = () => {
                     <td style={{ width: '28%', padding: '2px 4px' }}>28/08/2026</td>
                   </tr>
                   <tr style={{ borderBottom: '1px solid #000' }}>
+                    <td style={{ width: '25%', padding: '2px 4px', fontWeight: 'bold', borderRight: '1px solid #000' }}>Contract No.</td>
+                    <td style={{ width: '25%', padding: '2px 4px', borderRight: '1px solid #000' }}>{formData.contractNo || '9010038288'}</td>
+                    <td style={{ width: '25%', padding: '2px 4px', fontWeight: 'bold', borderRight: '1px solid #000' }}>Page</td>
+                    <td style={{ width: '25%', padding: '2px 4px' }}>1 of 1</td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid #000' }}>
+                    <td style={{ padding: '2px 4px', fontWeight: 'bold', borderRight: '1px solid #000' }}>C. Period</td>
+                    <td style={{ padding: '2px 4px', borderRight: '1px solid #000' }}>{formData.contractPeriod || '01.05.2024 to 30.04.2027'}</td>
+                    <td style={{ padding: '2px 4px', fontWeight: 'bold', borderRight: '1px solid #000' }}>Vendor Code</td>
+                    <td style={{ padding: '2px 4px' }}>{formData.vendorCode || '840305'}</td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid #000' }}>
                     <td style={{ padding: '2px 4px', fontWeight: 'bold', borderRight: '1px solid #000' }}>P.O. No.</td>
                     <td style={{ padding: '2px 4px', borderRight: '1px solid #000' }}>5000173952</td>
                     <td style={{ padding: '2px 4px', fontWeight: 'bold', borderRight: '1px solid #000', background: '#dbe2ea' }}>GSTIN</td>
                     <td style={{ padding: '2px 4px', fontWeight: 'bold', background: '#dbe2ea' }}>{formData.gstin || '-'}</td>
                   </tr>
                   <tr style={{ borderBottom: '1px solid #000' }}>
-                    <td style={{ padding: '2px 4px', fontWeight: 'bold', borderRight: '1px solid #000' }}>D.G. NO.</td>
-                    <td style={{ padding: '2px 4px', borderRight: '1px solid #000' }}>0110/FED0240001</td>
+                    <td style={{ padding: '2px 4px', fontWeight: 'bold', borderRight: '1px solid #000' }}>B.G. No. & Validity</td>
+                    <td style={{ padding: '2px 4px', borderRight: '1px solid #000' }}>{formData.bgNo || '8110IPEBG240001 Validity : 30.09.2027'}</td>
                     <td style={{ padding: '2px 4px', fontWeight: 'bold', borderRight: '1px solid #000', background: '#dbe2ea' }}>PAN</td>
                     <td style={{ padding: '2px 4px', fontWeight: 'bold', background: '#dbe2ea' }}>{formData.pan || '-'}</td>
                   </tr>

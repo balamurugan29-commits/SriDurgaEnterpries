@@ -19,6 +19,9 @@ public class ChallanRequest {
     private String customerAddress;
     private String customerPhone;
     private String vendorCode;
+    private String contractNo;
+    private String contractPeriod;
+    private String bgNo;
     private String poNumber;
     private String poDate;
     private String epfCode;

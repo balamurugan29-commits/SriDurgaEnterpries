@@ -57,6 +57,18 @@ public class CompanyDetails {
     @Column(name = "ifsc_code", length = 50)
     private String ifscCode = "";
 
+    @Column(name = "contract_no", length = 100)
+    private String contractNo = "";
+
+    @Column(name = "contract_period", length = 150)
+    private String contractPeriod = "";
+
+    @Column(name = "bg_no", length = 150)
+    private String bgNo = "";
+
+    @Column(name = "vendor_code", length = 50)
+    private String vendorCode = "";
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
