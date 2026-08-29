@@ -3,6 +3,7 @@ import { fetchItems, fetchItemByCode, fetchNextChallanNumber, createChallan, upd
 import { printTaxInvoiceDirect } from '../utils/taxInvoicePrint';
 import { ChallanPrintModal } from '../components/ChallanPrintModal';
 import { InvoiceImageUploadModal } from '../components/InvoiceImageUploadModal';
+import { LineItemUploadModal } from '../components/LineItemUploadModal';
 import { Toast } from '../components/Toast';
 import { FileSpreadsheet, Plus, Trash2, Printer, Save, Zap, Edit3, X, RefreshCw, ShieldCheck, Building2, HelpCircle, CheckCircle2, XCircle, RotateCcw, ChevronDown, Eye, Upload, Sparkles } from 'lucide-react';
 
@@ -253,6 +254,44 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
 
   // Invoice Image OCR & Auto-Extraction Modal State
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+
+  // Line Item Spreadsheet (Excel / CSV) Upload Modal State
+  const [lineItemUploadModalOpen, setLineItemUploadModalOpen] = useState(false);
+
+  // Auto-Row Generation & Sequential Serial Number Normalizer
+  const autoExpandLineItems = (items) => {
+    if (!items || items.length === 0) {
+      return [{ serialNumber: 1, itemCode: '', description: '', quantity: 1, unit: 'No', rate: 0, amount: 0, fetched: false }];
+    }
+
+    // 1. Re-index all serial numbers to clean sequential 1..N
+    const normalized = items.map((it, idx) => ({
+      ...it,
+      serialNumber: idx + 1
+    }));
+
+    // 2. Check if the last row contains any data (itemCode, description, or rate)
+    const lastItem = normalized[normalized.length - 1];
+    const isFilled = (lastItem.itemCode && lastItem.itemCode.trim() !== '') ||
+                     (lastItem.description && lastItem.description.trim() !== '') ||
+                     Number(lastItem.rate) > 0;
+
+    // 3. Automatically append the next blank row below it
+    if (isFilled) {
+      normalized.push({
+        serialNumber: normalized.length + 1,
+        itemCode: '',
+        description: '',
+        quantity: 1,
+        unit: 'No',
+        rate: 0,
+        amount: 0,
+        fetched: false
+      });
+    }
+
+    return normalized;
+  };
 
   const handleApplyExtractedData = (data) => {
     if (!data) return;
@@ -768,7 +807,7 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
       updated[index].rate = baseRate;
       updated[index].amount = qty * baseRate;
       updated[index].fetched = true;
-      setLineItems(updated);
+      setLineItems(autoExpandLineItems(updated));
       setToast({ message: `Fetched '${foundMasterItem.itemCode}' from Item Master (Unit: ${itemUnit}, Rate: ₹${baseRate.toFixed(2)})`, type: 'success' });
     }
   };
@@ -791,7 +830,7 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
       applyMasterItemToRow(index, foundMasterItem);
     } else {
       updated[index].fetched = false;
-      setLineItems(updated);
+      setLineItems(autoExpandLineItems(updated));
     }
   };
 
@@ -868,7 +907,7 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
       updated[rowIndex].rate = finalRate;
       updated[rowIndex].amount = finalAmount;
       updated[rowIndex].fetched = true;
-      setLineItems(updated);
+      setLineItems(autoExpandLineItems(updated));
 
       setServiceChargeModal({
         isOpen: false,
@@ -911,7 +950,7 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
       updated[index].amount = q * r;
     }
 
-    setLineItems(updated);
+    setLineItems(autoExpandLineItems(updated));
   };
 
   const handleAddLine = () => {
@@ -922,15 +961,33 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
   };
 
   const handleRemoveLine = (index) => {
-    if (lineItems.length <= 1) {
-      setToast({ message: 'Tax Invoice must have at least one line item.', type: 'error' });
-      return;
+    const filtered = lineItems.filter((_, idx) => idx !== index);
+    if (filtered.length === 0) {
+      setLineItems([
+        { serialNumber: 1, itemCode: '', description: '', quantity: 1, unit: 'No', rate: 0, amount: 0, fetched: false }
+      ]);
+    } else {
+      setLineItems(autoExpandLineItems(filtered));
     }
-    const updated = lineItems.filter((_, idx) => idx !== index).map((item, idx) => ({
-      ...item,
-      serialNumber: idx + 1
-    }));
-    setLineItems(updated);
+  };
+
+  // Line Item Excel / CSV Spreadsheet Import Handler
+  const handleImportLineItems = (importedItems, mode = 'REPLACE') => {
+    if (!importedItems || importedItems.length === 0) return;
+
+    let combined;
+    if (mode === 'APPEND') {
+      const existingValid = lineItems.filter(i => (i.itemCode && i.itemCode.trim()) || (i.description && i.description.trim()) || Number(i.rate) > 0);
+      combined = [...existingValid, ...importedItems];
+    } else {
+      combined = [...importedItems];
+    }
+
+    setLineItems(autoExpandLineItems(combined));
+    setToast({ 
+      message: `Successfully imported ${importedItems.length} line items from spreadsheet!`, 
+      type: 'success' 
+    });
   };
 
   // SAVE TAX INVOICE & AUTO-SYNC CUSTOMER DETAILS
@@ -1540,9 +1597,36 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
             </h3>
           </div>
 
-          <button onClick={handleAddLine} className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}>
-            <Plus size={15} /> Add Line Item
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+            <button 
+              type="button"
+              onClick={() => setLineItemUploadModalOpen(true)} 
+              className="btn btn-outline" 
+              style={{ 
+                fontSize: '0.8rem', 
+                padding: '0.4rem 0.85rem',
+                borderColor: 'rgba(16, 185, 129, 0.4)',
+                color: '#34d399',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                background: 'rgba(16, 185, 129, 0.1)'
+              }}
+              title="Upload Line Items from Excel (.xlsx/.xls) or CSV spreadsheet"
+            >
+              <Upload size={14} />
+              <span>Upload Line Items (Excel / CSV)</span>
+            </button>
+
+            <button 
+              type="button"
+              onClick={handleAddLine} 
+              className="btn btn-secondary" 
+              style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
+            >
+              <Plus size={15} /> Add Line Item
+            </button>
+          </div>
         </div>
 
         <div className="custom-table-container" style={{ border: 'none', borderRadius: 0 }}>
@@ -1973,6 +2057,14 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
         onClose={() => setUploadModalOpen(false)}
         onApplyExtractedData={handleApplyExtractedData}
         masterCustomers={masterCustomers}
+        masterItems={masterItems}
+      />
+
+      {/* Line Items Spreadsheet (Excel / CSV) Upload Modal */}
+      <LineItemUploadModal
+        isOpen={lineItemUploadModalOpen}
+        onClose={() => setLineItemUploadModalOpen(false)}
+        onImport={handleImportLineItems}
         masterItems={masterItems}
       />
     </div>

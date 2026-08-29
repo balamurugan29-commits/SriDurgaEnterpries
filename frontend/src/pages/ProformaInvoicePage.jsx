@@ -11,6 +11,7 @@ import {
 } from '../services/api';
 import { printProformaInvoiceDirect } from '../utils/proformaInvoicePrint';
 import { ProformaPrintModal } from '../components/ProformaPrintModal';
+import { LineItemUploadModal } from '../components/LineItemUploadModal';
 import { Toast } from '../components/Toast';
 import { 
   FileSpreadsheet, 
@@ -23,7 +24,8 @@ import {
   Eye, 
   ChevronDown, 
   History,
-  CheckCircle2
+  CheckCircle2,
+  Upload
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -284,6 +286,40 @@ export const ProformaInvoicePage = ({ initialProforma, clearEditingProforma }) =
     setToast({ message: `Auto-filled all details for '${c.customerName}' from Customer Directory!`, type: 'info' });
   };
 
+  // Line Item Spreadsheet (Excel / CSV) Upload Modal State
+  const [lineItemUploadModalOpen, setLineItemUploadModalOpen] = useState(false);
+
+  // Auto-Row Generation & Sequential Serial Number Normalizer
+  const autoExpandLineItems = (itemsList) => {
+    if (!itemsList || itemsList.length === 0) {
+      return [{ serialNumber: 1, itemCode: '', description: '', unit: 'No', quantity: 1, rate: 0, amount: 0 }];
+    }
+
+    const normalized = itemsList.map((it, idx) => ({
+      ...it,
+      serialNumber: idx + 1
+    }));
+
+    const lastItem = normalized[normalized.length - 1];
+    const isFilled = (lastItem.itemCode && lastItem.itemCode.trim() !== '') ||
+                     (lastItem.description && lastItem.description.trim() !== '') ||
+                     Number(lastItem.rate) > 0;
+
+    if (isFilled) {
+      normalized.push({
+        serialNumber: normalized.length + 1,
+        itemCode: '',
+        description: '',
+        unit: 'No',
+        quantity: 1,
+        rate: 0,
+        amount: 0
+      });
+    }
+
+    return normalized;
+  };
+
   // Item Table Manipulation
   const handleItemChange = (index, field, value) => {
     const newItems = [...items];
@@ -295,7 +331,7 @@ export const ProformaInvoicePage = ({ initialProforma, clearEditingProforma }) =
       newItems[index].amount = Math.round(q * r * 100) / 100;
     }
 
-    setItems(newItems);
+    setItems(autoExpandLineItems(newItems));
   };
 
   const handleSelectItem = (index, masterItem) => {
@@ -310,7 +346,7 @@ export const ProformaInvoicePage = ({ initialProforma, clearEditingProforma }) =
       rate: rate,
       amount: Math.round(qty * rate * 100) / 100
     };
-    setItems(newItems);
+    setItems(autoExpandLineItems(newItems));
   };
 
   const handleAddItem = () => {
@@ -321,13 +357,31 @@ export const ProformaInvoicePage = ({ initialProforma, clearEditingProforma }) =
   };
 
   const handleRemoveItem = (index) => {
-    if (items.length <= 1) {
+    const filtered = items.filter((_, idx) => idx !== index);
+    if (filtered.length === 0) {
       setItems([{ serialNumber: 1, itemCode: '', description: '', unit: 'No', quantity: 1, rate: 0, amount: 0 }]);
       return;
     }
-    const filtered = items.filter((_, idx) => idx !== index);
-    const renumbered = filtered.map((item, idx) => ({ ...item, serialNumber: idx + 1 }));
-    setItems(renumbered);
+    setItems(autoExpandLineItems(filtered));
+  };
+
+  // Line Item Excel / CSV Spreadsheet Import Handler
+  const handleImportLineItems = (importedItems, mode = 'REPLACE') => {
+    if (!importedItems || importedItems.length === 0) return;
+
+    let combined;
+    if (mode === 'APPEND') {
+      const existingValid = items.filter(i => (i.itemCode && i.itemCode.trim()) || (i.description && i.description.trim()) || Number(i.rate) > 0);
+      combined = [...existingValid, ...importedItems];
+    } else {
+      combined = [...importedItems];
+    }
+
+    setItems(autoExpandLineItems(combined));
+    setToast({ 
+      message: `Successfully imported ${importedItems.length} line items from spreadsheet!`, 
+      type: 'success' 
+    });
   };
 
   const handleResetForm = async () => {
@@ -734,18 +788,32 @@ export const ProformaInvoicePage = ({ initialProforma, clearEditingProforma }) =
 
       {/* Dynamic Line Items Table */}
       <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
           <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             2. Line Items (Auto-Fetch from Item Master)
           </div>
-          <button
-            onClick={handleAddItem}
-            className="btn btn-outline"
-            style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', borderColor: '#38bdf8', color: '#38bdf8' }}
-          >
-            <Plus size={14} />
-            <span>Add Item Row</span>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+            <button
+              type="button"
+              onClick={() => setLineItemUploadModalOpen(true)}
+              className="btn btn-outline"
+              style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399', background: 'rgba(16, 185, 129, 0.1)' }}
+              title="Upload Line Items from Excel (.xlsx/.xls) or CSV spreadsheet"
+            >
+              <Upload size={14} />
+              <span>Upload Items (Excel / CSV)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleAddItem}
+              className="btn btn-outline"
+              style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', borderColor: '#38bdf8', color: '#38bdf8' }}
+            >
+              <Plus size={14} />
+              <span>Add Item Row</span>
+            </button>
+          </div>
         </div>
 
         <div style={{ overflowX: 'auto' }}>
@@ -964,6 +1032,14 @@ export const ProformaInvoicePage = ({ initialProforma, clearEditingProforma }) =
           proforma={getPayload()}
         />
       )}
+
+      {/* Line Items Spreadsheet (Excel / CSV) Upload Modal */}
+      <LineItemUploadModal
+        isOpen={lineItemUploadModalOpen}
+        onClose={() => setLineItemUploadModalOpen(false)}
+        onImport={handleImportLineItems}
+        masterItems={masterItems}
+      />
     </div>
   );
 };
