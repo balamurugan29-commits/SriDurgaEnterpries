@@ -395,16 +395,44 @@ try {
 }
 
 # ------------------------------------------------------------------------------
-# 10. SYSTEM CONFIGURATION & SCRIPTS
+# 10. SYSTEM CONFIGURATION & AUTO-START VERIFICATION
 # ------------------------------------------------------------------------------
 Write-Host "`n--- MODULE 10: Auto-Start & Launcher Verification ---" -ForegroundColor Cyan
+
+# Test 1: Windows Registry Run Key
 $reg = Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "SriDurgaERP" -ErrorAction SilentlyContinue
-Assert-Test "Windows Auto-Start Registry Key" ($reg.SriDurgaERP -ne $null)
-$shortcut = Get-ChildItem -Path ([Environment]::GetFolderPath('Startup')) -Filter "*SriDurga*" -ErrorAction SilentlyContinue
-Assert-Test "Windows Startup Folder Shortcut" ($shortcut -ne $null)
-Assert-Test "Bundled Portable Java 17 Exists" (Test-Path "E:\office\jdk-17\bin\java.exe")
-Assert-Test "Production Executable JAR Exists" (Test-Path "E:\office\SriDurgaEnterpries\backend\target\sri-durga-backend-1.0.0.jar")
-Assert-Test "Desktop Application Shortcut Exists" (Test-Path ([Environment]::GetFolderPath('Desktop') + "\Sri Durga Enterprises.lnk"))
+Assert-Test "Windows Auto-Start Registry Key (HKCU\Run)" ($reg.SriDurgaERP -ne $null -and $reg.SriDurgaERP.Contains("Start-Server-Silent.vbs"))
+
+# Test 2: Windows Startup Folder Shortcut
+$startupFolder = [Environment]::GetFolderPath('Startup')
+$startupShortcut = Get-ChildItem -Path $startupFolder -Filter "*SriDurga*" -ErrorAction SilentlyContinue
+Assert-Test "Windows Startup Folder Shortcut ($startupFolder)" ($startupShortcut -ne $null)
+
+# Test 3: Portable Java 17 Runtime
+$javaExists = (Test-Path "E:\office\jdk-17\bin\java.exe") -or (Test-Path "C:\SriDurgaERP\jdk-17\bin\java.exe")
+$javawExists = (Test-Path "E:\office\jdk-17\bin\javaw.exe") -or (Test-Path "C:\SriDurgaERP\jdk-17\bin\javaw.exe")
+Assert-Test "Bundled Portable Java 17 Runtime (java.exe & javaw.exe)" ($javaExists -and $javawExists)
+
+# Test 4: Production Packaged Executable JAR
+$jarExists = (Test-Path "E:\office\SriDurgaEnterpries\backend\target\sri-durga-backend-1.0.0.jar") -or (Test-Path "C:\SriDurgaERP\backend\target\sri-durga-backend-1.0.0.jar")
+Assert-Test "Production Executable JAR (sri-durga-backend-1.0.0.jar)" $jarExists
+
+# Test 5: Desktop Application Launch Shortcut
+$desktop = [Environment]::GetFolderPath('Desktop')
+$desktopShortcutExists = (Test-Path "$desktop\Sri Durga Enterprises.lnk") -or (Test-Path ([Environment]::GetFolderPath('UserProfile') + "\Desktop\Sri Durga Enterprises.lnk")) -or (Test-Path "C:\Users\Admin\OneDrive\Desktop\Sri Durga Enterprises.lnk")
+Assert-Test "Desktop Application Shortcut (Sri Durga Enterprises.lnk)" $desktopShortcutExists
+
+# Test 6: Silent Background Launcher VBS Script
+$vbsScript = Test-Path "E:\office\SriDurgaEnterpries\Start-Server-Silent.vbs"
+Assert-Test "Silent VBS Background Launcher (Start-Server-Silent.vbs)" $vbsScript
+
+# Test 7: Desktop Windowed App Launcher BAT Script
+$batScript = Test-Path "E:\office\SriDurgaEnterpries\Sri-Durga-Enterprises-App.bat"
+Assert-Test "Native Desktop App Wrapper (Sri-Durga-Enterprises-App.bat)" $batScript
+
+# Test 8: Auto-Start Re-arm Script
+$enableScript = Test-Path "E:\office\SriDurgaEnterpries\Enable-AutoStart.ps1"
+Assert-Test "Auto-Start Setup & Re-arm Script (Enable-AutoStart.ps1)" $enableScript
 
 # ==============================================================================
 # SUMMARY REPORT
