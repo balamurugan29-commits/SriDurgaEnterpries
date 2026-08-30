@@ -4,7 +4,6 @@ import {
   Save, 
   RefreshCw, 
   CheckCircle2, 
-  Landmark, 
   CreditCard, 
   FileText, 
   MapPin, 
@@ -523,121 +522,7 @@ export const CompanyDetailsPage = () => {
             </div>
           </div>
 
-          {/* SECTION 2: BANK & SETTLEMENT DETAILS */}
-          <div className="glass-panel" style={{ padding: '1.5rem', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                <Landmark size={20} color="#fbbf24" />
-                <div>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
-                    Bank & Settlement Coordinates
-                  </h3>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Printed in the Payment & Declaration footer of Tax Invoices
-                  </span>
-                </div>
-              </div>
-
-              {!isEditing ? (
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
-                  <Lock size={12} /> Read-Only
-                </span>
-              ) : (
-                <span style={{ fontSize: '0.75rem', color: '#34d399', display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(52,211,153,0.1)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
-                  <Unlock size={12} /> Editable
-                </span>
-              )}
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              {/* Bank Name */}
-              <div>
-                <label className="form-label" style={{ fontWeight: 700, color: '#fbbf24' }}>
-                  Bank Name
-                </label>
-                <input
-                  type="text"
-                  disabled={!isEditing}
-                  className="form-input"
-                  placeholder="e.g. State Bank of India, Indian Overseas Bank..."
-                  value={formData.bankName || ''}
-                  onChange={e => handleChange('bankName', e.target.value)}
-                  style={{ 
-                    opacity: !isEditing ? 0.85 : 1,
-                    background: !isEditing ? 'rgba(0,0,0,0.2)' : undefined,
-                    cursor: !isEditing ? 'default' : 'text'
-                  }}
-                />
-              </div>
-
-              {/* Branch */}
-              <div>
-                <label className="form-label" style={{ fontWeight: 700, color: '#fbbf24' }}>
-                  Branch Name
-                </label>
-                <input
-                  type="text"
-                  disabled={!isEditing}
-                  className="form-input"
-                  placeholder="e.g. Main Branch"
-                  value={formData.branch || ''}
-                  onChange={e => handleChange('branch', e.target.value)}
-                  style={{ 
-                    opacity: !isEditing ? 0.85 : 1,
-                    background: !isEditing ? 'rgba(0,0,0,0.2)' : undefined,
-                    cursor: !isEditing ? 'default' : 'text'
-                  }}
-                />
-              </div>
-
-              {/* Account Number */}
-              <div>
-                <label className="form-label" style={{ fontWeight: 700, color: '#fbbf24' }}>
-                  Account Number
-                </label>
-                <input
-                  type="text"
-                  disabled={!isEditing}
-                  className="form-input"
-                  placeholder="Enter Account Number"
-                  value={formData.accountNumber || ''}
-                  onChange={e => handleChange('accountNumber', e.target.value)}
-                  style={{ 
-                    fontFamily: 'monospace', 
-                    fontWeight: 700,
-                    opacity: !isEditing ? 0.85 : 1,
-                    background: !isEditing ? 'rgba(0,0,0,0.2)' : undefined,
-                    cursor: !isEditing ? 'default' : 'text'
-                  }}
-                />
-              </div>
-
-              {/* IFSC Code */}
-              <div>
-                <label className="form-label" style={{ fontWeight: 700, color: '#fbbf24' }}>
-                  IFSC Code
-                </label>
-                <input
-                  type="text"
-                  disabled={!isEditing}
-                  className="form-input"
-                  placeholder="e.g. SBIN0001234"
-                  value={formData.ifscCode || ''}
-                  onChange={e => handleChange('ifscCode', e.target.value.toUpperCase())}
-                  style={{ 
-                    textTransform: 'uppercase', 
-                    fontFamily: 'monospace', 
-                    fontWeight: 700,
-                    opacity: !isEditing ? 0.85 : 1,
-                    background: !isEditing ? 'rgba(0,0,0,0.2)' : undefined,
-                    cursor: !isEditing ? 'default' : 'text'
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION 3: ENTERPRISE & CONTACT PROFILE */}
+          {/* SECTION 2: ENTERPRISE & CONTACT PROFILE */}
           <div className="glass-panel" style={{ padding: '1.5rem', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
@@ -859,15 +744,7 @@ export const CompanyDetailsPage = () => {
                 </tbody>
               </table>
 
-              {/* Mini Bank Payment Details Footer */}
-              <div style={{ border: '1px solid #000', padding: '4px', fontSize: '8px', background: '#f8fafc', marginBottom: '6px' }}>
-                <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '2px' }}>BANK & PAYMENT DETAILS:</div>
-                <div>Bank: <strong>{formData.bankName || '-'}</strong> {formData.branch ? `(${formData.branch})` : ''}</div>
-                <div>A/C No: <strong>{formData.accountNumber || '-'}</strong></div>
-                <div>IFSC Code: <strong>{formData.ifscCode || '-'}</strong></div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '7px', color: '#475569' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '7px', color: '#475569', marginTop: '6px' }}>
                 <span>We hereby certify statutory clauses & remittances complied. E & O.E.</span>
                 <span style={{ fontWeight: 'bold' }}>For {formData.companyName || 'SRI DURGA ENTERPRISES'}</span>
               </div>
