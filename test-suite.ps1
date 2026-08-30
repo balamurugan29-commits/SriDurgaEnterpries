@@ -434,6 +434,15 @@ Assert-Test "Native Desktop App Wrapper (Sri-Durga-Enterprises-App.bat)" $batScr
 $enableScript = Test-Path "E:\office\SriDurgaEnterpries\Enable-AutoStart.ps1"
 Assert-Test "Auto-Start Setup & Re-arm Script (Enable-AutoStart.ps1)" $enableScript
 
+# Test 9: 24/7 Watchdog Keep-Alive Daemon Script
+$watchdogScript = Test-Path "E:\office\SriDurgaEnterpries\Watchdog-KeepAlive-Service.vbs"
+Assert-Test "24/7 Watchdog Keep-Alive Daemon Script (Watchdog-KeepAlive-Service.vbs)" $watchdogScript
+
+# Test 10: Watchdog Windows Registry Key
+$watchdogReg = Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "SriDurgaERP_Watchdog" -ErrorAction SilentlyContinue
+Assert-Test "Watchdog Registry Key (HKCU\Run\SriDurgaERP_Watchdog)" ($watchdogReg.SriDurgaERP_Watchdog -ne $null)
+
+
 # ==============================================================================
 # SUMMARY REPORT
 # ==============================================================================
