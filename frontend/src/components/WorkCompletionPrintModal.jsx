@@ -34,6 +34,15 @@ export const WorkCompletionPrintModal = ({ isOpen, onClose, certificate }) => {
   const materialItems = (certificate.items || [])
     .filter(item => (item.itemType === 'MATERIAL' || item.itemType === 'Material' || !item.itemType) && isValidItem(item));
 
+  const formatDisplayDate = (val) => {
+    if (!val || val === '-') return '-';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+      const [y, m, d] = val.split('-');
+      return `${d}/${m}/${y}`;
+    }
+    return val;
+  };
+
   const hasServiceItems = serviceItems.length > 0;
   const hasMaterialItems = materialItems.length > 0;
 
@@ -436,8 +445,8 @@ export const WorkCompletionPrintModal = ({ isOpen, onClose, certificate }) => {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '13px' }}>
-                    <div>a.Date of handing over for repairs: <strong>{certificate.dateHandingOver || '-'}</strong></div>
-                    <div>b.Date of completion of work: <strong>{certificate.dateCompletion || '-'}</strong></div>
+                    <div>a.Date of handing over for repairs: <strong>{formatDisplayDate(certificate.dateHandingOver)}</strong></div>
+                    <div>b.Date of completion of work: <strong>{formatDisplayDate(certificate.dateCompletion)}</strong></div>
                     <div>c.Delay in completion of work, if any: <strong>{certificate.delayInCompletion || 'NIL'}</strong></div>
                     <div>d.Performance of machines/ equipment after repair: <strong>{certificate.performanceOfMachines || 'OK'}</strong></div>
                     <div>e.Defective spares/ material returned: <strong>{certificate.defectiveSparesReturned || 'NA'}</strong></div>

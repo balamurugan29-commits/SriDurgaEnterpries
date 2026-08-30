@@ -50,6 +50,21 @@ export const WorkCompletionPage = ({ editingCertificate, onCancelEdit }) => {
     });
   };
 
+const toDateInputValue = (dateStr) => {
+  if (!dateStr) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  const parts = dateStr.split(/[/-]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 4) {
+      return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+    }
+    if (parts[2].length === 4) {
+      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+  }
+  return '';
+};
+
   // Clean blank template for 100% fresh data entry
   const getBlankCertificateForm = (nextNo = '') => ({
     certificateNo: nextNo,
@@ -744,10 +759,9 @@ export const WorkCompletionPage = ({ editingCertificate, onCancelEdit }) => {
           <div>
             <label className="form-label">a. Date of Handing Over for Repairs <span style={{ color: '#34d399' }}>(Editable)</span></label>
             <input 
-              type="text" 
+              type="date" 
               className="form-input" 
-              placeholder="e.g. 03/04/2026" 
-              value={formData.dateHandingOver} 
+              value={toDateInputValue(formData.dateHandingOver)} 
               onChange={e => handleInputChange('dateHandingOver', e.target.value)} 
             />
           </div>
@@ -755,10 +769,9 @@ export const WorkCompletionPage = ({ editingCertificate, onCancelEdit }) => {
           <div>
             <label className="form-label">b. Date of Completion of Work <span style={{ color: '#34d399' }}>(Editable)</span></label>
             <input 
-              type="text" 
+              type="date" 
               className="form-input" 
-              placeholder="e.g. 06/04/2026" 
-              value={formData.dateCompletion} 
+              value={toDateInputValue(formData.dateCompletion)} 
               onChange={e => handleInputChange('dateCompletion', e.target.value)} 
             />
           </div>
