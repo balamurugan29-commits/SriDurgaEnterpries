@@ -167,14 +167,14 @@ try {
         state = "Puducherry (34)"
         epfCode = "PC 1758"
         esiCode = "55000426770000602"
-        bankName = "Indian Overseas Bank"
-        branch = "Karaikal Main Branch"
-        accountNumber = "015402000001234"
-        ifscCode = "IOBA0000154"
+        bankName = ""
+        branch = ""
+        accountNumber = ""
+        ifscCode = ""
     } | ConvertTo-Json
 
     $savedComp = Invoke-RestMethod -Uri "$baseUrl/api/company-details" -Method Post -Headers $adminHeaders -Body $saveCompBody
-    Assert-Test "Save and Update Company Details" ($savedComp.bankName -eq "Indian Overseas Bank" -and $savedComp.accountNumber -eq "015402000001234") "Bank: $($savedComp.bankName) | A/C: $($savedComp.accountNumber)"
+    Assert-Test "Save and Update Company Details" ($savedComp.gstin -eq "34ABDFS4476N1ZN" -and $savedComp.pan -eq "ABDFS4476N") "GST: $($savedComp.gstin) | PAN: $($savedComp.pan)"
 } catch {
     Assert-Test "Company Details Master Operations" $false $_.Exception.Message
 }

@@ -635,6 +635,120 @@ export const CompanyDetailsPage = () => {
             </div>
           </div>
 
+          {/* SECTION 3: BANK & SETTLEMENT COORDINATES */}
+          <div className="glass-panel" style={{ padding: '1.5rem', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                <CreditCard size={20} color="#fbbf24" />
+                <div>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                    Bank & Settlement Coordinates
+                  </h3>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Printed in the Payment & Settlement footer of Tax Invoices
+                  </span>
+                </div>
+              </div>
+
+              {!isEditing ? (
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                  <Lock size={12} /> Read-Only
+                </span>
+              ) : (
+                <span style={{ fontSize: '0.75rem', color: '#34d399', display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(52,211,153,0.1)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                  <Unlock size={12} /> Editable
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              {/* Bank Name */}
+              <div>
+                <label className="form-label" style={{ fontWeight: 700, color: '#fbbf24' }}>
+                  Bank Name
+                </label>
+                <input
+                  type="text"
+                  disabled={!isEditing}
+                  className="form-input"
+                  placeholder="Enter Bank Name..."
+                  value={formData.bankName || ''}
+                  onChange={e => handleChange('bankName', e.target.value)}
+                  style={{ 
+                    opacity: !isEditing ? 0.85 : 1,
+                    background: !isEditing ? 'rgba(0,0,0,0.2)' : undefined,
+                    cursor: !isEditing ? 'default' : 'text'
+                  }}
+                />
+              </div>
+
+              {/* Branch Name */}
+              <div>
+                <label className="form-label" style={{ fontWeight: 700, color: '#fbbf24' }}>
+                  Branch Name
+                </label>
+                <input
+                  type="text"
+                  disabled={!isEditing}
+                  className="form-input"
+                  placeholder="Enter Branch Name..."
+                  value={formData.branch || ''}
+                  onChange={e => handleChange('branch', e.target.value)}
+                  style={{ 
+                    opacity: !isEditing ? 0.85 : 1,
+                    background: !isEditing ? 'rgba(0,0,0,0.2)' : undefined,
+                    cursor: !isEditing ? 'default' : 'text'
+                  }}
+                />
+              </div>
+
+              {/* Account Number */}
+              <div>
+                <label className="form-label" style={{ fontWeight: 700, color: '#fbbf24' }}>
+                  Account Number
+                </label>
+                <input
+                  type="text"
+                  disabled={!isEditing}
+                  className="form-input"
+                  placeholder="Enter Bank Account Number..."
+                  value={formData.accountNumber || ''}
+                  onChange={e => handleChange('accountNumber', e.target.value)}
+                  style={{ 
+                    fontFamily: 'monospace',
+                    fontWeight: 700,
+                    opacity: !isEditing ? 0.85 : 1,
+                    background: !isEditing ? 'rgba(0,0,0,0.2)' : undefined,
+                    cursor: !isEditing ? 'default' : 'text'
+                  }}
+                />
+              </div>
+
+              {/* IFSC Code */}
+              <div>
+                <label className="form-label" style={{ fontWeight: 700, color: '#fbbf24' }}>
+                  IFSC Code
+                </label>
+                <input
+                  type="text"
+                  disabled={!isEditing}
+                  className="form-input"
+                  placeholder="Enter IFSC Code..."
+                  value={formData.ifscCode || ''}
+                  onChange={e => handleChange('ifscCode', e.target.value.toUpperCase())}
+                  style={{ 
+                    textTransform: 'uppercase',
+                    fontFamily: 'monospace',
+                    fontWeight: 700,
+                    opacity: !isEditing ? 0.85 : 1,
+                    background: !isEditing ? 'rgba(0,0,0,0.2)' : undefined,
+                    cursor: !isEditing ? 'default' : 'text'
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
           {/* BOTTOM ACTION BUTTONS */}
           {isEditing && (
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
