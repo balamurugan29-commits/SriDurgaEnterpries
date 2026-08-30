@@ -19,9 +19,23 @@ export const WorkCompletionPrintModal = ({ isOpen, onClose, certificate }) => {
 
   if (!isOpen || !certificate) return null;
 
-  const isService = (certificate.equipmentDescription || '').toLowerCase().includes('service') || (certificate.items || []).some(item => item.itemType === 'SERVICE');
-  const serviceItems = (certificate.items || []).filter(item => item.itemType === 'SERVICE');
-  const materialItems = (certificate.items || []).filter(item => item.itemType === 'MATERIAL' || !item.itemType);
+  const isValidItem = (item) => {
+    if (!item) return false;
+    const rc = (item.rcItemNo || '').toString().trim();
+    const desc = (item.description || '').toString().trim();
+    const hasRc = rc !== '' && rc !== '-';
+    const hasDesc = desc !== '' && desc !== '-';
+    return hasRc || hasDesc;
+  };
+
+  const serviceItems = (certificate.items || [])
+    .filter(item => (item.itemType === 'SERVICE' || item.itemType === 'Service') && isValidItem(item));
+
+  const materialItems = (certificate.items || [])
+    .filter(item => (item.itemType === 'MATERIAL' || item.itemType === 'Material' || !item.itemType) && isValidItem(item));
+
+  const hasServiceItems = serviceItems.length > 0;
+  const hasMaterialItems = materialItems.length > 0;
 
   const handlePrint = () => {
     const printArea = document.getElementById('work-cert-print-area');
@@ -137,36 +151,33 @@ export const WorkCompletionPrintModal = ({ isOpen, onClose, certificate }) => {
     );
   };
 
-  const renderItemsTable = (itemsList) => (
-    <table className="cert-table" style={{ width: '100%', borderCollapse: 'collapse', margin: '14px 0', fontSize: '13px' }}>
-      <thead>
-        <tr style={{ borderTop: '1.5px solid #000', borderBottom: '1.5px solid #000' }}>
-          <th style={{ width: '60px', padding: '6px 8px', fontWeight: 'bold' }}>Sl.No.</th>
-          <th style={{ width: '120px', padding: '6px 8px', fontWeight: 'bold' }}>RC Item No.</th>
-          <th style={{ padding: '6px 8px', fontWeight: 'bold' }}>Description</th>
-          <th style={{ width: '80px', padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>Qty.</th>
-        </tr>
-      </thead>
-      <tbody>
-        {itemsList && itemsList.length > 0 ? (
-          itemsList.map((item, idx) => (
+  const renderItemsTable = (itemsList) => {
+    if (!itemsList || itemsList.length === 0) return null;
+    return (
+      <table className="cert-table" style={{ width: '100%', borderCollapse: 'collapse', margin: '8px 0', fontSize: '13px' }}>
+        <thead>
+          <tr style={{ borderTop: '1.5px solid #000', borderBottom: '1.5px solid #000' }}>
+            <th style={{ width: '60px', padding: '5px 8px', fontWeight: 'bold', textAlign: 'left' }}>Sl.No.</th>
+            <th style={{ width: '130px', padding: '5px 8px', fontWeight: 'bold', textAlign: 'left' }}>RC Item No.</th>
+            <th style={{ padding: '5px 8px', fontWeight: 'bold', textAlign: 'left' }}>Description</th>
+            <th style={{ width: '80px', padding: '5px 8px', textAlign: 'right', fontWeight: 'bold' }}>Qty.</th>
+          </tr>
+        </thead>
+        <tbody>
+          {itemsList.map((item, idx) => (
             <tr key={idx} style={idx === itemsList.length - 1 ? { borderBottom: '1.5px solid #000' } : {}}>
-              <td style={{ padding: '6px 8px', verticalAlign: 'top' }}>{idx + 1}</td>
-              <td style={{ padding: '6px 8px', verticalAlign: 'top', fontWeight: '600' }}>{item.rcItemNo || '-'}</td>
-              <td style={{ padding: '6px 8px', verticalAlign: 'top', whiteSpace: 'pre-line' }}>{item.description}</td>
-              <td style={{ padding: '6px 8px', verticalAlign: 'top', textAlign: 'right', fontWeight: '600' }}>
+              <td style={{ padding: '5px 8px', verticalAlign: 'top' }}>{idx + 1}</td>
+              <td style={{ padding: '5px 8px', verticalAlign: 'top', fontWeight: '600' }}>{item.rcItemNo || '-'}</td>
+              <td style={{ padding: '5px 8px', verticalAlign: 'top', whiteSpace: 'pre-line' }}>{item.description || '-'}</td>
+              <td style={{ padding: '5px 8px', verticalAlign: 'top', textAlign: 'right', fontWeight: '600' }}>
                 {item.quantity} {item.unit || 'No.'}
               </td>
             </tr>
-          ))
-        ) : (
-          <tr style={{ borderBottom: '1.5px solid #000' }}>
-            <td colSpan={4} style={{ padding: '12px 8px', textAlign: 'center' }}>No items listed</td>
-          </tr>
-        )}
-      </tbody>
-    </table>
-  );
+          ))}
+        </tbody>
+      </table>
+    );
+  };
 
   return (
     <div 
@@ -317,29 +328,33 @@ export const WorkCompletionPrintModal = ({ isOpen, onClose, certificate }) => {
                 </div>
 
                 {/* Work Release & Materials */}
-                <div style={{ marginBottom: '20px' }}>
-                  <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '6px', fontSize: '13.5px' }}>
-                    WORK RELEASE
-                  </div>
-                  {isService ? (
-                    <>
-                      <div style={{ fontWeight: 'bold', marginTop: '6px' }}>Work to be carried out:</div>
-                      {renderItemsTable(serviceItems)}
-                      
-                      <div style={{ fontWeight: 'bold', marginTop: '12px' }}>Materials</div>
-                      {renderItemsTable(materialItems)}
-                    </>
-                  ) : (
-                    <>
-                      <div style={{ fontWeight: 'bold', marginTop: '6px' }}>Materials</div>
-                      {renderItemsTable(materialItems)}
-                    </>
-                  )}
+                {(hasServiceItems || hasMaterialItems) && (
+                  <div style={{ marginBottom: '18px' }}>
+                    <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '6px', fontSize: '13.5px' }}>
+                      WORK RELEASE
+                    </div>
 
-                  <div style={{ marginTop: '8px', fontSize: '13px' }}>
-                    <strong>Completion Time :</strong> {certificate.completionTime || '5 Day(s)'}
+                    {/* 1. Work to be carried out (Only if entered) */}
+                    {hasServiceItems && (
+                      <div style={{ marginBottom: hasMaterialItems ? '12px' : '4px' }}>
+                        <div style={{ fontWeight: 'bold', marginTop: '4px', fontSize: '13px' }}>Work to be carried out:</div>
+                        {renderItemsTable(serviceItems)}
+                      </div>
+                    )}
+
+                    {/* 2. Materials (Only if entered) */}
+                    {hasMaterialItems && (
+                      <div style={{ marginBottom: '4px' }}>
+                        <div style={{ fontWeight: 'bold', marginTop: hasServiceItems ? '8px' : '4px', fontSize: '13px' }}>Materials</div>
+                        {renderItemsTable(materialItems)}
+                      </div>
+                    )}
+
+                    <div style={{ marginTop: '8px', fontSize: '13px' }}>
+                      <strong>Completion Time :</strong> {certificate.completionTime || '5 Day(s)'}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Signatures */}
                 <div style={{ marginTop: 'auto', paddingTop: '70px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '13px', fontWeight: '500' }}>
@@ -390,25 +405,29 @@ export const WorkCompletionPrintModal = ({ isOpen, onClose, certificate }) => {
                 </div>
 
                 {/* Work Completed & Materials */}
-                <div style={{ marginBottom: '20px' }}>
-                  <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '6px', fontSize: '13.5px' }}>
-                    WORK COMPLETED
+                {(hasServiceItems || hasMaterialItems) && (
+                  <div style={{ marginBottom: '18px' }}>
+                    <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '6px', fontSize: '13.5px' }}>
+                      WORK COMPLETED
+                    </div>
+
+                    {/* 1. Work to be carried out (Only if entered) */}
+                    {hasServiceItems && (
+                      <div style={{ marginBottom: hasMaterialItems ? '12px' : '4px' }}>
+                        <div style={{ fontWeight: 'bold', marginTop: '4px', fontSize: '13px' }}>Work to be carried out:</div>
+                        {renderItemsTable(serviceItems)}
+                      </div>
+                    )}
+
+                    {/* 2. Materials (Only if entered) */}
+                    {hasMaterialItems && (
+                      <div style={{ marginBottom: '4px' }}>
+                        <div style={{ fontWeight: 'bold', marginTop: hasServiceItems ? '8px' : '4px', fontSize: '13px' }}>Materials</div>
+                        {renderItemsTable(materialItems)}
+                      </div>
+                    )}
                   </div>
-                  {isService ? (
-                    <>
-                      <div style={{ fontWeight: 'bold', marginTop: '6px' }}>Work to be carried out:</div>
-                      {renderItemsTable(serviceItems)}
-                      
-                      <div style={{ fontWeight: 'bold', marginTop: '12px' }}>Materials</div>
-                      {renderItemsTable(materialItems)}
-                    </>
-                  ) : (
-                    <>
-                      <div style={{ fontWeight: 'bold', marginTop: '6px' }}>Materials</div>
-                      {renderItemsTable(materialItems)}
-                    </>
-                  )}
-                </div>
+                )}
 
                 {/* Other Details */}
                 <div style={{ marginBottom: '20px' }}>
