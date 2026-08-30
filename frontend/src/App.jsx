@@ -6,25 +6,21 @@ import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { AppSettingsModal } from './components/AppSettingsModal';
 import { LoginPage } from './pages/LoginPage';
-import { ShieldAlert, Loader2, RefreshCw } from 'lucide-react';
+import { ShieldAlert, Loader2 } from 'lucide-react';
 
-// Resilient chunk loader that auto-reloads if a new version was deployed
-const lazyWithRetry = (importFn) => lazy(async () => {
-  try {
-    return await importFn();
-  } catch (error) {
-    console.warn("Chunk load failed, retrying once after reload...", error);
-    const lastReload = sessionStorage.getItem('last_lazy_reload');
-    const now = Date.now();
-    if (!lastReload || (now - parseInt(lastReload, 10)) > 8000) {
-      sessionStorage.setItem('last_lazy_reload', now.toString());
+// Automatic chunk error recovery helper
+const lazyWithRetry = (importFn) =>
+  lazy(async () => {
+    try {
+      return await importFn();
+    } catch (error) {
+      console.warn('Chunk update detected, reloading application bundle...', error);
       window.location.reload();
+      return new Promise(() => {});
     }
-    throw error;
-  }
-});
+  });
 
-// Code-split page components for optimal bundle performance
+// Code-split page components with automatic chunk refresh
 const DashboardPage = lazyWithRetry(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const MasterPage = lazyWithRetry(() => import('./pages/MasterPage').then(m => ({ default: m.MasterPage })));
 const CustomerMasterPage = lazyWithRetry(() => import('./pages/CustomerMasterPage').then(m => ({ default: m.CustomerMasterPage })));
@@ -317,99 +313,14 @@ const MainApp = () => {
   );
 };
 
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    console.error("ErrorBoundary caught an error:", error, errorInfo);
-    if (error?.message && (error.message.includes('dynamically imported module') || error.message.includes('Loading chunk') || error.message.includes('Failed to fetch'))) {
-      const lastReload = sessionStorage.getItem('last_chunk_reload');
-      const now = Date.now();
-      if (!lastReload || (now - parseInt(lastReload, 10)) > 10000) {
-        sessionStorage.setItem('last_chunk_reload', now.toString());
-        window.location.reload();
-      }
-    }
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          background: '#0a0f1d',
-          color: '#ffffff',
-          padding: '2rem',
-          fontFamily: 'Inter, system-ui, sans-serif',
-          textAlign: 'center'
-        }}>
-          <div style={{
-            width: '64px',
-            height: '64px',
-            borderRadius: '20px',
-            background: 'rgba(99, 102, 241, 0.15)',
-            border: '1px solid rgba(99, 102, 241, 0.3)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: '1.5rem',
-            color: '#818cf8'
-          }}>
-            <RefreshCw size={32} />
-          </div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.75rem', color: '#ffffff' }}>
-            Sri Durga ERP System
-          </h2>
-          <p style={{ color: '#94a3b8', maxWidth: '460px', marginBottom: '1.75rem', fontSize: '0.925rem', lineHeight: 1.6 }}>
-            The central application has updated. Click below to reload and access all modules seamlessly.
-          </p>
-          <button
-            onClick={() => {
-              sessionStorage.clear();
-              window.location.reload();
-            }}
-            style={{
-              padding: '0.75rem 2rem',
-              background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '10px',
-              fontWeight: 700,
-              fontSize: '0.95rem',
-              cursor: 'pointer',
-              boxShadow: '0 4px 15px rgba(99, 102, 241, 0.4)'
-            }}
-          >
-            Reload Application
-          </button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
 export default function App() {
   return (
-    <ErrorBoundary>
-      <HashRouter>
-        <AuthProvider>
-          <SettingsProvider>
-            <MainApp />
-          </SettingsProvider>
-        </AuthProvider>
-      </HashRouter>
-    </ErrorBoundary>
+    <HashRouter>
+      <AuthProvider>
+        <SettingsProvider>
+          <MainApp />
+        </SettingsProvider>
+      </AuthProvider>
+    </HashRouter>
   );
 }
