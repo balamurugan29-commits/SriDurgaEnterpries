@@ -366,9 +366,16 @@ export const WorkCompletionPrintModal = ({ isOpen, onClose, certificate }) => {
                 )}
 
                 {/* Signatures */}
-                <div style={{ marginTop: 'auto', paddingTop: '70px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '13px', fontWeight: '500' }}>
-                  <div>Signature of Contractor</div>
-                  <div>Signature of EIC</div>
+                <div style={{ marginTop: 'auto', paddingTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '13px', fontWeight: '500' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <img 
+                      src="/signature.jpg" 
+                      alt="Signature of Contractor" 
+                      style={{ height: '65px', width: 'auto', objectFit: 'contain', marginBottom: '4px', marginLeft: '12px' }} 
+                    />
+                    <div>Signature of Contractor</div>
+                  </div>
+                  <div style={{ paddingBottom: '6px' }}>Signature of EIC</div>
                 </div>
               </div>
             )}
