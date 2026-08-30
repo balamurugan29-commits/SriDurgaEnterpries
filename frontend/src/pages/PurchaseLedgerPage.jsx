@@ -19,6 +19,7 @@ import {
   FilterX, 
   IndianRupee, 
   Building2, 
+  Calculator,
   CheckCircle2, 
   Clock,
   Edit3, 
@@ -91,6 +92,7 @@ export const PurchaseLedgerPage = () => {
 
   // Modal State for Manual Entry / Edit
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState('FULL_EDIT'); // 'DEALER_INVOICE' | 'VALUATION_TAX' | 'FULL_EDIT'
   const [editingItem, setEditingItem] = useState(null);
 
   // Export Customizer Modal State
@@ -247,9 +249,29 @@ export const PurchaseLedgerPage = () => {
     });
   };
 
-  // Open Modal for New Manual Entry
-  const handleOpenNewModal = () => {
+  // Open Modal for Dealer & Invoice Entry (Entry 1)
+  const handleOpenDealerInvoiceModal = () => {
     setEditingItem(null);
+    setModalMode('DEALER_INVOICE');
+    setFormData({
+      dealerStoreName: '',
+      invoiceNo: '',
+      invoiceDate: new Date().toISOString().split('T')[0],
+      taxableAmount: '',
+      taxAmount: '',
+      totalAmount: '',
+      paidAmount: '',
+      paymentDate: '',
+      modeOfPayment: '',
+      balanceAmount: ''
+    });
+    setIsModalOpen(true);
+  };
+
+  // Open Modal for Valuation & Tax Entry (Entry 2)
+  const handleOpenValuationTaxModal = () => {
+    setEditingItem(null);
+    setModalMode('VALUATION_TAX');
     setTaxRate(18); // Default 18% GST
     setFormData({
       dealerStoreName: '',
@@ -266,9 +288,10 @@ export const PurchaseLedgerPage = () => {
     setIsModalOpen(true);
   };
 
-  // Open Modal for Editing an Existing Entry
+  // Open Modal for Full Edit
   const handleOpenEditModal = (item) => {
     setEditingItem(item);
+    setModalMode('FULL_EDIT');
     const total = Number(item.totalAmount) || 0;
     const paid = Number(item.paidAmount || item.passedAmount) || 0;
     const balance = total > 0 ? Math.max(0, total - paid) : 0;
@@ -300,24 +323,28 @@ export const PurchaseLedgerPage = () => {
   };
 
   // Save Form (Create / Update)
-  const handleSubmitForm = async (e) => {
-    e.preventDefault();
+  const handleSubmitForm = async (e, andProceedToValuation = false) => {
+    if (e && e.preventDefault) e.preventDefault();
+
     if (!formData.dealerStoreName.trim()) {
       setToast({ message: 'Name of Dealer/Store is required!', type: 'error' });
       return;
     }
-    if (!formData.invoiceNo.trim()) {
-      setToast({ message: 'Invoice No. is required!', type: 'error' });
-      return;
-    }
-    if (!formData.invoiceDate) {
-      setToast({ message: 'Invoice Date is required!', type: 'error' });
-      return;
+
+    if (modalMode === 'DEALER_INVOICE' || modalMode === 'FULL_EDIT') {
+      if (!formData.invoiceNo.trim()) {
+        setToast({ message: 'Invoice No. is required!', type: 'error' });
+        return;
+      }
+      if (!formData.invoiceDate) {
+        setToast({ message: 'Invoice Date is required!', type: 'error' });
+        return;
+      }
     }
 
     // Dealer + Invoice No Duplicate Check (ignoring dashes and empty invoices)
     const trimmedDealer = formData.dealerStoreName.trim().toUpperCase();
-    const trimmedInv = formData.invoiceNo.trim().toUpperCase();
+    const trimmedInv = (formData.invoiceNo || '').trim().toUpperCase();
     const isDash = !trimmedInv || trimmedInv === '-' || trimmedInv === '--' || trimmedInv === 'N/A' || trimmedInv === 'NA';
 
     if (trimmedDealer && !isDash) {
@@ -346,8 +373,8 @@ export const PurchaseLedgerPage = () => {
     const payload = {
       dealerStoreName: formData.dealerStoreName.trim(),
       supplierRemarks: formData.dealerStoreName.trim(), // fallback
-      invoiceNo: formData.invoiceNo.trim(),
-      invoiceDate: formData.invoiceDate,
+      invoiceNo: formData.invoiceNo ? formData.invoiceNo.trim() : '-',
+      invoiceDate: formData.invoiceDate || new Date().toISOString().split('T')[0],
       taxableAmount: taxable,
       taxAmount: tax,
       totalAmount: total,
@@ -360,14 +387,22 @@ export const PurchaseLedgerPage = () => {
     };
 
     try {
+      let saved = null;
       if (editingItem && editingItem.id) {
-        await updatePurchaseLedger(editingItem.id, payload);
+        saved = await updatePurchaseLedger(editingItem.id, payload);
         setToast({ message: `Purchase record ${payload.invoiceNo} updated successfully!`, type: 'success' });
       } else {
-        await createPurchaseLedger(payload);
-        setToast({ message: `New purchase record for ${payload.dealerStoreName} created successfully!`, type: 'success' });
+        saved = await createPurchaseLedger(payload);
+        setToast({ message: `Purchase record for ${payload.dealerStoreName} saved successfully!`, type: 'success' });
       }
-      setIsModalOpen(false);
+
+      if (andProceedToValuation) {
+        setEditingItem(saved || payload);
+        setModalMode('VALUATION_TAX');
+        setTaxRate(18);
+      } else {
+        setIsModalOpen(false);
+      }
       loadPurchaseData();
     } catch (err) {
       setToast({ message: 'Failed to save purchase record: ' + err.message, type: 'error' });
@@ -1242,24 +1277,46 @@ export const PurchaseLedgerPage = () => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
-          {/* 1. MANUAL ENTRY BUTTON */}
+          {/* 1. ENTRY BUTTON 1: Add Dealer & Invoice Details */}
           <button 
-            onClick={handleOpenNewModal} 
+            onClick={handleOpenDealerInvoiceModal} 
             className="btn btn-primary"
             style={{ 
               display: 'flex', 
               alignItems: 'center', 
-              gap: '0.5rem', 
-              padding: '0.55rem 1.15rem', 
+              gap: '0.45rem', 
+              padding: '0.55rem 1.05rem', 
               fontSize: '0.85rem', 
               fontWeight: 800,
-              background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)',
+              background: 'linear-gradient(135deg, #ec4899 0%, #d946ef 100%)',
               border: 'none',
               boxShadow: '0 4px 15px rgba(236, 72, 153, 0.4)' 
             }}
+            title="Add Dealer & Invoice Details (Step 1 Entry)"
           >
-            <Plus size={16} />
-            <span>New Purchase Entry</span>
+            <Building2 size={16} />
+            <span>+ Dealer & Invoice</span>
+          </button>
+
+          {/* 2. ENTRY BUTTON 2: Add Valuation & Tax / Payment */}
+          <button 
+            onClick={handleOpenValuationTaxModal} 
+            className="btn btn-primary"
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.45rem', 
+              padding: '0.55rem 1.05rem', 
+              fontSize: '0.85rem', 
+              fontWeight: 800,
+              background: 'linear-gradient(135deg, #0284c7 0%, #6366f1 100%)',
+              border: 'none',
+              boxShadow: '0 4px 15px rgba(2, 132, 199, 0.4)' 
+            }}
+            title="Add Valuation, Tax & Payment (Step 2 Entry)"
+          >
+            <Calculator size={16} />
+            <span>+ Valuation & Tax</span>
           </button>
 
           {/* 2. FILTER BUTTON WITH ACTIVE BADGE */}
@@ -2038,7 +2095,7 @@ export const PurchaseLedgerPage = () => {
       </div>
 
       {/* ============================================================ */}
-      {/* MANUAL ENTRY / EDIT PURCHASE LEDGER MODAL                    */}
+      {/* SEPARATE ENTRY MODALS: DEALER & INVOICE / VALUATION & TAX    */}
       {/* ============================================================ */}
       {isModalOpen && (
         <div 
@@ -2063,9 +2120,11 @@ export const PurchaseLedgerPage = () => {
             className="glass-panel animate-modal-entry"
             style={{ 
               width: '100%', 
-              maxWidth: '750px', 
+              maxWidth: modalMode === 'DEALER_INVOICE' ? '580px' : '750px', 
               background: '#0f172a', 
-              border: '1.5px solid rgba(236, 72, 153, 0.4)', 
+              border: modalMode === 'VALUATION_TAX' 
+                ? '1.5px solid rgba(56, 189, 248, 0.45)' 
+                : '1.5px solid rgba(236, 72, 153, 0.45)', 
               borderRadius: '16px', 
               boxShadow: '0 25px 60px rgba(0, 0, 0, 0.9)',
               display: 'flex',
@@ -2087,15 +2146,31 @@ export const PurchaseLedgerPage = () => {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(236, 72, 153, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ShoppingBag size={18} color="#f472b6" />
+                <div 
+                  style={{ 
+                    width: '34px', 
+                    height: '34px', 
+                    borderRadius: '8px', 
+                    background: modalMode === 'VALUATION_TAX' ? 'rgba(56, 189, 248, 0.2)' : 'rgba(236, 72, 153, 0.2)', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center' 
+                  }}
+                >
+                  {modalMode === 'DEALER_INVOICE' && <Building2 size={18} color="#f472b6" />}
+                  {modalMode === 'VALUATION_TAX' && <Calculator size={18} color="#38bdf8" />}
+                  {modalMode === 'FULL_EDIT' && <Edit3 size={18} color="#f472b6" />}
                 </div>
                 <div>
                   <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#f8fafc', margin: 0 }}>
-                    {editingItem ? 'Edit Purchase Entry' : 'Add New Purchase Entry'}
+                    {modalMode === 'DEALER_INVOICE' && (editingItem ? 'Edit Dealer & Invoice Details' : '1. Dealer & Invoice Details Entry')}
+                    {modalMode === 'VALUATION_TAX' && (editingItem ? 'Edit Valuation & Tax Details' : '2. Valuation & Tax Entry')}
+                    {modalMode === 'FULL_EDIT' && 'Edit Purchase Entry'}
                   </h3>
                   <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                    Enter dealer/store details, taxable value, tax, payment and balance.
+                    {modalMode === 'DEALER_INVOICE' && 'Enter dealer/store name, invoice number, and bill date.'}
+                    {modalMode === 'VALUATION_TAX' && 'Enter taxable value, GST tax rate, and payment settlement.'}
+                    {modalMode === 'FULL_EDIT' && 'Update dealer, invoice, tax calculation, and payment details.'}
                   </span>
                 </div>
               </div>
@@ -2112,204 +2187,264 @@ export const PurchaseLedgerPage = () => {
             {/* Modal Form */}
             <form onSubmit={handleSubmitForm} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', maxHeight: '75vh', overflowY: 'auto' }}>
               
-              {/* Section 1: Dealer & Bill Information */}
-              <div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#f472b6', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
-                  1. Dealer & Invoice Details
+              {/* SECTION 1: DEALER & INVOICE DETAILS (Shown in DEALER_INVOICE, FULL_EDIT, and as Reference in VALUATION_TAX) */}
+              {(modalMode === 'DEALER_INVOICE' || modalMode === 'FULL_EDIT') && (
+                <div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#f472b6', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+                    1. Dealer & Invoice Details
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '1rem' }}>
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <label className="form-label" style={{ fontSize: '0.75rem' }}>Name of Dealer/Store <span style={{ color: '#f87171' }}>*</span></label>
+                      <input
+                        type="text"
+                        name="dealerStoreName"
+                        required
+                        list="dealerStoreOptionsList"
+                        placeholder="Select from list or type new dealer..."
+                        className="form-input"
+                        value={formData.dealerStoreName}
+                        onChange={handleInputChange}
+                        autoComplete="off"
+                      />
+                      <datalist id="dealerStoreOptionsList">
+                        {uniqueDealerOptions.map(d => (
+                          <option key={d} value={d} />
+                        ))}
+                      </datalist>
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.75rem' }}>Invoice No. <span style={{ color: '#f87171' }}>*</span></label>
+                      <input
+                        type="text"
+                        name="invoiceNo"
+                        required
+                        placeholder="e.g. INV-2026/410 (or - for payment)"
+                        className="form-input"
+                        value={formData.invoiceNo}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.75rem' }}>Date <span style={{ color: '#f87171' }}>*</span></label>
+                      <input
+                        type="date"
+                        name="invoiceDate"
+                        required
+                        className="form-input"
+                        value={formData.invoiceDate}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '1rem' }}>
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Name of Dealer/Store <span style={{ color: '#f87171' }}>*</span></label>
-                    <input
-                      type="text"
-                      name="dealerStoreName"
-                      required
-                      list="dealerStoreOptionsList"
-                      placeholder="Select from list or type new dealer..."
-                      className="form-input"
-                      value={formData.dealerStoreName}
-                      onChange={handleInputChange}
-                      autoComplete="off"
-                    />
-                    <datalist id="dealerStoreOptionsList">
-                      {uniqueDealerOptions.map(d => (
-                        <option key={d} value={d} />
-                      ))}
-                    </datalist>
-                  </div>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Invoice No. <span style={{ color: '#f87171' }}>*</span></label>
-                    <input
-                      type="text"
-                      name="invoiceNo"
-                      required
-                      placeholder="e.g. INV-2026/410 (or - for payment)"
-                      className="form-input"
-                      value={formData.invoiceNo}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Date <span style={{ color: '#f87171' }}>*</span></label>
-                    <input
-                      type="date"
-                      name="invoiceDate"
-                      required
-                      className="form-input"
-                      value={formData.invoiceDate}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-              </div>
+              )}
 
-              {/* Section 2: Amounts & Tax (With GST Rate Calculator) */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    2. Valuation & Tax
+              {/* In VALUATION_TAX entry mode: Select / Confirm Dealer & Invoice context */}
+              {modalMode === 'VALUATION_TAX' && (
+                <div style={{ padding: '0.85rem 1rem', background: 'rgba(56, 189, 248, 0.08)', borderRadius: '10px', border: '1px solid rgba(56, 189, 248, 0.25)' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.6rem' }}>
+                    Linked Dealer & Invoice
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>GST Rate:</span>
-                    {[18, 12, 5, 28, 0].map(rate => (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem' }}>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.72rem' }}>Name of Dealer/Store <span style={{ color: '#f87171' }}>*</span></label>
+                      <input
+                        type="text"
+                        name="dealerStoreName"
+                        required
+                        list="dealerStoreOptionsList"
+                        placeholder="Select or type dealer..."
+                        className="form-input"
+                        style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem' }}
+                        value={formData.dealerStoreName}
+                        onChange={handleInputChange}
+                        autoComplete="off"
+                      />
+                      <datalist id="dealerStoreOptionsList">
+                        {uniqueDealerOptions.map(d => (
+                          <option key={d} value={d} />
+                        ))}
+                      </datalist>
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.72rem' }}>Invoice No.</label>
+                      <input
+                        type="text"
+                        name="invoiceNo"
+                        placeholder="e.g. INV-2026/410 (or -)"
+                        className="form-input"
+                        style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem' }}
+                        value={formData.invoiceNo}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.72rem' }}>Date</label>
+                      <input
+                        type="date"
+                        name="invoiceDate"
+                        className="form-input"
+                        style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem' }}
+                        value={formData.invoiceDate}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* SECTION 2: AMOUNTS & TAX (Shown in VALUATION_TAX and FULL_EDIT) */}
+              {(modalMode === 'VALUATION_TAX' || modalMode === 'FULL_EDIT') && (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      2. Valuation & Tax
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>GST Rate:</span>
+                      {[18, 12, 5, 28, 0].map(rate => (
+                        <button
+                          key={rate}
+                          type="button"
+                          onClick={() => handleTaxRateSelect(rate)}
+                          className={`btn ${taxRate === rate ? 'btn-primary' : 'btn-outline'}`}
+                          style={{ 
+                            padding: '0.18rem 0.5rem', 
+                            fontSize: '0.72rem', 
+                            fontWeight: 700, 
+                            borderRadius: '6px',
+                            borderColor: taxRate === rate ? 'transparent' : 'rgba(56, 189, 248, 0.3)',
+                            color: taxRate === rate ? '#ffffff' : '#38bdf8',
+                            background: taxRate === rate ? 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)' : 'rgba(56, 189, 248, 0.08)'
+                          }}
+                        >
+                          {rate}%
+                        </button>
+                      ))}
                       <button
-                        key={rate}
                         type="button"
-                        onClick={() => handleTaxRateSelect(rate)}
-                        className={`btn ${taxRate === rate ? 'btn-primary' : 'btn-outline'}`}
+                        onClick={() => handleTaxRateSelect('CUSTOM')}
+                        className={`btn ${taxRate === 'CUSTOM' ? 'btn-primary' : 'btn-outline'}`}
                         style={{ 
                           padding: '0.18rem 0.5rem', 
                           fontSize: '0.72rem', 
                           fontWeight: 700, 
                           borderRadius: '6px',
-                          borderColor: taxRate === rate ? 'transparent' : 'rgba(56, 189, 248, 0.3)',
-                          color: taxRate === rate ? '#ffffff' : '#38bdf8',
-                          background: taxRate === rate ? 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)' : 'rgba(56, 189, 248, 0.08)'
+                          borderColor: taxRate === 'CUSTOM' ? 'transparent' : 'rgba(255, 255, 255, 0.2)',
+                          color: taxRate === 'CUSTOM' ? '#ffffff' : 'var(--text-muted)',
+                          background: taxRate === 'CUSTOM' ? '#475569' : 'transparent'
                         }}
                       >
-                        {rate}%
+                        Custom
                       </button>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => handleTaxRateSelect('CUSTOM')}
-                      className={`btn ${taxRate === 'CUSTOM' ? 'btn-primary' : 'btn-outline'}`}
-                      style={{ 
-                        padding: '0.18rem 0.5rem', 
-                        fontSize: '0.72rem', 
-                        fontWeight: 700, 
-                        borderRadius: '6px',
-                        borderColor: taxRate === 'CUSTOM' ? 'transparent' : 'rgba(255, 255, 255, 0.2)',
-                        color: taxRate === 'CUSTOM' ? '#ffffff' : 'var(--text-muted)',
-                        background: taxRate === 'CUSTOM' ? '#475569' : 'transparent'
-                      }}
-                    >
-                      Custom
-                    </button>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.75rem' }}>Taxable Amount (₹) <span style={{ color: '#f87171' }}>*</span></label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        name="taxableAmount"
+                        required={modalMode === 'VALUATION_TAX'}
+                        placeholder="0.00"
+                        className="form-input"
+                        value={formData.taxableAmount}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.75rem' }}>
+                        Tax (₹) {taxRate !== 'CUSTOM' && taxRate !== '' ? `(${taxRate}%)` : ''}
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        name="taxAmount"
+                        placeholder="0.00"
+                        className="form-input"
+                        value={formData.taxAmount}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.75rem', color: '#f472b6' }}>Total Amount (₹)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        name="totalAmount"
+                        className="form-input"
+                        style={{ background: 'rgba(236, 72, 153, 0.1)', borderColor: 'rgba(236, 72, 153, 0.4)', fontWeight: 900, color: '#f472b6' }}
+                        value={formData.totalAmount}
+                        onChange={handleInputChange}
+                      />
+                    </div>
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Taxable Amount (₹) <span style={{ color: '#f87171' }}>*</span></label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="taxableAmount"
-                      required
-                      placeholder="0.00"
-                      className="form-input"
-                      value={formData.taxableAmount}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '0.75rem' }}>
-                      Tax (₹) {taxRate !== 'CUSTOM' && taxRate !== '' ? `(${taxRate}%)` : ''}
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="taxAmount"
-                      placeholder="0.00"
-                      className="form-input"
-                      value={formData.taxAmount}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '0.75rem', color: '#f472b6' }}>Total Amount (₹)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="totalAmount"
-                      className="form-input"
-                      style={{ background: 'rgba(236, 72, 153, 0.1)', borderColor: 'rgba(236, 72, 153, 0.4)', fontWeight: 900, color: '#f472b6' }}
-                      value={formData.totalAmount}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-              </div>
+              )}
 
-              {/* Section 3: Payment & Balance */}
-              <div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
-                  3. Payment & Settlement
+              {/* SECTION 3: PAYMENT & BALANCE (Shown in VALUATION_TAX and FULL_EDIT) */}
+              {(modalMode === 'VALUATION_TAX' || modalMode === 'FULL_EDIT') && (
+                <div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+                    3. Payment & Settlement
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.75rem' }}>Paid Amount (₹)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        name="paidAmount"
+                        placeholder="0.00"
+                        className="form-input"
+                        value={formData.paidAmount}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.75rem' }}>Payment Date</label>
+                      <input
+                        type="date"
+                        name="paymentDate"
+                        className="form-input"
+                        value={formData.paymentDate}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.75rem' }}>Mode of Payment</label>
+                      <select
+                        name="modeOfPayment"
+                        className="form-input"
+                        value={formData.modeOfPayment || ''}
+                        onChange={handleInputChange}
+                      >
+                        <option value="">-- None / Unpaid --</option>
+                        {PAYMENT_MODES.map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.75rem', color: '#fbbf24' }}>Balance Amount (₹)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        name="balanceAmount"
+                        readOnly
+                        className="form-input"
+                        style={{ background: 'rgba(245, 158, 11, 0.1)', borderColor: 'rgba(245, 158, 11, 0.4)', fontWeight: 900, color: '#fbbf24', cursor: 'not-allowed' }}
+                        value={formData.balanceAmount}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Paid Amount (₹)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="paidAmount"
-                      placeholder="0.00"
-                      className="form-input"
-                      value={formData.paidAmount}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Payment Date</label>
-                    <input
-                      type="date"
-                      name="paymentDate"
-                      className="form-input"
-                      value={formData.paymentDate}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Mode of Payment</label>
-                    <select
-                      name="modeOfPayment"
-                      className="form-input"
-                      value={formData.modeOfPayment || ''}
-                      onChange={handleInputChange}
-                    >
-                      <option value="">-- None / Unpaid --</option>
-                      {PAYMENT_MODES.map(m => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '0.75rem', color: '#fbbf24' }}>Balance Amount (₹)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="balanceAmount"
-                      readOnly
-                      className="form-input"
-                      style={{ background: 'rgba(245, 158, 11, 0.1)', borderColor: 'rgba(245, 158, 11, 0.4)', fontWeight: 900, color: '#fbbf24', cursor: 'not-allowed' }}
-                      value={formData.balanceAmount}
-                    />
-                  </div>
-                </div>
-              </div>
+              )}
 
               {/* Modal Actions */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -2318,14 +2453,56 @@ export const PurchaseLedgerPage = () => {
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  style={{ padding: '0.55rem 1.5rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', border: 'none' }}
-                >
-                  <Save size={16} />
-                  <span>{editingItem ? 'Update Purchase Entry' : 'Save Purchase Entry'}</span>
-                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  {modalMode === 'DEALER_INVOICE' && !editingItem && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleSubmitForm(e, true)}
+                      className="btn btn-outline"
+                      style={{ 
+                        padding: '0.55rem 1rem', 
+                        fontWeight: 700, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.45rem', 
+                        color: '#38bdf8', 
+                        borderColor: 'rgba(56, 189, 248, 0.5)',
+                        background: 'rgba(56, 189, 248, 0.1)'
+                      }}
+                      title="Save dealer details and immediately open Valuation & Tax entry"
+                    >
+                      <span>Save & Add Valuation Details</span>
+                      <ArrowRight size={15} />
+                    </button>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ 
+                      padding: '0.55rem 1.4rem', 
+                      fontWeight: 800, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '0.5rem', 
+                      background: modalMode === 'VALUATION_TAX' 
+                        ? 'linear-gradient(135deg, #0284c7 0%, #6366f1 100%)' 
+                        : 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)', 
+                      border: 'none',
+                      boxShadow: modalMode === 'VALUATION_TAX'
+                        ? '0 4px 15px rgba(2, 132, 199, 0.4)'
+                        : '0 4px 15px rgba(236, 72, 153, 0.4)'
+                    }}
+                  >
+                    <Save size={16} />
+                    <span>
+                      {modalMode === 'DEALER_INVOICE' && (editingItem ? 'Update Dealer Details' : 'Save Dealer & Invoice')}
+                      {modalMode === 'VALUATION_TAX' && (editingItem ? 'Update Valuation & Tax' : 'Save Valuation & Tax')}
+                      {modalMode === 'FULL_EDIT' && 'Update Purchase Entry'}
+                    </span>
+                  </button>
+                </div>
               </div>
 
             </form>
