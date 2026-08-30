@@ -3,40 +3,21 @@
 ' and automatically restarts backend & database if ever interrupted.
 
 Option Explicit
-Dim WshShell, http, fso, scriptDir, pingUrl, failCount, javaExe, jarPath, cmd
+Dim WshShell, fso, scriptDir, pingUrl, failCount, batPath
 
 Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 
 scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
 pingUrl = "http://localhost:8085/api/auth/ping"
+batPath = scriptDir & "\Run-Production-Server.bat"
 failCount = 0
-
-' Determine Java 17 and JAR paths
-jarPath = scriptDir & "\backend\target\sri-durga-backend-1.0.0.jar"
-If Not fso.FileExists(jarPath) Then
-    jarPath = "C:\SriDurgaERP\backend\target\sri-durga-backend-1.0.0.jar"
-End If
-
-javaExe = scriptDir & "\jdk-17\bin\javaw.exe"
-If Not fso.FileExists(javaExe) Then
-    javaExe = scriptDir & "\..\jdk-17\bin\javaw.exe"
-End If
-If Not fso.FileExists(javaExe) Then
-    javaExe = "E:\office\jdk-17\bin\javaw.exe"
-End If
-If Not fso.FileExists(javaExe) Then
-    javaExe = "C:\SriDurgaERP\jdk-17\bin\javaw.exe"
-End If
-If Not fso.FileExists(javaExe) Then
-    javaExe = "javaw.exe"
-End If
 
 Function IsServerAlive()
     On Error Resume Next
     Dim req
-    Set req = CreateObject("MSXML2.ServerXMLHTTP.6.0")
-    req.setTimeouts 2000, 2000, 2000, 2000
+    Set req = CreateObject("WinHttp.WinHttpRequest.5.1")
+    req.SetTimeouts 1500, 1500, 1500, 1500
     req.Open "GET", pingUrl, False
     req.Send
     If Err.Number = 0 And req.Status = 200 Then
@@ -49,10 +30,9 @@ Function IsServerAlive()
 End Function
 
 Sub StartBackendServer()
-    If fso.FileExists(jarPath) Then
-        cmd = """" & javaExe & """ -Xms64m -Xmx256m -XX:+UseSerialGC -jar """ & jarPath & """"
-        WshShell.CurrentDirectory = fso.GetParentFolderName(jarPath) & "\.."
-        WshShell.Run cmd, 0, False
+    If fso.FileExists(batPath) Then
+        WshShell.CurrentDirectory = scriptDir
+        WshShell.Run """" & batPath & """", 0, False
     End If
 End Sub
 
@@ -71,7 +51,7 @@ Do While True
             ' Server has been down for 20 seconds -> Self-heal and restart backend
             StartBackendServer()
             failCount = 0
-            WScript.Sleep 5000
+            WScript.Sleep 10000
         End If
     Else
         failCount = 0
