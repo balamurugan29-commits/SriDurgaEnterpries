@@ -1,4 +1,4 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState } from 'react';
 import { HashRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SettingsProvider, useSettings } from './context/SettingsContext';
@@ -6,44 +6,24 @@ import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { AppSettingsModal } from './components/AppSettingsModal';
 import { LoginPage } from './pages/LoginPage';
-import { ShieldAlert, Loader2 } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 
-// Automatic chunk error recovery helper
-const lazyWithRetry = (importFn) =>
-  lazy(async () => {
-    try {
-      return await importFn();
-    } catch (error) {
-      console.warn('Chunk update detected, reloading application bundle...', error);
-      window.location.reload();
-      return new Promise(() => {});
-    }
-  });
-
-// Code-split page components with automatic chunk refresh
-const DashboardPage = lazyWithRetry(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
-const MasterPage = lazyWithRetry(() => import('./pages/MasterPage').then(m => ({ default: m.MasterPage })));
-const CustomerMasterPage = lazyWithRetry(() => import('./pages/CustomerMasterPage').then(m => ({ default: m.CustomerMasterPage })));
-const CompanyDetailsPage = lazyWithRetry(() => import('./pages/CompanyDetailsPage').then(m => ({ default: m.CompanyDetailsPage })));
-const WorkCompletionPage = lazyWithRetry(() => import('./pages/WorkCompletionPage').then(m => ({ default: m.WorkCompletionPage })));
-const WorkCompletionListPage = lazyWithRetry(() => import('./pages/WorkCompletionListPage').then(m => ({ default: m.WorkCompletionListPage })));
-const ChallanPage = lazyWithRetry(() => import('./pages/ChallanPage').then(m => ({ default: m.ChallanPage })));
-const ChallanListPage = lazyWithRetry(() => import('./pages/ChallanListPage').then(m => ({ default: m.ChallanListPage })));
-const JobCardPage = lazyWithRetry(() => import('./pages/JobCardPage').then(m => ({ default: m.JobCardPage })));
-const JobCardListPage = lazyWithRetry(() => import('./pages/JobCardListPage').then(m => ({ default: m.JobCardListPage })));
-const GatePassPage = lazyWithRetry(() => import('./pages/GatePassPage').then(m => ({ default: m.GatePassPage })));
-const GatePassListPage = lazyWithRetry(() => import('./pages/GatePassListPage').then(m => ({ default: m.GatePassListPage })));
-const SalesLedgerPage = lazyWithRetry(() => import('./pages/SalesLedgerPage').then(m => ({ default: m.SalesLedgerPage })));
-const PurchaseLedgerPage = lazyWithRetry(() => import('./pages/PurchaseLedgerPage').then(m => ({ default: m.PurchaseLedgerPage })));
-const ProformaInvoicePage = lazyWithRetry(() => import('./pages/ProformaInvoicePage').then(m => ({ default: m.ProformaInvoicePage })));
-const ProformaInvoiceListPage = lazyWithRetry(() => import('./pages/ProformaInvoiceListPage').then(m => ({ default: m.ProformaInvoiceListPage })));
-
-const PageLoader = () => (
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', gap: '0.75rem', color: 'var(--primary, #6366f1)' }}>
-    <Loader2 className="animate-spin" size={28} />
-    <span style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-muted)' }}>Loading module...</span>
-  </div>
-);
+import { DashboardPage } from './pages/DashboardPage';
+import { MasterPage } from './pages/MasterPage';
+import { CustomerMasterPage } from './pages/CustomerMasterPage';
+import { CompanyDetailsPage } from './pages/CompanyDetailsPage';
+import { WorkCompletionPage } from './pages/WorkCompletionPage';
+import { WorkCompletionListPage } from './pages/WorkCompletionListPage';
+import { ChallanPage } from './pages/ChallanPage';
+import { ChallanListPage } from './pages/ChallanListPage';
+import { JobCardPage } from './pages/JobCardPage';
+import { JobCardListPage } from './pages/JobCardListPage';
+import { GatePassPage } from './pages/GatePassPage';
+import { GatePassListPage } from './pages/GatePassListPage';
+import { SalesLedgerPage } from './pages/SalesLedgerPage';
+import { PurchaseLedgerPage } from './pages/PurchaseLedgerPage';
+import { ProformaInvoicePage } from './pages/ProformaInvoicePage';
+import { ProformaInvoiceListPage } from './pages/ProformaInvoiceListPage';
 
 // Permission Guard Component for Route Protection
 const PermissionGuard = ({ requiredPermission, children }) => {
@@ -168,8 +148,7 @@ const MainApp = () => {
             zIndex: 1
           }}
         >
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
+          <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<PermissionGuard requiredPermission="dashboard"><DashboardPage setActivePage={handleSetActivePage} /></PermissionGuard>} />
               <Route path="/master" element={<PermissionGuard requiredPermission="master"><MasterPage /></PermissionGuard>} />
@@ -303,7 +282,6 @@ const MainApp = () => {
                 element={<PermissionGuard requiredPermission="purchase-ledger"><PurchaseLedgerPage /></PermissionGuard>} 
               />
             </Routes>
-          </Suspense>
         </main>
       </div>
 
