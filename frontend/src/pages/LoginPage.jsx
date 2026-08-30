@@ -132,7 +132,7 @@ export const LoginPage = () => {
             disabled={loading}
             style={{ width: '100%', padding: '0.85rem', marginTop: '0.5rem', fontSize: '0.95rem' }}
           >
-            <span>{loading ? 'Authenticating...' : 'Sign In to Sri Durga Enterprises'}</span>
+            <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
             <ArrowRight size={18} />
           </button>
         </form>
