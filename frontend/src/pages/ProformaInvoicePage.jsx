@@ -25,15 +25,254 @@ import {
   ChevronDown, 
   History,
   CheckCircle2,
-  Upload
+  Upload,
+  Zap,
+  X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-// Fast in-memory searchable Combobox for Item Code
-const ItemCodeCombobox = React.memo(({ value, masterItems, onChange, onSelect }) => {
+// Keyboard-Driven Interactive Service Charge Option Popup Modal
+const ServiceChargeChoiceModal = ({ data, onChoice, onClose }) => {
+  const [selectedChoice, setSelectedChoice] = useState('yes'); // Default: 'yes' (S option)
+  const { itemCode, description, unit, baseRate, serviceCharge } = data;
+
+  const baseRateNum = Number(baseRate || 0);
+  const serviceChargeNum = Number(serviceCharge || 0);
+  const totalRateNum = baseRateNum + serviceChargeNum;
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        setSelectedChoice('no');
+      } else if (e.key === 'ArrowRight' || e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        setSelectedChoice('yes');
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        onChoice(selectedChoice === 'yes');
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [selectedChoice, onChoice, onClose]);
+
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 99999,
+      background: 'rgba(0, 0, 0, 0.82)',
+      backdropFilter: 'blur(10px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '1rem'
+    }}>
+      <div 
+        className="glass-panel animate-modal-entry"
+        style={{
+          width: '100%',
+          maxWidth: '560px',
+          background: '#0b1329',
+          border: '1.5px solid rgba(99, 102, 241, 0.5)',
+          borderRadius: '18px',
+          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.7)',
+          overflow: 'hidden',
+          padding: 0
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          padding: '1.25rem 1.5rem',
+          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(16, 185, 129, 0.15) 100%)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ background: 'rgba(251, 191, 36, 0.2)', border: '1px solid rgba(251, 191, 36, 0.4)', padding: '0.5rem', borderRadius: '10px', color: '#fbbf24' }}>
+              <Zap size={22} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'white', margin: 0 }}>
+                Service Charge Selection
+              </h3>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                Item Code: <strong style={{ color: '#818cf8', fontFamily: 'monospace' }}>{itemCode}</strong> ({unit || 'No'})
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              padding: '4px'
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Item Description Info */}
+        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', background: 'rgba(15, 23, 42, 0.5)' }}>
+          <p style={{ fontSize: '0.85rem', color: '#e2e8f0', margin: 0, lineHeight: 1.45 }}>
+            {description}
+          </p>
+        </div>
+
+        {/* 2 Interactive Options (Left: No | Right: S / Yes) */}
+        <div style={{ padding: '1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          
+          {/* Option 1: NO (Left Arrow) */}
+          <div
+            onClick={() => {
+              setSelectedChoice('no');
+              onChoice(false);
+            }}
+            onMouseEnter={() => setSelectedChoice('no')}
+            style={{
+              padding: '1.25rem 1rem',
+              borderRadius: '14px',
+              cursor: 'pointer',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              gap: '0.6rem',
+              background: selectedChoice === 'no' ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+              border: selectedChoice === 'no' ? '2px solid #818cf8' : '1.5px solid rgba(255, 255, 255, 0.12)',
+              boxShadow: selectedChoice === 'no' ? '0 0 20px rgba(99, 102, 241, 0.35)' : 'none',
+              transform: selectedChoice === 'no' ? 'scale(1.02)' : 'scale(1)',
+              transition: 'all 0.18s ease'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '2px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: '#94a3b8' }}>
+                ← LEFT ARROW (N)
+              </span>
+            </div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white' }}>
+              No
+            </div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+              Base Rate Only
+            </div>
+            <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#38bdf8' }}>
+              ₹{baseRateNum.toFixed(2)}
+            </div>
+            {selectedChoice === 'no' && (
+              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#818cf8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+                <CheckCircle2 size={13} /> Selected (Press Enter)
+              </div>
+            )}
+          </div>
+
+          {/* Option 2: S / YES (Right Arrow) */}
+          <div
+            onClick={() => {
+              setSelectedChoice('yes');
+              onChoice(true);
+            }}
+            onMouseEnter={() => setSelectedChoice('yes')}
+            style={{
+              padding: '1.25rem 1rem',
+              borderRadius: '14px',
+              cursor: 'pointer',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              gap: '0.6rem',
+              background: selectedChoice === 'yes' ? 'rgba(16, 185, 129, 0.22)' : 'rgba(255, 255, 255, 0.03)',
+              border: selectedChoice === 'yes' ? '2px solid #34d399' : '1.5px solid rgba(255, 255, 255, 0.12)',
+              boxShadow: selectedChoice === 'yes' ? '0 0 22px rgba(16, 185, 129, 0.4)' : 'none',
+              transform: selectedChoice === 'yes' ? 'scale(1.02)' : 'scale(1)',
+              transition: 'all 0.18s ease'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '2px 8px', borderRadius: '6px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399' }}>
+                RIGHT ARROW (S) →
+              </span>
+            </div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#34d399', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+              <span>S / Yes</span>
+              <span style={{ fontSize: '0.75rem', padding: '1px 6px', borderRadius: '4px', background: '#34d399', color: '#064e3b', fontWeight: 900 }}>S</span>
+            </div>
+            <div style={{ fontSize: '0.78rem', color: '#fbbf24' }}>
+              + ₹{serviceChargeNum.toFixed(2)} Service Charge
+            </div>
+            <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#34d399' }}>
+              ₹{totalRateNum.toFixed(2)}
+            </div>
+            {selectedChoice === 'yes' && (
+              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#34d399', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+                <CheckCircle2 size={13} /> Selected (Press Enter)
+              </div>
+            )}
+          </div>
+
+        </div>
+
+        {/* Keyboard Helper Banner & Confirmation Action */}
+        <div style={{
+          padding: '1rem 1.5rem',
+          background: 'rgba(15, 23, 42, 0.8)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.75rem'
+        }}>
+          <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span>⌨️ <strong>←</strong> = No</span>
+            <span>|</span>
+            <span><strong>→</strong> = S / Yes</span>
+            <span>|</span>
+            <span><strong style={{ color: 'white' }}>⏎ Enter</strong> = Confirm</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onChoice(selectedChoice === 'yes')}
+            className="btn btn-secondary"
+            style={{
+              padding: '0.6rem 1.4rem',
+              fontWeight: 800,
+              fontSize: '0.875rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem'
+            }}
+          >
+            <CheckCircle2 size={16} />
+            <span>Confirm ({selectedChoice === 'yes' ? 'S / Yes' : 'No'})</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+// Fast in-memory searchable Combobox for Item Code with Enter key settlement
+const ItemCodeCombobox = React.memo(({ id, value, masterItems, onChange, onSelect, onEnterNext }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState(value || '');
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
   const containerRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     setQuery(value || '');
@@ -63,6 +302,10 @@ const ItemCodeCombobox = React.memo(({ value, masterItems, onChange, onSelect })
     ).slice(0, 30);
   }, [masterItems, query]);
 
+  useEffect(() => {
+    setHighlightedIndex(0);
+  }, [filteredItems]);
+
   const handleInputChange = (e) => {
     const val = e.target.value;
     setQuery(val);
@@ -75,10 +318,53 @@ const ItemCodeCombobox = React.memo(({ value, masterItems, onChange, onSelect })
     setIsOpen(false);
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setIsOpen(true);
+      setHighlightedIndex(prev => (prev < filteredItems.length - 1 ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setIsOpen(true);
+      setHighlightedIndex(prev => (prev > 0 ? prev - 1 : filteredItems.length - 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      const cleanQ = (query || '').trim().toUpperCase();
+      // 1. Exact match check
+      const exactMatch = masterItems.find(m => m.itemCode && m.itemCode.trim().toUpperCase() === cleanQ);
+      if (exactMatch) {
+        handleItemSelect(exactMatch);
+        return;
+      }
+      // 2. Highlighted or first dropdown item
+      if (isOpen && filteredItems.length > 0) {
+        const selected = filteredItems[highlightedIndex] || filteredItems[0];
+        if (selected) {
+          handleItemSelect(selected);
+          return;
+        }
+      }
+      // 3. First match if query not empty
+      if (filteredItems.length > 0 && cleanQ) {
+        handleItemSelect(filteredItems[0]);
+        return;
+      }
+      // 4. Custom manual entry
+      onChange(query);
+      setIsOpen(false);
+      if (onEnterNext) onEnterNext();
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+    }
+  };
+
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%', minWidth: '160px' }}>
       <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
         <input
+          ref={inputRef}
+          id={id}
           type="text"
           className="form-input"
           style={{
@@ -91,6 +377,7 @@ const ItemCodeCombobox = React.memo(({ value, masterItems, onChange, onSelect })
           placeholder="Type / Select Code"
           value={query}
           onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
           onFocus={() => setIsOpen(true)}
         />
         <button
@@ -133,38 +420,40 @@ const ItemCodeCombobox = React.memo(({ value, masterItems, onChange, onSelect })
             padding: '4px'
           }}
         >
-          {filteredItems.map(m => (
-            <div
-              key={m.id || m.itemCode}
-              onClick={() => handleItemSelect(m)}
-              style={{
-                padding: '6px 10px',
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-                borderRadius: '4px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                gap: '8px',
-                color: 'var(--text-main, #f8fafc)',
-                borderBottom: '1px solid rgba(255,255,255,0.05)'
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(56, 189, 248, 0.15)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontWeight: 800, color: '#38bdf8' }}>{m.itemCode}</span>
-                {m.folderName && m.folderName !== 'General' && (
-                  <span style={{ fontSize: '0.625rem', padding: '1px 5px', borderRadius: '4px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', fontWeight: 600 }}>
-                    📁 {m.folderName}
-                  </span>
-                )}
+          {filteredItems.map((m, idx) => {
+            const isHighlighted = idx === highlightedIndex;
+            return (
+              <div
+                key={m.id || m.itemCode}
+                onClick={() => handleItemSelect(m)}
+                style={{
+                  padding: '6px 10px',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  borderRadius: '4px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: '8px',
+                  color: 'var(--text-main, #f8fafc)',
+                  background: isHighlighted ? 'rgba(99, 102, 241, 0.25)' : 'transparent',
+                  borderBottom: '1px solid rgba(255,255,255,0.05)',
+                  transition: 'background 0.15s ease'
+                }}
+                onMouseEnter={() => setHighlightedIndex(idx)}
+              >
+                <div style={{ overflow: 'hidden' }}>
+                  <div style={{ fontWeight: 700, color: '#38bdf8' }}>{m.itemCode}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {m.description}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontWeight: 700, color: '#34d399' }}>₹{Number(m.rate || 0).toFixed(2)}</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{m.unit || 'No'}</div>
+                </div>
               </div>
-              <div style={{ flex: 1, textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {m.description}
-              </div>
-              <div style={{ color: '#34d399', fontWeight: 700 }}>₹{Number(m.rate || 0).toFixed(2)}</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -209,6 +498,18 @@ export const ProformaInvoicePage = ({ initialProforma, clearEditingProforma }) =
   const [items, setItems] = useState([
     { serialNumber: 1, itemCode: '', description: '', unit: 'No', quantity: 1, rate: 0, amount: 0 }
   ]);
+
+  // Service charge modal state
+  const [serviceChargeModal, setServiceChargeModal] = useState({
+    isOpen: false,
+    rowIndex: null,
+    itemCode: '',
+    description: '',
+    unit: 'No',
+    baseRate: 0,
+    serviceCharge: 0,
+    qty: 1
+  });
 
   // Load masters & next Proforma number
   useEffect(() => {
@@ -336,17 +637,78 @@ export const ProformaInvoicePage = ({ initialProforma, clearEditingProforma }) =
 
   const handleSelectItem = (index, masterItem) => {
     const newItems = [...items];
-    const qty = newItems[index].quantity || 1;
-    const rate = Number(masterItem.rate) || 0;
-    newItems[index] = {
-      ...newItems[index],
-      itemCode: masterItem.itemCode,
-      description: masterItem.description,
-      unit: masterItem.unit || 'No',
-      rate: rate,
-      amount: Math.round(qty * rate * 100) / 100
+    const existingQty = newItems[index]?.quantity;
+    const qty = (existingQty !== undefined && existingQty !== '' && !isNaN(Number(existingQty)) && Number(existingQty) > 0) ? Number(existingQty) : 1;
+    const baseRate = Number(masterItem.rate) || 0;
+    const sc = Number(masterItem.serviceCharge) || 0;
+    const itemUnit = masterItem.unit || 'No';
+
+    if (sc > 0) {
+      setServiceChargeModal({
+        isOpen: true,
+        rowIndex: index,
+        itemCode: masterItem.itemCode,
+        description: masterItem.description,
+        unit: itemUnit,
+        baseRate: baseRate,
+        serviceCharge: sc,
+        qty: qty
+      });
+    } else {
+      newItems[index] = {
+        ...newItems[index],
+        itemCode: masterItem.itemCode,
+        description: masterItem.description,
+        unit: itemUnit,
+        quantity: qty,
+        rate: baseRate,
+        amount: Math.round(qty * baseRate * 100) / 100
+      };
+      setItems(autoExpandLineItems(newItems));
+
+      setTimeout(() => {
+        const qtyEl = document.getElementById(`proforma-qty-input-${index}`);
+        if (qtyEl) {
+          qtyEl.focus();
+          qtyEl.select();
+        }
+      }, 60);
+    }
+  };
+
+  const handleServiceChargeChoice = (applyServiceCharge) => {
+    const { rowIndex, itemCode, description, unit: itemUnit, baseRate, serviceCharge, qty } = serviceChargeModal;
+    const finalRate = applyServiceCharge ? (baseRate + serviceCharge) : baseRate;
+    const newItems = [...items];
+    newItems[rowIndex] = {
+      ...newItems[rowIndex],
+      itemCode: itemCode,
+      description: description,
+      unit: itemUnit,
+      quantity: qty,
+      rate: finalRate,
+      amount: Math.round(qty * finalRate * 100) / 100
     };
     setItems(autoExpandLineItems(newItems));
+
+    setServiceChargeModal({
+      isOpen: false,
+      rowIndex: null,
+      itemCode: '',
+      description: '',
+      unit: 'No',
+      baseRate: 0,
+      serviceCharge: 0,
+      qty: 1
+    });
+
+    setTimeout(() => {
+      const qtyEl = document.getElementById(`proforma-qty-input-${rowIndex}`);
+      if (qtyEl) {
+        qtyEl.focus();
+        qtyEl.select();
+      }
+    }, 60);
   };
 
   const handleAddItem = () => {
@@ -838,10 +1200,18 @@ export const ProformaInvoicePage = ({ initialProforma, clearEditingProforma }) =
                   </td>
                   <td style={{ padding: '6px' }}>
                     <ItemCodeCombobox
+                      id={`proforma-item-code-input-${idx}`}
                       value={item.itemCode}
                       masterItems={masterItems}
                       onChange={(val) => handleItemChange(idx, 'itemCode', val)}
                       onSelect={(m) => handleSelectItem(idx, m)}
+                      onEnterNext={() => {
+                        const qtyEl = document.getElementById(`proforma-qty-input-${idx}`);
+                        if (qtyEl) {
+                          qtyEl.focus();
+                          qtyEl.select();
+                        }
+                      }}
                     />
                   </td>
                   <td style={{ padding: '6px' }}>
@@ -865,12 +1235,30 @@ export const ProformaInvoicePage = ({ initialProforma, clearEditingProforma }) =
                   </td>
                   <td style={{ padding: '6px' }}>
                     <input
+                      id={`proforma-qty-input-${idx}`}
                       type="number"
-                      step="0.01"
+                      min="0.001"
+                      step="any"
                       className="form-input"
                       style={{ textAlign: 'center', fontWeight: 700, fontSize: '0.85rem' }}
-                      value={item.quantity}
+                      placeholder="Qty"
+                      value={item.quantity === 0 || item.quantity === '' ? '' : item.quantity}
                       onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const nextIdx = idx + 1;
+                          const nextInput = document.getElementById(`proforma-item-code-input-${nextIdx}`);
+                          if (nextInput) {
+                            nextInput.focus();
+                          } else {
+                            handleAddItem();
+                            setTimeout(() => {
+                              document.getElementById(`proforma-item-code-input-${nextIdx}`)?.focus();
+                            }, 60);
+                          }
+                        }
+                      }}
                     />
                   </td>
                   <td style={{ padding: '6px' }}>
@@ -1023,6 +1411,15 @@ export const ProformaInvoicePage = ({ initialProforma, clearEditingProforma }) =
         </div>
 
       </div>
+
+      {/* Service Charge Selection Interactive Popup Modal */}
+      {serviceChargeModal.isOpen && (
+        <ServiceChargeChoiceModal
+          data={serviceChargeModal}
+          onChoice={handleServiceChargeChoice}
+          onClose={() => handleServiceChargeChoice(false)}
+        />
+      )}
 
       {/* Preview Modal */}
       {isPreviewOpen && (

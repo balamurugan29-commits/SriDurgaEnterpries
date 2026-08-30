@@ -680,7 +680,7 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                                     {item.serialNumber || overallIndex}
                                   </td>
                                   {hasAnyItemCode && (
-                                    <td style={{ padding: '4px 2px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: '600' }}>
+                                    <td style={{ padding: '4px 2px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px' }}>
                                       {item.itemCode && item.itemCode.toUpperCase() !== 'CUSTOM' ? item.itemCode : '-'}
                                     </td>
                                   )}
@@ -690,10 +690,10 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                                   <td style={{ padding: '4px 4px', borderRight: '1px solid #000', textAlign: 'right', fontSize: '12px' }}>
                                     {Number(rate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </td>
-                                  <td style={{ padding: '4px 2px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px', fontWeight: '600' }}>
+                                  <td style={{ padding: '4px 2px', borderRight: '1px solid #000', textAlign: 'center', fontSize: '12px' }}>
                                     {qty} {item.unit || (Number(qty) === 1 ? 'No' : 'Nos')}
                                   </td>
-                                  <td style={{ padding: '4px 6px', textAlign: 'right', fontSize: '12px', fontWeight: '600' }}>
+                                  <td style={{ padding: '4px 6px', textAlign: 'right', fontSize: '12px' }}>
                                     {amt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </td>
                                 </tr>

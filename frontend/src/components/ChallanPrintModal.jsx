@@ -678,7 +678,7 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                                 <tr key={itemIdx} style={{ verticalAlign: 'top', minHeight: '24px' }}>
                                   <td style={{ textAlign: 'center', padding: '4px 2px', borderRight: '1px solid #000', fontSize: '12px' }}>{item.serialNumber || overallIndex}</td>
                                   {hasAnyItemCode && (
-                                    <td style={{ textAlign: 'center', padding: '4px 2px', borderRight: '1px solid #000', fontWeight: '600', fontSize: '12px' }}>
+                                    <td style={{ textAlign: 'center', padding: '4px 2px', borderRight: '1px solid #000', fontSize: '12px' }}>
                                       {item.itemCode && item.itemCode !== 'CUSTOM' ? item.itemCode : '-'}
                                     </td>
                                   )}
@@ -688,10 +688,10 @@ export const ChallanPrintModal = ({ isOpen, onClose, challan }) => {
                                   <td style={{ textAlign: 'right', padding: '4px 4px', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     {Number(item.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </td>
-                                  <td style={{ textAlign: 'center', padding: '4px 2px', borderRight: '1px solid #000', fontWeight: '600', fontSize: '12px' }}>
+                                  <td style={{ textAlign: 'center', padding: '4px 2px', borderRight: '1px solid #000', fontSize: '12px' }}>
                                     {item.quantity} {item.unit || (Number(item.quantity) === 1 ? 'No' : 'Nos')}
                                   </td>
-                                  <td style={{ textAlign: 'right', padding: '4px 6px', fontWeight: '600', fontSize: '12px' }}>
+                                  <td style={{ textAlign: 'right', padding: '4px 6px', fontSize: '12px' }}>
                                     {calcAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </td>
                                 </tr>

@@ -7,11 +7,248 @@ import { LineItemUploadModal } from '../components/LineItemUploadModal';
 import { Toast } from '../components/Toast';
 import { FileSpreadsheet, Plus, Trash2, Printer, Save, Zap, Edit3, X, RefreshCw, ShieldCheck, Building2, HelpCircle, CheckCircle2, XCircle, RotateCcw, ChevronDown, Eye, Upload, Sparkles } from 'lucide-react';
 
-// Fast, responsive in-memory searchable Combobox for Item Code
-const ItemCodeCombobox = React.memo(({ value, masterItems, isFetched, onChange, onSelect }) => {
+// Keyboard-Driven Interactive Service Charge Option Popup Modal
+const ServiceChargeChoiceModal = ({ data, onChoice, onClose }) => {
+  const [selectedChoice, setSelectedChoice] = useState('yes'); // Default: 'yes' (S option)
+  const { itemCode, description, unit, baseRate, serviceCharge } = data;
+
+  const baseRateNum = Number(baseRate || 0);
+  const serviceChargeNum = Number(serviceCharge || 0);
+  const totalRateNum = baseRateNum + serviceChargeNum;
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        setSelectedChoice('no');
+      } else if (e.key === 'ArrowRight' || e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        setSelectedChoice('yes');
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        onChoice(selectedChoice === 'yes');
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [selectedChoice, onChoice, onClose]);
+
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 99999,
+      background: 'rgba(0, 0, 0, 0.82)',
+      backdropFilter: 'blur(10px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '1rem'
+    }}>
+      <div 
+        className="glass-panel animate-modal-entry"
+        style={{
+          width: '100%',
+          maxWidth: '560px',
+          background: '#0b1329',
+          border: '1.5px solid rgba(99, 102, 241, 0.5)',
+          borderRadius: '18px',
+          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.7)',
+          overflow: 'hidden',
+          padding: 0
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          padding: '1.25rem 1.5rem',
+          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(16, 185, 129, 0.15) 100%)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ background: 'rgba(251, 191, 36, 0.2)', border: '1px solid rgba(251, 191, 36, 0.4)', padding: '0.5rem', borderRadius: '10px', color: '#fbbf24' }}>
+              <Zap size={22} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'white', margin: 0 }}>
+                Service Charge Selection
+              </h3>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                Item Code: <strong style={{ color: '#818cf8', fontFamily: 'monospace' }}>{itemCode}</strong> ({unit || 'No'})
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              padding: '4px'
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Item Description Info */}
+        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', background: 'rgba(15, 23, 42, 0.5)' }}>
+          <p style={{ fontSize: '0.85rem', color: '#e2e8f0', margin: 0, lineHeight: 1.45 }}>
+            {description}
+          </p>
+        </div>
+
+        {/* 2 Interactive Options (Left: No | Right: S / Yes) */}
+        <div style={{ padding: '1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          
+          {/* Option 1: NO (Left Arrow) */}
+          <div
+            onClick={() => {
+              setSelectedChoice('no');
+              onChoice(false);
+            }}
+            onMouseEnter={() => setSelectedChoice('no')}
+            style={{
+              padding: '1.25rem 1rem',
+              borderRadius: '14px',
+              cursor: 'pointer',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              gap: '0.6rem',
+              background: selectedChoice === 'no' ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+              border: selectedChoice === 'no' ? '2px solid #818cf8' : '1.5px solid rgba(255, 255, 255, 0.12)',
+              boxShadow: selectedChoice === 'no' ? '0 0 20px rgba(99, 102, 241, 0.35)' : 'none',
+              transform: selectedChoice === 'no' ? 'scale(1.02)' : 'scale(1)',
+              transition: 'all 0.18s ease'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '2px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: '#94a3b8' }}>
+                ← LEFT ARROW (N)
+              </span>
+            </div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white' }}>
+              No
+            </div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+              Base Rate Only
+            </div>
+            <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#38bdf8' }}>
+              ₹{baseRateNum.toFixed(2)}
+            </div>
+            {selectedChoice === 'no' && (
+              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#818cf8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+                <CheckCircle2 size={13} /> Selected (Press Enter)
+              </div>
+            )}
+          </div>
+
+          {/* Option 2: S / YES (Right Arrow) */}
+          <div
+            onClick={() => {
+              setSelectedChoice('yes');
+              onChoice(true);
+            }}
+            onMouseEnter={() => setSelectedChoice('yes')}
+            style={{
+              padding: '1.25rem 1rem',
+              borderRadius: '14px',
+              cursor: 'pointer',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              gap: '0.6rem',
+              background: selectedChoice === 'yes' ? 'rgba(16, 185, 129, 0.22)' : 'rgba(255, 255, 255, 0.03)',
+              border: selectedChoice === 'yes' ? '2px solid #34d399' : '1.5px solid rgba(255, 255, 255, 0.12)',
+              boxShadow: selectedChoice === 'yes' ? '0 0 22px rgba(16, 185, 129, 0.4)' : 'none',
+              transform: selectedChoice === 'yes' ? 'scale(1.02)' : 'scale(1)',
+              transition: 'all 0.18s ease'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '2px 8px', borderRadius: '6px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399' }}>
+                RIGHT ARROW (S) →
+              </span>
+            </div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#34d399', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+              <span>S / Yes</span>
+              <span style={{ fontSize: '0.75rem', padding: '1px 6px', borderRadius: '4px', background: '#34d399', color: '#064e3b', fontWeight: 900 }}>S</span>
+            </div>
+            <div style={{ fontSize: '0.78rem', color: '#fbbf24' }}>
+              + ₹{serviceChargeNum.toFixed(2)} Service Charge
+            </div>
+            <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#34d399' }}>
+              ₹{totalRateNum.toFixed(2)}
+            </div>
+            {selectedChoice === 'yes' && (
+              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#34d399', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+                <CheckCircle2 size={13} /> Selected (Press Enter)
+              </div>
+            )}
+          </div>
+
+        </div>
+
+        {/* Keyboard Helper Banner & Confirmation Action */}
+        <div style={{
+          padding: '1rem 1.5rem',
+          background: 'rgba(15, 23, 42, 0.8)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.75rem'
+        }}>
+          <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span>⌨️ <strong>←</strong> = No</span>
+            <span>|</span>
+            <span><strong>→</strong> = S / Yes</span>
+            <span>|</span>
+            <span><strong style={{ color: 'white' }}>⏎ Enter</strong> = Confirm</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onChoice(selectedChoice === 'yes')}
+            className="btn btn-secondary"
+            style={{
+              padding: '0.6rem 1.4rem',
+              fontWeight: 800,
+              fontSize: '0.875rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem'
+            }}
+          >
+            <CheckCircle2 size={16} />
+            <span>Confirm ({selectedChoice === 'yes' ? 'S / Yes' : 'No'})</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+// Fast, responsive in-memory searchable Combobox for Item Code with Enter key settlement
+const ItemCodeCombobox = React.memo(({ id, value, masterItems, isFetched, onChange, onSelect, onEnterNext }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState(value || '');
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
   const containerRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     setQuery(value || '');
@@ -41,6 +278,10 @@ const ItemCodeCombobox = React.memo(({ value, masterItems, isFetched, onChange, 
     ).slice(0, 30);
   }, [masterItems, query]);
 
+  useEffect(() => {
+    setHighlightedIndex(0);
+  }, [filteredItems]);
+
   const handleInputChange = (e) => {
     const val = e.target.value;
     setQuery(val);
@@ -53,10 +294,53 @@ const ItemCodeCombobox = React.memo(({ value, masterItems, isFetched, onChange, 
     setIsOpen(false);
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setIsOpen(true);
+      setHighlightedIndex(prev => (prev < filteredItems.length - 1 ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setIsOpen(true);
+      setHighlightedIndex(prev => (prev > 0 ? prev - 1 : filteredItems.length - 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      const cleanQ = (query || '').trim().toUpperCase();
+      // 1. Exact match check
+      const exactMatch = masterItems.find(m => m.itemCode && m.itemCode.trim().toUpperCase() === cleanQ);
+      if (exactMatch) {
+        handleItemSelect(exactMatch);
+        return;
+      }
+      // 2. Highlighted or first dropdown item
+      if (isOpen && filteredItems.length > 0) {
+        const selected = filteredItems[highlightedIndex] || filteredItems[0];
+        if (selected) {
+          handleItemSelect(selected);
+          return;
+        }
+      }
+      // 3. First match if query not empty
+      if (filteredItems.length > 0 && cleanQ) {
+        handleItemSelect(filteredItems[0]);
+        return;
+      }
+      // 4. Custom manual entry
+      onChange(query);
+      setIsOpen(false);
+      if (onEnterNext) onEnterNext();
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+    }
+  };
+
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%', minWidth: '160px' }}>
       <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
         <input
+          ref={inputRef}
+          id={id}
           type="text"
           className="form-input"
           style={{
@@ -69,6 +353,7 @@ const ItemCodeCombobox = React.memo(({ value, masterItems, isFetched, onChange, 
           placeholder="Select / Type Code"
           value={query}
           onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
           onFocus={() => setIsOpen(true)}
         />
         <button
@@ -114,49 +399,52 @@ const ItemCodeCombobox = React.memo(({ value, masterItems, isFetched, onChange, 
             padding: '4px'
           }}
         >
-          {filteredItems.map(m => (
-            <div
-              key={m.id || m.itemCode}
-              onClick={() => handleItemSelect(m)}
-              style={{
-                padding: '0.45rem 0.6rem',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '0.5rem',
-                borderBottom: '1px solid var(--border-color)',
-                transition: 'background 0.15s ease'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.18)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', textAlign: 'left' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <span style={{ fontWeight: 700, color: '#818cf8', fontSize: '0.8rem' }}>
-                    {m.itemCode}
-                  </span>
-                  {m.folderName && m.folderName !== 'General' && (
-                    <span style={{ fontSize: '0.625rem', padding: '1px 5px', borderRadius: '4px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', fontWeight: 600 }}>
-                      📁 {m.folderName}
+          {filteredItems.map((m, idx) => {
+            const isHighlighted = idx === highlightedIndex;
+            return (
+              <div
+                key={m.id || m.itemCode}
+                onClick={() => handleItemSelect(m)}
+                style={{
+                  padding: '0.45rem 0.6rem',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.5rem',
+                  borderBottom: '1px solid var(--border-color)',
+                  background: isHighlighted ? 'rgba(99, 102, 241, 0.25)' : 'transparent',
+                  transition: 'background 0.15s ease'
+                }}
+                onMouseEnter={() => setHighlightedIndex(idx)}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', textAlign: 'left' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <span style={{ fontWeight: 700, color: '#818cf8', fontSize: '0.8rem' }}>
+                      {m.itemCode}
                     </span>
-                  )}
+                    {m.folderName && m.folderName !== 'General' && (
+                      <span style={{ fontSize: '0.625rem', padding: '1px 5px', borderRadius: '4px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', fontWeight: 600 }}>
+                        📁 {m.folderName}
+                      </span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: '0.675rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>
+                    {m.description}
+                  </span>
                 </div>
-                <span style={{ fontSize: '0.675rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>
-                  {m.description}
-                </span>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34d399', display: 'block' }}>
+                    ₹{Number(m.rate || 0).toFixed(2)}
+                  </span>
+                  <span style={{ fontSize: '0.625rem', color: 'var(--text-subtle)' }}>
+                    {m.unit || 'No'}
+                  </span>
+                </div>
               </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34d399', display: 'block' }}>
-                  ₹{Number(m.rate || 0).toFixed(2)}
-                </span>
-                <span style={{ fontSize: '0.625rem', color: 'var(--text-subtle)' }}>
-                  {m.unit || 'No'}
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -785,7 +1073,8 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
     const updated = [...lineItems];
     const baseRate = Number(foundMasterItem.rate) || 0;
     const sc = Number(foundMasterItem.serviceCharge) || 0;
-    const qty = updated[index].quantity || 1;
+    const existingQty = updated[index]?.quantity;
+    const qty = (existingQty !== undefined && existingQty !== '' && !isNaN(Number(existingQty)) && Number(existingQty) > 0) ? Number(existingQty) : 1;
     const itemUnit = foundMasterItem.unit || 'No';
 
     if (sc > 0) {
@@ -805,9 +1094,19 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
       updated[index].description = foundMasterItem.description;
       updated[index].unit = itemUnit;
       updated[index].rate = baseRate;
+      updated[index].quantity = qty;
       updated[index].amount = qty * baseRate;
       updated[index].fetched = true;
       setLineItems(autoExpandLineItems(updated));
+
+      setTimeout(() => {
+        const qtyEl = document.getElementById(`qty-input-${index}`);
+        if (qtyEl) {
+          qtyEl.focus();
+          qtyEl.select();
+        }
+      }, 60);
+
       setToast({ message: `Fetched '${foundMasterItem.itemCode}' from Item Master (Unit: ${itemUnit}, Rate: ₹${baseRate.toFixed(2)})`, type: 'success' });
     }
   };
@@ -902,9 +1201,11 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
       // Normal single item code selection flow
       const updated = [...lineItems];
       updated[rowIndex].serialNumber = rowIndex + 1;
+      updated[rowIndex].itemCode = itemCode;
       updated[rowIndex].description = description;
       if (itemUnit) updated[rowIndex].unit = itemUnit;
       updated[rowIndex].rate = finalRate;
+      updated[rowIndex].quantity = qty;
       updated[rowIndex].amount = finalAmount;
       updated[rowIndex].fetched = true;
       setLineItems(autoExpandLineItems(updated));
@@ -920,6 +1221,14 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
         qty: 1,
         isFromTransfer: false
       });
+
+      setTimeout(() => {
+        const qtyEl = document.getElementById(`qty-input-${rowIndex}`);
+        if (qtyEl) {
+          qtyEl.focus();
+          qtyEl.select();
+        }
+      }, 60);
 
       if (applyServiceCharge) {
         setToast({ 
@@ -1658,11 +1967,19 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
                     {/* Item Code Dropdown / Type-In (Fast Combobox) */}
                     <td style={{ position: 'relative', minWidth: '180px', verticalAlign: 'top' }}>
                       <ItemCodeCombobox
+                        id={`item-code-input-${idx}`}
                         value={item.itemCode}
                         masterItems={masterItems}
                         isFetched={item.fetched}
                         onChange={(newCode) => handleItemCodeChange(idx, newCode)}
                         onSelect={(selectedMaster) => handleSelectMasterItem(idx, selectedMaster)}
+                        onEnterNext={() => {
+                          const qtyEl = document.getElementById(`qty-input-${idx}`);
+                          if (qtyEl) {
+                            qtyEl.focus();
+                            qtyEl.select();
+                          }
+                        }}
                       />
                     </td>
 
@@ -1676,11 +1993,12 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
                       />
                     </td>
 
-                    {/* Quantity (Bolder, Bigger & Type-Only No Spinners) */}
+                    {/* Quantity (Editable by user & Keyboard Enter to next row) */}
                     <td style={{ textAlign: 'right', verticalAlign: 'top' }}>
                       <input
+                        id={`qty-input-${idx}`}
                         type="number"
-                        min="0.01"
+                        min="0.001"
                         step="any"
                         className="form-input line-item-input-large"
                         style={{ 
@@ -1692,8 +2010,24 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
                           background: 'var(--input-bg)',
                           border: '1.5px solid rgba(99, 102, 241, 0.4)'
                         }}
-                        value={item.quantity === 0 ? '' : item.quantity}
+                        placeholder="Qty"
+                        value={item.quantity === 0 || item.quantity === '' ? '' : item.quantity}
                         onChange={e => handleItemFieldChange(idx, 'quantity', e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const nextIdx = idx + 1;
+                            const nextItemInput = document.getElementById(`item-code-input-${nextIdx}`);
+                            if (nextItemInput) {
+                              nextItemInput.focus();
+                            } else {
+                              handleAddLine();
+                              setTimeout(() => {
+                                document.getElementById(`item-code-input-${nextIdx}`)?.focus();
+                              }, 60);
+                            }
+                          }
+                        }}
                       />
                     </td>
 
@@ -2043,6 +2377,15 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
           </option>
         ))}
       </datalist>
+
+      {/* Service Charge Selection Interactive Popup Modal */}
+      {serviceChargeModal.isOpen && (
+        <ServiceChargeChoiceModal
+          data={serviceChargeModal}
+          onChoice={handleServiceChargeChoice}
+          onClose={() => handleServiceChargeChoice(false)}
+        />
+      )}
 
       {/* Tax Invoice Print & Preview Modal */}
       <ChallanPrintModal 
