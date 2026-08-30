@@ -410,29 +410,29 @@ export const AppSettingsModal = () => {
                 Navigation Layout Orientation
               </label>
               <span style={{ fontSize: '0.725rem', color: 'var(--text-subtle)' }}>
-                Active: <strong>{layout === 'sidebar' ? 'Sidebar (Left)' : 'Top Bar'}</strong>
+                Active: <strong>{layout === 'top' || layout === 'topbar' ? 'Top Navigation' : 'Side Navigation'}</strong>
               </span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
               <button
                 type="button"
-                onClick={() => setLayout('sidebar')}
+                onClick={() => setLayout('side')}
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.75rem',
                   padding: '1rem',
                   borderRadius: '14px',
-                  border: layout === 'sidebar' ? '2px solid #6366f1' : '1px solid var(--border-color)',
-                  background: layout === 'sidebar' ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-card)',
+                  border: (layout === 'side' || layout === 'sidebar') ? '2px solid #6366f1' : '1px solid var(--border-color)',
+                  background: (layout === 'side' || layout === 'sidebar') ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-card)',
                   cursor: 'pointer',
                   textAlign: 'left',
                   transition: 'all 0.2s ease',
                   position: 'relative'
                 }}
               >
-                {layout === 'sidebar' && (
+                {(layout === 'side' || layout === 'sidebar') && (
                   <div style={{ position: 'absolute', top: '10px', right: '10px', width: '20px', height: '20px', borderRadius: '50%', background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
                     <Check size={12} strokeWidth={3} />
                   </div>
@@ -455,22 +455,22 @@ export const AppSettingsModal = () => {
 
               <button
                 type="button"
-                onClick={() => setLayout('topbar')}
+                onClick={() => setLayout('top')}
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.75rem',
                   padding: '1rem',
                   borderRadius: '14px',
-                  border: layout === 'topbar' ? '2px solid #6366f1' : '1px solid var(--border-color)',
-                  background: layout === 'topbar' ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-card)',
+                  border: (layout === 'top' || layout === 'topbar') ? '2px solid #6366f1' : '1px solid var(--border-color)',
+                  background: (layout === 'top' || layout === 'topbar') ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-card)',
                   cursor: 'pointer',
                   textAlign: 'left',
                   transition: 'all 0.2s ease',
                   position: 'relative'
                 }}
               >
-                {layout === 'topbar' && (
+                {(layout === 'top' || layout === 'topbar') && (
                   <div style={{ position: 'absolute', top: '10px', right: '10px', width: '20px', height: '20px', borderRadius: '50%', background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
                     <Check size={12} strokeWidth={3} />
                   </div>
@@ -500,7 +500,7 @@ export const AppSettingsModal = () => {
                 Navigation Bar Display Mode
               </label>
               <span style={{ fontSize: '0.725rem', color: 'var(--text-subtle)' }}>
-                Active: <strong>{navMode === 'full' ? 'Icons + Labels' : 'Icons Only'}</strong>
+                Active: <strong>{navMode === 'icons' || navMode === 'collapsed' ? 'Icons Only' : 'Icons + Labels'}</strong>
               </span>
             </div>
 
@@ -534,15 +534,15 @@ export const AppSettingsModal = () => {
 
               <button
                 type="button"
-                onClick={() => setNavMode('collapsed')}
+                onClick={() => setNavMode('icons')}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.75rem',
                   padding: '0.875rem 1rem',
                   borderRadius: '12px',
-                  border: navMode === 'collapsed' ? '2px solid #6366f1' : '1px solid var(--border-color)',
-                  background: navMode === 'collapsed' ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-card)',
+                  border: (navMode === 'icons' || navMode === 'collapsed') ? '2px solid #6366f1' : '1px solid var(--border-color)',
+                  background: (navMode === 'icons' || navMode === 'collapsed') ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-card)',
                   cursor: 'pointer',
                   textAlign: 'left',
                   transition: 'all 0.2s ease',
@@ -554,7 +554,7 @@ export const AppSettingsModal = () => {
                   <span style={{ fontSize: '0.825rem', fontWeight: 700, color: 'var(--text-main)', display: 'block' }}>Icons Only</span>
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Hide text wording</span>
                 </div>
-                {navMode === 'collapsed' && (
+                {(navMode === 'icons' || navMode === 'collapsed') && (
                   <Check size={14} color="#6366f1" style={{ marginLeft: 'auto' }} />
                 )}
               </button>

@@ -142,8 +142,8 @@ export const WorkCompletionPage = ({ editingCertificate, onCancelEdit }) => {
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
       
-      // If toggled to Service and there are no SERVICE items, add a blank one
-      if (field === 'equipmentDescription' && value === 'Service') {
+      // If toggled to Service or text contains service and there are no SERVICE items, add a blank one
+      if (field === 'equipmentDescription' && (value || '').toLowerCase().includes('service')) {
         const hasServiceItem = prev.items.some(i => i.itemType === 'SERVICE');
         if (!hasServiceItem) {
           updated.items = [
@@ -488,7 +488,7 @@ export const WorkCompletionPage = ({ editingCertificate, onCancelEdit }) => {
     );
   };
 
-  const isServiceSelected = formData.equipmentDescription === 'Service';
+  const isServiceSelected = (formData.equipmentDescription || '').toLowerCase().includes('service') || formData.items.some(i => i.itemType === 'SERVICE');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -642,20 +642,32 @@ export const WorkCompletionPage = ({ editingCertificate, onCancelEdit }) => {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
           
-          {/* Requirement Dropdown: ONLY 2 Options (Material / Service) */}
+          {/* Requirement Details Input: Manual Typing Enabled */}
           <div>
             <label className="form-label" style={{ fontWeight: 700, color: '#fbbf24' }}>
               Requirement Details <span style={{ color: '#f87171' }}>*</span>
             </label>
-            <select
-              className="form-select"
-              style={{ fontWeight: 700, color: isServiceSelected ? '#fbbf24' : '#34d399', borderColor: isServiceSelected ? 'rgba(245, 158, 11, 0.4)' : 'rgba(16, 185, 129, 0.4)' }}
-              value={formData.equipmentDescription || 'Material'}
+            <input
+              type="text"
+              list="requirement-details-datalist"
+              className="form-input"
+              style={{ 
+                fontWeight: 700, 
+                color: isServiceSelected ? '#fbbf24' : '#34d399', 
+                borderColor: isServiceSelected ? 'rgba(245, 158, 11, 0.4)' : 'rgba(16, 185, 129, 0.4)' 
+              }}
+              placeholder="e.g. Service / Material"
+              value={formData.equipmentDescription || ''}
               onChange={e => handleInputChange('equipmentDescription', e.target.value)}
-            >
-              <option value="Material">Material</option>
-              <option value="Service">Service</option>
-            </select>
+            />
+            <datalist id="requirement-details-datalist">
+              <option value="Service" />
+              <option value="Material" />
+              <option value="Service & Material" />
+              <option value="Overhauling & Repair" />
+              <option value="Routine Maintenance" />
+              <option value="Emergency Breakdown Service" />
+            </datalist>
           </div>
 
           {/* Conditional Field: Equipment appears BEFORE Location ONLY when "Service" is selected */}

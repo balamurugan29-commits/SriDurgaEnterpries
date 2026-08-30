@@ -10,12 +10,28 @@ const DEFAULT_SETTINGS = {
   navMode: 'full',     // 'full' | 'icons'
 };
 
+const normalizeSettings = (raw) => {
+  if (!raw || typeof raw !== 'object') return DEFAULT_SETTINGS;
+  const normalized = { ...DEFAULT_SETTINGS, ...raw };
+  if (normalized.layout === 'topbar' || normalized.layout === 'top') {
+    normalized.layout = 'top';
+  } else {
+    normalized.layout = 'side';
+  }
+  if (normalized.navMode === 'collapsed' || normalized.navMode === 'icons') {
+    normalized.navMode = 'icons';
+  } else {
+    normalized.navMode = 'full';
+  }
+  return normalized;
+};
+
 export const SettingsProvider = ({ children }) => {
   const [settings, setSettings] = useState(() => {
     try {
       const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
       if (saved) {
-        return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+        return normalizeSettings(JSON.parse(saved));
       }
     } catch (e) {
       console.warn('Failed to parse saved settings, using defaults:', e);
@@ -68,7 +84,7 @@ export const SettingsProvider = ({ children }) => {
   }, [settings]);
 
   const setTheme = (theme) => {
-    setSettings((prev) => ({ ...prev, theme }));
+    setSettings((prev) => ({ ...prev, theme: theme === 'light' ? 'light' : 'dark' }));
   };
 
   const toggleTheme = () => {
@@ -79,11 +95,13 @@ export const SettingsProvider = ({ children }) => {
   };
 
   const setLayout = (layout) => {
-    setSettings((prev) => ({ ...prev, layout }));
+    const normalized = (layout === 'topbar' || layout === 'top') ? 'top' : 'side';
+    setSettings((prev) => ({ ...prev, layout: normalized }));
   };
 
   const setNavMode = (navMode) => {
-    setSettings((prev) => ({ ...prev, navMode }));
+    const normalized = (navMode === 'collapsed' || navMode === 'icons') ? 'icons' : 'full';
+    setSettings((prev) => ({ ...prev, navMode: normalized }));
   };
 
   const toggleNavMode = () => {

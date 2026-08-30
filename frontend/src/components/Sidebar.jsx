@@ -85,7 +85,7 @@ export const Sidebar = ({ activePage, setActivePage }) => {
   const isCardActive = activePage === 'job-card' || activePage === 'job-card-history' || activePage === 'job-card-list';
   const isPassActive = activePage === 'gate-pass' || activePage === 'gate-pass-list' || activePage === 'gate-pass-history';
   const isAuditActive = activePage === 'sales-ledger' || activePage === 'purchase-ledger';
-  const isCompact = navMode === 'icons';
+  const isCompact = navMode === 'icons' || navMode === 'collapsed';
 
   // Handle click outside icon flyout menus
   useEffect(() => {
@@ -311,7 +311,7 @@ export const Sidebar = ({ activePage, setActivePage }) => {
   };
 
   // If layout is top and not mobile menu open, hide sidebar on desktop
-  const isDesktopHidden = layout === 'top';
+  const isDesktopHidden = layout === 'top' || layout === 'topbar';
 
   return (
     <>

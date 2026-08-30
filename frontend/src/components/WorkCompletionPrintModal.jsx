@@ -19,7 +19,7 @@ export const WorkCompletionPrintModal = ({ isOpen, onClose, certificate }) => {
 
   if (!isOpen || !certificate) return null;
 
-  const isService = certificate.equipmentDescription === 'Service';
+  const isService = (certificate.equipmentDescription || '').toLowerCase().includes('service') || (certificate.items || []).some(item => item.itemType === 'SERVICE');
   const serviceItems = (certificate.items || []).filter(item => item.itemType === 'SERVICE');
   const materialItems = (certificate.items || []).filter(item => item.itemType === 'MATERIAL' || !item.itemType);
 

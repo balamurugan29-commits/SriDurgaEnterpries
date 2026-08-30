@@ -61,6 +61,51 @@ export const Navbar = ({ activePage, setActivePage }) => {
   const topPassDropdownRef = useRef(null);
   const topAuditDropdownRef = useRef(null);
 
+  const isTopLayout = layout === 'top' || layout === 'topbar';
+  const isCompact = navMode === 'icons' || navMode === 'collapsed';
+
+  const closeAllTopDropdowns = () => {
+    setTopMasterOpen(false);
+    setTopCertOpen(false);
+    setTopInvoiceOpen(false);
+    setTopCardOpen(false);
+    setTopPassOpen(false);
+    setTopAuditOpen(false);
+  };
+
+  const toggleTopDropdown = (name) => {
+    if (name === 'master') {
+      const next = !topMasterOpen;
+      closeAllTopDropdowns();
+      setTopMasterOpen(next);
+    } else if (name === 'invoice') {
+      const next = !topInvoiceOpen;
+      closeAllTopDropdowns();
+      setTopInvoiceOpen(next);
+    } else if (name === 'cert') {
+      const next = !topCertOpen;
+      closeAllTopDropdowns();
+      setTopCertOpen(next);
+    } else if (name === 'card') {
+      const next = !topCardOpen;
+      closeAllTopDropdowns();
+      setTopCardOpen(next);
+    } else if (name === 'pass') {
+      const next = !topPassOpen;
+      closeAllTopDropdowns();
+      setTopPassOpen(next);
+    } else if (name === 'audit') {
+      const next = !topAuditOpen;
+      closeAllTopDropdowns();
+      setTopAuditOpen(next);
+    }
+  };
+
+  const handleTopNavClick = (page) => {
+    setActivePage(page);
+    closeAllTopDropdowns();
+  };
+
   // Permission Access Helper
   const canAccess = (pageKey) => {
     if (!user) return false;
@@ -225,32 +270,34 @@ export const Navbar = ({ activePage, setActivePage }) => {
             </div>
           </div>
 
-          {/* Hide / Show Sidebar Menu Toggle Option */}
-          <button 
-            type="button"
-            onClick={toggleSidebarHidden}
-            className="btn btn-outline hide-menu-toggle-btn"
-            style={{ 
-              display: 'inline-flex', 
-              alignItems: 'center', 
-              gap: '0.45rem', 
-              padding: '0.4rem 0.85rem', 
-              borderRadius: '10px', 
-              fontSize: '0.8rem', 
-              fontWeight: 700, 
-              borderColor: sidebarHidden ? 'rgba(52, 211, 153, 0.5)' : 'rgba(99, 102, 241, 0.4)', 
-              background: sidebarHidden ? 'linear-gradient(135deg, rgba(52, 211, 153, 0.2) 0%, rgba(16, 185, 129, 0.15) 100%)' : 'rgba(99, 102, 241, 0.08)', 
-              color: sidebarHidden ? '#34d399' : '#818cf8',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              boxShadow: sidebarHidden ? '0 0 14px rgba(52, 211, 153, 0.3)' : 'none',
-              marginLeft: '0.75rem'
-            }}
-            title={sidebarHidden ? "Click to Show / Open the Navigation Menu Bar" : "Click to Hide the Navigation Menu Bar"}
-          >
-            {sidebarHidden ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-            <span>{sidebarHidden ? 'Show Menu' : 'Hide Menu'}</span>
-          </button>
+          {/* Hide / Show Sidebar Menu Toggle Option (Displayed in sidebar layout mode) */}
+          {!isTopLayout && (
+            <button 
+              type="button"
+              onClick={toggleSidebarHidden}
+              className="btn btn-outline hide-menu-toggle-btn"
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '0.45rem', 
+                padding: '0.4rem 0.85rem', 
+                borderRadius: '10px', 
+                fontSize: '0.8rem', 
+                fontWeight: 700, 
+                borderColor: sidebarHidden ? 'rgba(52, 211, 153, 0.5)' : 'rgba(99, 102, 241, 0.4)', 
+                background: sidebarHidden ? 'linear-gradient(135deg, rgba(52, 211, 153, 0.2) 0%, rgba(16, 185, 129, 0.15) 100%)' : 'rgba(99, 102, 241, 0.08)', 
+                color: sidebarHidden ? '#34d399' : '#818cf8',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: sidebarHidden ? '0 0 14px rgba(52, 211, 153, 0.3)' : 'none',
+                marginLeft: '0.75rem'
+              }}
+              title={sidebarHidden ? "Click to Show / Open the Navigation Menu Bar" : "Click to Hide the Navigation Menu Bar"}
+            >
+              {sidebarHidden ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+              <span>{sidebarHidden ? 'Show Menu' : 'Hide Menu'}</span>
+            </button>
+          )}
         </div>
 
         {/* Right Side: User Profile, Users & Roles, App Settings & Controls */}
@@ -359,8 +406,8 @@ export const Navbar = ({ activePage, setActivePage }) => {
         )}
       </div>
 
-      {/* TOP NAVIGATION BAR (Rendered horizontally when layout === 'top') */}
-      {layout === 'top' && user && (
+      {/* TOP NAVIGATION BAR (Rendered horizontally when layout === 'top' or 'topbar') */}
+      {isTopLayout && user && (
         <div 
           className="top-nav-bar"
           style={{ 
@@ -379,29 +426,29 @@ export const Navbar = ({ activePage, setActivePage }) => {
           {/* Top Nav: Dashboard */}
           {canAccess('dashboard') && (
             <button
-              onClick={() => setActivePage('dashboard')}
+              onClick={() => handleTopNavClick('dashboard')}
               className={`has-tooltip top-nav-item btn ${activePage === 'dashboard' ? 'btn-primary' : 'btn-outline'}`}
-              style={{ padding: navMode === 'icons' ? '0.45rem 0.65rem' : '0.45rem 0.85rem', fontSize: '0.8rem' }}
+              style={{ padding: isCompact ? '0.45rem 0.65rem' : '0.45rem 0.85rem', fontSize: '0.8rem' }}
             >
               <LayoutDashboard size={15} />
-              {navMode === 'full' && <span>Dashboard</span>}
+              {!isCompact && <span>Dashboard</span>}
               <span className="nav-tooltip">Dashboard</span>
             </button>
           )}
 
           {/* Top Nav: Master Page Dropdown */}
-          {(canAccess('master') || canAccess('customer-master')) && (
+          {(canAccess('master') || canAccess('customer-master') || canAccess('company-details')) && (
             <div ref={topDropdownRef} style={{ position: 'relative', zIndex: 99999 }}>
               <button
-                onClick={() => { setTopMasterOpen(!topMasterOpen); setTopCertOpen(false); setTopInvoiceOpen(false); setTopCardOpen(false); setTopPassOpen(false); }}
+                onClick={() => toggleTopDropdown('master')}
                 className={`has-tooltip top-nav-item btn ${isMasterActive ? 'btn-primary' : 'btn-outline'}`}
-                style={{ padding: navMode === 'icons' ? '0.45rem 0.65rem' : '0.45rem 0.85rem', fontSize: '0.8rem', gap: '0.35rem' }}
+                style={{ padding: isCompact ? '0.45rem 0.65rem' : '0.45rem 0.85rem', fontSize: '0.8rem', gap: '0.35rem' }}
                 title="Master Pages"
               >
                 <Layers size={15} />
-                {navMode === 'full' && <span>Master Directory</span>}
+                {!isCompact && <span>Master Directory</span>}
                 <ChevronDown size={13} />
-                {navMode === 'icons' && !topMasterOpen && <span className="nav-tooltip">Master Pages</span>}
+                {isCompact && !topMasterOpen && <span className="nav-tooltip">Master Pages</span>}
               </button>
 
               {topMasterOpen && (
@@ -431,7 +478,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
 
                   {canAccess('master') && (
                     <button
-                      onClick={() => { setActivePage('master'); setTopMasterOpen(false); }}
+                      onClick={() => handleTopNavClick('master')}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -453,7 +500,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
                   )}
                   {canAccess('customer-master') && (
                     <button
-                      onClick={() => { setActivePage('customer-master'); setTopMasterOpen(false); }}
+                      onClick={() => handleTopNavClick('customer-master')}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -475,7 +522,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
                   )}
                   {canAccess('company-details') && (
                     <button
-                      onClick={() => { setActivePage('company-details'); setTopMasterOpen(false); }}
+                      onClick={() => handleTopNavClick('company-details')}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -504,15 +551,15 @@ export const Navbar = ({ activePage, setActivePage }) => {
           {(canAccess('challan') || canAccess('challan-list') || canAccess('proforma-invoice') || canAccess('proforma-invoice-history')) && (
             <div ref={topInvoiceDropdownRef} style={{ position: 'relative', zIndex: 99999 }}>
               <button
-                onClick={() => { setTopInvoiceOpen(!topInvoiceOpen); setTopMasterOpen(false); setTopCertOpen(false); setTopCardOpen(false); setTopPassOpen(false); setTopAuditOpen(false); }}
+                onClick={() => toggleTopDropdown('invoice')}
                 className={`has-tooltip top-nav-item btn ${isInvoiceActive ? 'btn-accent' : 'btn-outline'}`}
-                style={{ padding: navMode === 'icons' ? '0.45rem 0.65rem' : '0.45rem 0.85rem', fontSize: '0.8rem', gap: '0.35rem' }}
+                style={{ padding: isCompact ? '0.45rem 0.65rem' : '0.45rem 0.85rem', fontSize: '0.8rem', gap: '0.35rem' }}
                 title="Invoice"
               >
                 <FileSpreadsheet size={15} />
-                {navMode === 'full' && <span>Invoice</span>}
+                {!isCompact && <span>Invoice</span>}
                 <ChevronDown size={13} />
-                {navMode === 'icons' && !topInvoiceOpen && <span className="nav-tooltip">Invoice</span>}
+                {isCompact && !topInvoiceOpen && <span className="nav-tooltip">Invoice</span>}
               </button>
 
               {topInvoiceOpen && (
@@ -542,7 +589,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
 
                   {canAccess('challan') && (
                     <button
-                      onClick={() => { setActivePage('challan'); setTopInvoiceOpen(false); }}
+                      onClick={() => handleTopNavClick('challan')}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -564,7 +611,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
                   )}
                   {canAccess('challan-list') && (
                     <button
-                      onClick={() => { setActivePage('challan-list'); setTopInvoiceOpen(false); }}
+                      onClick={() => handleTopNavClick('challan-list')}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -591,7 +638,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
 
                   {canAccess('proforma-invoice') && (
                     <button
-                      onClick={() => { setActivePage('proforma-invoice'); setTopInvoiceOpen(false); }}
+                      onClick={() => handleTopNavClick('proforma-invoice')}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -613,7 +660,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
                   )}
                   {canAccess('proforma-invoice-history') && (
                     <button
-                      onClick={() => { setActivePage('proforma-invoice-history'); setTopInvoiceOpen(false); }}
+                      onClick={() => handleTopNavClick('proforma-invoice-history')}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -642,15 +689,15 @@ export const Navbar = ({ activePage, setActivePage }) => {
           {(canAccess('work-completion') || canAccess('work-completion-history')) && (
             <div ref={topCertDropdownRef} style={{ position: 'relative', zIndex: 99999 }}>
               <button
-                onClick={() => { setTopCertOpen(!topCertOpen); setTopMasterOpen(false); setTopInvoiceOpen(false); setTopCardOpen(false); setTopPassOpen(false); setTopAuditOpen(false); }}
+                onClick={() => toggleTopDropdown('cert')}
                 className={`has-tooltip top-nav-item btn ${isCertActive ? 'btn-secondary' : 'btn-outline'}`}
-                style={{ padding: navMode === 'icons' ? '0.45rem 0.65rem' : '0.45rem 0.85rem', fontSize: '0.8rem', gap: '0.35rem' }}
+                style={{ padding: isCompact ? '0.45rem 0.65rem' : '0.45rem 0.85rem', fontSize: '0.8rem', gap: '0.35rem' }}
                 title="Certificate"
               >
                 <Award size={15} />
-                {navMode === 'full' && <span>Certificate</span>}
+                {!isCompact && <span>Certificate</span>}
                 <ChevronDown size={13} />
-                {navMode === 'icons' && !topCertOpen && <span className="nav-tooltip">Certificate</span>}
+                {isCompact && !topCertOpen && <span className="nav-tooltip">Certificate</span>}
               </button>
 
               {topCertOpen && (
@@ -680,7 +727,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
 
                   {canAccess('work-completion') && (
                     <button
-                      onClick={() => { setActivePage('work-completion'); setTopCertOpen(false); }}
+                      onClick={() => handleTopNavClick('work-completion')}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -702,7 +749,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
                   )}
                   {canAccess('work-completion-history') && (
                     <button
-                      onClick={() => { setActivePage('work-completion-history'); setTopCertOpen(false); }}
+                      onClick={() => handleTopNavClick('work-completion-history')}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -731,15 +778,15 @@ export const Navbar = ({ activePage, setActivePage }) => {
           {(canAccess('job-card') || canAccess('job-card-history')) && (
             <div ref={topCardDropdownRef} style={{ position: 'relative', zIndex: 99999 }}>
               <button
-                onClick={() => { setTopCardOpen(!topCardOpen); setTopMasterOpen(false); setTopCertOpen(false); setTopInvoiceOpen(false); setTopPassOpen(false); }}
+                onClick={() => toggleTopDropdown('card')}
                 className={`has-tooltip top-nav-item btn ${isCardActive ? 'btn-primary' : 'btn-outline'}`}
-                style={{ padding: navMode === 'icons' ? '0.45rem 0.65rem' : '0.45rem 0.85rem', fontSize: '0.8rem', gap: '0.35rem' }}
+                style={{ padding: isCompact ? '0.45rem 0.65rem' : '0.45rem 0.85rem', fontSize: '0.8rem', gap: '0.35rem' }}
                 title="Card"
               >
                 <Wrench size={15} />
-                {navMode === 'full' && <span>Card</span>}
+                {!isCompact && <span>Card</span>}
                 <ChevronDown size={13} />
-                {navMode === 'icons' && !topCardOpen && <span className="nav-tooltip">Card</span>}
+                {isCompact && !topCardOpen && <span className="nav-tooltip">Card</span>}
               </button>
 
               {topCardOpen && (
@@ -769,7 +816,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
 
                   {canAccess('job-card') && (
                     <button
-                      onClick={() => { setActivePage('job-card'); setTopCardOpen(false); }}
+                      onClick={() => handleTopNavClick('job-card')}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -791,7 +838,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
                   )}
                   {canAccess('job-card-history') && (
                     <button
-                      onClick={() => { setActivePage('job-card-history'); setTopCardOpen(false); }}
+                      onClick={() => handleTopNavClick('job-card-history')}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -820,15 +867,15 @@ export const Navbar = ({ activePage, setActivePage }) => {
           {(canAccess('gate-pass') || canAccess('gate-pass-list')) && (
             <div ref={topPassDropdownRef} style={{ position: 'relative', zIndex: 99999 }}>
               <button
-                onClick={() => { setTopPassOpen(!topPassOpen); setTopMasterOpen(false); setTopCertOpen(false); setTopInvoiceOpen(false); setTopCardOpen(false); }}
+                onClick={() => toggleTopDropdown('pass')}
                 className={`has-tooltip top-nav-item btn ${isPassActive ? 'btn-accent' : 'btn-outline'}`}
-                style={{ padding: navMode === 'icons' ? '0.45rem 0.65rem' : '0.45rem 0.85rem', fontSize: '0.8rem', gap: '0.35rem' }}
+                style={{ padding: isCompact ? '0.45rem 0.65rem' : '0.45rem 0.85rem', fontSize: '0.8rem', gap: '0.35rem' }}
                 title="Pass"
               >
                 <ArrowLeftRight size={15} />
-                {navMode === 'full' && <span>Pass</span>}
+                {!isCompact && <span>Pass</span>}
                 <ChevronDown size={13} />
-                {navMode === 'icons' && !topPassOpen && <span className="nav-tooltip">Pass</span>}
+                {isCompact && !topPassOpen && <span className="nav-tooltip">Pass</span>}
               </button>
 
               {topPassOpen && (
@@ -858,7 +905,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
 
                   {canAccess('gate-pass') && (
                     <button
-                      onClick={() => { setActivePage('gate-pass'); setTopPassOpen(false); }}
+                      onClick={() => handleTopNavClick('gate-pass')}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -880,7 +927,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
                   )}
                   {canAccess('gate-pass-list') && (
                     <button
-                      onClick={() => { setActivePage('gate-pass-list'); setTopPassOpen(false); }}
+                      onClick={() => handleTopNavClick('gate-pass-list')}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -907,56 +954,60 @@ export const Navbar = ({ activePage, setActivePage }) => {
 
           {/* Top Nav: Audit (Sales Ledger & Purchase Ledger) */}
           {(canAccess('sales-ledger') || canAccess('purchase-ledger')) && (
-            <div style={{ position: 'relative' }} ref={topAuditDropdownRef}>
+            <div style={{ position: 'relative', zIndex: 99999 }} ref={topAuditDropdownRef}>
               <button
-                onClick={() => setTopAuditOpen(prev => !prev)}
+                onClick={() => toggleTopDropdown('audit')}
                 className={`has-tooltip top-nav-item btn ${isAuditActive ? 'btn-primary' : 'btn-outline'}`}
                 style={{ 
-                  padding: navMode === 'icons' ? '0.45rem 0.65rem' : '0.45rem 0.85rem', 
+                  padding: isCompact ? '0.45rem 0.65rem' : '0.45rem 0.85rem', 
                   fontSize: '0.8rem',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.45rem'
+                  gap: '0.35rem'
                 }}
+                title="Audit"
               >
                 <BookOpen size={15} color={isAuditActive ? '#ffffff' : '#818cf8'} />
-                {navMode === 'full' && <span>Audit</span>}
-                {navMode === 'full' && <ChevronDown size={13} style={{ opacity: 0.7 }} />}
-                <span className="nav-tooltip">Audit (Sales & Purchase Registers)</span>
+                {!isCompact && <span>Audit</span>}
+                <ChevronDown size={13} />
+                {isCompact && !topAuditOpen && <span className="nav-tooltip">Audit (Sales & Purchase Registers)</span>}
               </button>
 
               {topAuditOpen && (
                 <div 
-                  className="animate-fade-in"
                   style={{
                     position: 'absolute',
                     top: 'calc(100% + 6px)',
                     left: 0,
-                    background: 'var(--card-bg, #0f172a)',
-                    border: '1px solid rgba(99, 102, 241, 0.4)',
-                    borderRadius: '10px',
-                    padding: '0.4rem',
-                    minWidth: '190px',
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-                    zIndex: 9999,
+                    background: 'var(--bg-card-solid)',
+                    border: '1.5px solid var(--border-color-accent)',
+                    borderRadius: '12px',
+                    boxShadow: '0 20px 45px rgba(0,0,0,0.45)',
+                    padding: '0.5rem',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '0.25rem'
+                    gap: '0.35rem',
+                    zIndex: 999999,
+                    minWidth: '220px',
+                    animation: 'scaleIn 0.15s ease-out'
                   }}
                 >
+                  <div style={{ padding: '0.25rem 0.5rem', borderBottom: '1px solid var(--border-color)', marginBottom: '0.2rem' }}>
+                    <span style={{ fontSize: '0.675rem', fontWeight: 800, color: 'var(--text-subtle)', textTransform: 'uppercase' }}>
+                      AUDIT & REGISTERS
+                    </span>
+                  </div>
+
                   {/* Sales Ledger */}
                   {canAccess('sales-ledger') && (
                     <button
-                      onClick={() => {
-                        setActivePage('sales-ledger');
-                        setTopAuditOpen(false);
-                      }}
+                      onClick={() => handleTopNavClick('sales-ledger')}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.625rem',
-                        padding: '0.5rem 0.75rem',
-                        borderRadius: '6px',
+                        gap: '0.5rem',
+                        padding: '0.55rem 0.75rem',
+                        borderRadius: '8px',
                         border: 'none',
                         background: activePage === 'sales-ledger' ? 'rgba(99, 102, 241, 0.18)' : 'transparent',
                         color: 'var(--text-main)',
@@ -974,16 +1025,13 @@ export const Navbar = ({ activePage, setActivePage }) => {
                   {/* Purchase Ledger */}
                   {canAccess('purchase-ledger') && (
                     <button
-                      onClick={() => {
-                        setActivePage('purchase-ledger');
-                        setTopAuditOpen(false);
-                      }}
+                      onClick={() => handleTopNavClick('purchase-ledger')}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.625rem',
-                        padding: '0.5rem 0.75rem',
-                        borderRadius: '6px',
+                        gap: '0.5rem',
+                        padding: '0.55rem 0.75rem',
+                        borderRadius: '8px',
                         border: 'none',
                         background: activePage === 'purchase-ledger' ? 'rgba(236, 72, 153, 0.18)' : 'transparent',
                         color: 'var(--text-main)',

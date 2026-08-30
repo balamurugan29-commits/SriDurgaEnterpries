@@ -135,6 +135,8 @@ const MainApp = () => {
     setEditingGatePass(null);
   };
 
+  const isTopLayout = layout === 'top' || layout === 'topbar';
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-dark)' }}>
       <Navbar activePage={activePage} setActivePage={handleSetActivePage} />
@@ -148,7 +150,7 @@ const MainApp = () => {
             flex: 1, 
             padding: '1.5rem 2rem', 
             overflowY: 'auto', 
-            maxHeight: layout === 'top' ? 'calc(100vh - 110px)' : 'calc(100vh - 65px)',
+            maxHeight: isTopLayout ? 'calc(100vh - 110px)' : 'calc(100vh - 65px)',
             width: '100%',
             position: 'relative',
             zIndex: 1

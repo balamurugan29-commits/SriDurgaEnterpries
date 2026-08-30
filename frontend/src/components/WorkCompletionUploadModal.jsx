@@ -503,14 +503,20 @@ export const WorkCompletionUploadModal = ({
 
                   <div>
                     <label className="form-label">Requirement Details</label>
-                    <select
+                    <input
+                      type="text"
+                      list="upload-requirement-datalist"
                       className="form-input"
-                      value={extractedData.equipmentDescription || 'Material'}
+                      placeholder="e.g. Service / Material"
+                      value={extractedData.equipmentDescription || ''}
                       onChange={(e) => handleFieldChange('equipmentDescription', e.target.value)}
-                    >
-                      <option value="Material">Material</option>
-                      <option value="Service">Service</option>
-                    </select>
+                    />
+                    <datalist id="upload-requirement-datalist">
+                      <option value="Service" />
+                      <option value="Material" />
+                      <option value="Service & Material" />
+                      <option value="Overhauling & Repair" />
+                    </datalist>
                   </div>
 
                   <div>
