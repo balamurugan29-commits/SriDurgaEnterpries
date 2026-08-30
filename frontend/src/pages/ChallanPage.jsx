@@ -271,11 +271,11 @@ const ItemCodeCombobox = React.memo(({ id, value, masterItems, isFetched, onChan
   const filteredItems = useMemo(() => {
     if (!masterItems || masterItems.length === 0) return [];
     const q = (query || '').trim().toLowerCase();
-    if (!q) return masterItems.slice(0, 30);
+    if (!q) return masterItems.slice(0, 40);
     return masterItems.filter(m => 
       (m.itemCode && m.itemCode.toLowerCase().includes(q)) ||
       (m.description && m.description.toLowerCase().includes(q))
-    ).slice(0, 30);
+    ).slice(0, 40);
   }, [masterItems, query]);
 
   useEffect(() => {
@@ -286,51 +286,83 @@ const ItemCodeCombobox = React.memo(({ id, value, masterItems, isFetched, onChan
     const val = e.target.value;
     setQuery(val);
     onChange(val);
+    if (!isOpen) setIsOpen(true);
   };
 
   const handleItemSelect = (m) => {
     setQuery(m.itemCode);
-    onSelect(m);
     setIsOpen(false);
+    onSelect(m);
+    if (onEnterNext) {
+      setTimeout(() => onEnterNext(), 30);
+    }
   };
 
   const handleKeyDown = (e) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setIsOpen(true);
-      setHighlightedIndex(prev => (prev < filteredItems.length - 1 ? prev + 1 : 0));
+      if (!isOpen) {
+        setIsOpen(true);
+        setHighlightedIndex(0);
+      } else {
+        setHighlightedIndex(prev => {
+          const next = prev < filteredItems.length - 1 ? prev + 1 : 0;
+          setTimeout(() => {
+            const el = document.getElementById(`combo-item-${id}-${next}`);
+            if (el) el.scrollIntoView({ block: 'nearest' });
+          }, 10);
+          return next;
+        });
+      }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setIsOpen(true);
-      setHighlightedIndex(prev => (prev > 0 ? prev - 1 : filteredItems.length - 1));
+      if (!isOpen) {
+        setIsOpen(true);
+        setHighlightedIndex(filteredItems.length - 1);
+      } else {
+        setHighlightedIndex(prev => {
+          const next = prev > 0 ? prev - 1 : filteredItems.length - 1;
+          setTimeout(() => {
+            const el = document.getElementById(`combo-item-${id}-${next}`);
+            if (el) el.scrollIntoView({ block: 'nearest' });
+          }, 10);
+          return next;
+        });
+      }
     } else if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();
+      setIsOpen(false);
+
+      // 1. If dropdown has items and highlighted item is within bounds, select it immediately
+      if (filteredItems.length > 0 && highlightedIndex >= 0 && highlightedIndex < filteredItems.length) {
+        handleItemSelect(filteredItems[highlightedIndex]);
+        return;
+      }
+
+      // 2. Exact match check across all master items
       const cleanQ = (query || '').trim().toUpperCase();
-      // 1. Exact match check
       const exactMatch = masterItems.find(m => m.itemCode && m.itemCode.trim().toUpperCase() === cleanQ);
       if (exactMatch) {
         handleItemSelect(exactMatch);
         return;
       }
-      // 2. Highlighted or first dropdown item
-      if (isOpen && filteredItems.length > 0) {
-        const selected = filteredItems[highlightedIndex] || filteredItems[0];
-        if (selected) {
-          handleItemSelect(selected);
-          return;
-        }
-      }
-      // 3. First match if query not empty
+
+      // 3. First match if query is not empty
       if (filteredItems.length > 0 && cleanQ) {
         handleItemSelect(filteredItems[0]);
         return;
       }
+
       // 4. Custom manual entry
       onChange(query);
-      setIsOpen(false);
-      if (onEnterNext) onEnterNext();
+      if (onEnterNext) {
+        setTimeout(() => onEnterNext(), 30);
+      }
     } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setIsOpen(false);
+    } else if (e.key === 'Tab') {
       setIsOpen(false);
     }
   };
@@ -390,10 +422,10 @@ const ItemCodeCombobox = React.memo(({ id, value, masterItems, isFetched, onChan
             right: 0,
             marginTop: '4px',
             background: 'var(--bg-card-solid)',
-            border: '1px solid var(--border-color-accent)',
+            border: '1.5px solid var(--border-color-accent)',
             borderRadius: '10px',
-            boxShadow: '0 12px 30px rgba(0,0,0,0.5)',
-            maxHeight: '220px',
+            boxShadow: '0 12px 30px rgba(0,0,0,0.6)',
+            maxHeight: '230px',
             overflowY: 'auto',
             zIndex: 9999,
             padding: '4px'
@@ -404,7 +436,11 @@ const ItemCodeCombobox = React.memo(({ id, value, masterItems, isFetched, onChan
             return (
               <div
                 key={m.id || m.itemCode}
-                onClick={() => handleItemSelect(m)}
+                id={`combo-item-${id}-${idx}`}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleItemSelect(m);
+                }}
                 style={{
                   padding: '0.45rem 0.6rem',
                   borderRadius: '6px',
@@ -414,8 +450,8 @@ const ItemCodeCombobox = React.memo(({ id, value, masterItems, isFetched, onChan
                   justifyContent: 'space-between',
                   gap: '0.5rem',
                   borderBottom: '1px solid var(--border-color)',
-                  background: isHighlighted ? 'rgba(99, 102, 241, 0.25)' : 'transparent',
-                  transition: 'background 0.15s ease'
+                  background: isHighlighted ? 'rgba(99, 102, 241, 0.3)' : 'transparent',
+                  transition: 'background 0.1s ease'
                 }}
                 onMouseEnter={() => setHighlightedIndex(idx)}
               >
@@ -1114,23 +1150,9 @@ export const ChallanPage = ({ initialChallan, clearEditingChallan }) => {
   // Direct typing in Item Code input (Instant 0ms response)
   const handleItemCodeChange = (index, inputCode) => {
     const updated = [...lineItems];
-    const code = (inputCode || '').trim().toUpperCase();
     updated[index].itemCode = inputCode;
-
-    if (!code) {
-      updated[index].fetched = false;
-      setLineItems(updated);
-      return;
-    }
-
-    // Fast in-memory check if code exactly matches
-    const foundMasterItem = masterItems.find(i => i.itemCode && i.itemCode.toUpperCase() === code);
-    if (foundMasterItem) {
-      applyMasterItemToRow(index, foundMasterItem);
-    } else {
-      updated[index].fetched = false;
-      setLineItems(autoExpandLineItems(updated));
-    }
+    updated[index].fetched = false;
+    setLineItems(updated);
   };
 
   // Dropdown Selection handler
