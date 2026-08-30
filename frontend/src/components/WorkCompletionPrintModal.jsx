@@ -124,25 +124,9 @@ export const WorkCompletionPrintModal = ({ isOpen, onClose, certificate }) => {
   };
 
   const renderEquipmentDetailsGrid = () => {
-    if (isService) {
-      return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr 1fr', gap: '6px 14px', fontSize: '13px' }}>
-          <div><strong>Description:</strong> Service</div>
-          <div><strong>Equipment:</strong> {certificate.equipment || '-'}</div>
-          <div><strong>Location:</strong> {certificate.location || '-'}</div>
-
-          <div><strong>Make:</strong> {certificate.make || '-'}</div>
-          <div><strong>Sl. No.:</strong> {certificate.slNo || '-'}</div>
-          <div><strong>Capacity:</strong> {certificate.capacity || '-'}</div>
-
-          <div style={{ gridColumn: 'span 3' }}><strong>Type / Model:</strong> {certificate.typeModel || '-'}</div>
-        </div>
-      );
-    }
-
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '6px 12px', fontSize: '13px' }}>
-        <div><strong>Description:</strong> Material</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '6px 14px', fontSize: '13px' }}>
+        <div><strong>Description:</strong> {certificate.equipmentDescription || 'Service'}</div>
         <div><strong>Location:</strong> {certificate.location || '-'}</div>
         <div><strong>Make:</strong> {certificate.make || '-'}</div>
 
