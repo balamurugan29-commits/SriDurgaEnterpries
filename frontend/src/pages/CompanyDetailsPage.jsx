@@ -55,9 +55,13 @@ export const CompanyDetailsPage = () => {
       const data = await fetchCompanyDetails();
       if (data) {
         const clean = {
-          ...DEFAULT_COMPANY_DETAILS,
-          ...data
+          ...DEFAULT_COMPANY_DETAILS
         };
+        Object.keys(data).forEach(k => {
+          if (data[k] !== undefined && data[k] !== null && String(data[k]).trim() !== '') {
+            clean[k] = data[k];
+          }
+        });
         setFormData(clean);
         setSavedData(clean);
       }

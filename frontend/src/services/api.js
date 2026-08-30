@@ -1491,19 +1491,23 @@ export const deleteProforma = async (id) => {
 // COMPANY DETAILS MASTER API SERVICES
 // ==========================================
 export const DEFAULT_COMPANY_DETAILS = {
-  companyName: '',
-  address: '',
-  phone: '',
-  email: '',
-  gstin: '',
-  pan: '',
-  state: '',
-  epfCode: '',
-  esiCode: '',
-  bankName: '',
-  branch: '',
-  accountNumber: '',
-  ifscCode: ''
+  companyName: 'SRI DURGA ENTERPRISES',
+  address: 'No. 10 V.G. Nagar, Kovilpathu, Karaikal – 609 602',
+  phone: '9842492946',
+  email: 'sridurgaenterprises@yahoo.com',
+  gstin: '34ABDFS4476N1ZN',
+  pan: 'ABDFS4476N',
+  state: 'Puducherry (34)',
+  epfCode: 'PC 1758',
+  esiCode: '55000426770000602',
+  bankName: 'Bank of India',
+  branch: 'Karaikal',
+  accountNumber: '811030100000006',
+  ifscCode: 'BKID0008110',
+  contractNo: '9010038288',
+  contractPeriod: '01.05.2024 to 30.04.2027',
+  bgNo: '8110IPEBG240001  Validity Upto : 30.09.2027',
+  vendorCode: '840305'
 };
 
 export const fetchCompanyDetails = async () => {
