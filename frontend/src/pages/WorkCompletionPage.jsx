@@ -670,23 +670,6 @@ export const WorkCompletionPage = ({ editingCertificate, onCancelEdit }) => {
             </datalist>
           </div>
 
-          {/* Conditional Field: Equipment appears BEFORE Location ONLY when "Service" is selected */}
-          {isServiceSelected && (
-            <div style={{ gridColumn: 'span 2' }}>
-              <label className="form-label" style={{ color: '#fbbf24', fontWeight: 700 }}>
-                Equipment <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>(Appears for Service mode)</span>
-              </label>
-              <input 
-                type="text" 
-                className="form-input" 
-                style={{ borderColor: 'rgba(245, 158, 11, 0.4)', fontWeight: 600, color: 'var(--text-main)' }}
-                placeholder="e.g. Induction Motor 50HP / Submersible Pump / Contactor Assembly" 
-                value={formData.equipment} 
-                onChange={e => handleInputChange('equipment', e.target.value)} 
-              />
-            </div>
-          )}
-
           {/* Location Field */}
           <div>
             <label className="form-label">Location</label>
