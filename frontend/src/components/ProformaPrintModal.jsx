@@ -809,19 +809,19 @@ export const ProformaPrintModal = ({ isOpen, onClose, proforma }) => {
                               </div>
                               <div style={{ display: 'flex' }}>
                                 <span style={{ width: '85px', fontWeight: '500' }}>Bank Name</span>
-                                <span>: {companyDetails?.bankName || 'Bank of India'}</span>
+                                <span>: {companyDetails?.bankName || '-'}</span>
                               </div>
                               <div style={{ display: 'flex' }}>
                                 <span style={{ width: '85px', fontWeight: '500' }}>Account No.</span>
-                                <span>: <strong>{companyDetails?.accountNumber || '811030100000006'}</strong></span>
+                                <span>: <strong>{companyDetails?.accountNumber || '-'}</strong></span>
                               </div>
                               <div style={{ display: 'flex' }}>
                                 <span style={{ width: '85px', fontWeight: '500' }}>Branch</span>
-                                <span>: {companyDetails?.branch || 'Karaikal'}</span>
+                                <span>: {companyDetails?.branch || '-'}</span>
                               </div>
                               <div style={{ display: 'flex' }}>
                                 <span style={{ width: '85px', fontWeight: '500' }}>IFSC</span>
-                                <span>: <strong>{companyDetails?.ifscCode || 'BKID0008110'}</strong></span>
+                                <span>: <strong>{companyDetails?.ifscCode || '-'}</strong></span>
                               </div>
                             </div>
 
