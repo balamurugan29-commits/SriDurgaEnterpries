@@ -180,6 +180,39 @@ try {
 }
 
 # ------------------------------------------------------------------------------
+# 3C. TOTAL DATABASE BACKUP & RESTORE
+# ------------------------------------------------------------------------------
+Write-Host "`n--- MODULE 3C: Database Backup & Restore ---" -ForegroundColor Cyan
+try {
+    # 1. Download Backup
+    $backupData = Invoke-RestMethod -Uri "$baseUrl/api/database/download" -Method Get -Headers $adminHeaders
+    Assert-Test "Download Total Database Backup" ($backupData.app -ne $null -and $backupData.counts -ne $null) "App: $($backupData.app) | Version: $($backupData.version)"
+
+    # 2. Restore Database via JSON Payload
+    $restoreJsonRes = Invoke-RestMethod -Uri "$baseUrl/api/database/restore" -Method Post -Headers $adminHeaders -Body ($backupData | ConvertTo-Json -Depth 10) -ContentType "application/json"
+    Assert-Test "Restore Database via JSON Payload" ($restoreJsonRes.success -eq $true) "$($restoreJsonRes.message)"
+
+    # 3. Restore Database via Multipart File Upload
+    $tmpFile = [System.IO.Path]::GetTempFileName() + ".json"
+    $backupData | ConvertTo-Json -Depth 10 | Set-Content -Path $tmpFile
+    $tmpBytes = [System.IO.File]::ReadAllBytes($tmpFile)
+    $boundaryStr = [System.Guid]::NewGuid().ToString()
+    $crlf = "`r`n"
+    $multipartBody = (
+        "--$boundaryStr",
+        "Content-Disposition: form-data; name=`"file`"; filename=`"test_backup.json`"",
+        "Content-Type: application/json$crlf",
+        [System.Text.Encoding]::UTF8.GetString($tmpBytes),
+        "--$boundaryStr--$crlf"
+    ) -join $crlf
+    $uploadRestoreRes = Invoke-RestMethod -Uri "$baseUrl/api/database/upload-restore" -Method Post -Headers @{ Authorization = "Bearer $($adminAuth.token)" } -ContentType "multipart/form-data; boundary=$boundaryStr" -Body $multipartBody
+    Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue
+    Assert-Test "Upload & Restore Database via File Upload" ($uploadRestoreRes.success -eq $true) "$($uploadRestoreRes.message)"
+} catch {
+    Assert-Test "Database Backup & Restore Operations" $false $_.Exception.Message
+}
+
+# ------------------------------------------------------------------------------
 # 4. ITEM MASTER CRUD & AUTO-CALCULATIONS
 # ------------------------------------------------------------------------------
 Write-Host "`n--- MODULE 4: Item Master & Auto-Calculations ---" -ForegroundColor Cyan

@@ -49,7 +49,7 @@ public class DatabaseBackupController {
      * Restore Total Database via JSON Payload
      */
     @PostMapping("/restore")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Object>> restoreDatabase(@RequestBody DatabaseBackupDTO backup) {
         log.info("Request to restore database via JSON payload received");
         Map<String, Object> result = databaseBackupService.restoreDatabaseBackup(backup);
@@ -60,7 +60,7 @@ public class DatabaseBackupController {
      * Upload & Restore Total Database via File Upload (.json / .sdbak)
      */
     @PostMapping("/upload-restore")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Object>> uploadAndRestoreDatabase(@RequestParam("file") MultipartFile file) {
         log.info("Request to upload and restore database file: {} ({} bytes)", file.getOriginalFilename(), file.getSize());
 
