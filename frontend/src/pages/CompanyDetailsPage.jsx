@@ -275,11 +275,11 @@ export const CompanyDetailsPage = () => {
 
         <div className="glass-panel" style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
           <div style={{ background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24', padding: '0.6rem', borderRadius: '10px' }}>
-            <Landmark size={20} />
+            <CreditCard size={20} />
           </div>
           <div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Settlement Bank</div>
-            <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#fbbf24' }}>{formData.bankName || '(Not Set)'}</div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Permanent PAN</div>
+            <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#fbbf24', fontFamily: 'monospace' }}>{formData.pan || '(Not Set)'}</div>
           </div>
         </div>
       </div>
