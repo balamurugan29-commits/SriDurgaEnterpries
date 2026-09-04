@@ -78,6 +78,19 @@ export const InvoiceImageUploadModal = ({
     };
   }, [isOpen, masterItems, masterCustomers]);
 
+  // Listen for Escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const handleDownloadTemplate = (e) => {
     if (e) e.stopPropagation();
     const templateData = [
@@ -212,7 +225,7 @@ export const InvoiceImageUploadModal = ({
     <div style={{
       position: 'fixed',
       inset: 0,
-      zIndex: 1200,
+      zIndex: 999999,
       background: 'rgba(5, 8, 18, 0.85)',
       backdropFilter: 'blur(8px)',
       display: 'flex',

@@ -307,6 +307,8 @@ export const ALL_SYSTEM_PERMISSIONS = [
   { id: 'dashboard', label: 'Dashboard Overview', category: 'General' },
   { id: 'master', label: 'Item Master Catalog', category: 'Master Directory' },
   { id: 'customer-master', label: 'Customer Directory', category: 'Master Directory' },
+  { id: 'employee-master', label: 'Employee Master Directory', category: 'Master Directory' },
+  { id: 'attendance', label: 'Staff Attendance & Salary Payroll', category: 'Staff & Payroll' },
   { id: 'company-details', label: 'Company Details Master', category: 'Master Directory' },
   { id: 'challan', label: 'Create Tax Invoice', category: 'Invoice' },
   { id: 'challan-list', label: 'Tax Invoice History', category: 'Invoice' },
@@ -337,7 +339,7 @@ export const DEFAULT_INITIAL_USERS = [
     password: 'staff123',
     fullName: 'Billing & Dispatch Staff',
     role: 'STAFF',
-    permissions: 'dashboard,master,customer-master,company-details,challan,challan-list,proforma-invoice,proforma-invoice-history,gate-pass,gate-pass-list,job-card,job-card-history,work-completion,work-completion-history'
+    permissions: 'dashboard,master,customer-master,employee-master,attendance,company-details,challan,challan-list,proforma-invoice,proforma-invoice-history,gate-pass,gate-pass-list,job-card,job-card-history,work-completion,work-completion-history'
   }
 ];
 
@@ -751,6 +753,247 @@ export const deleteCustomer = async (id) => {
     return { message: 'Customer deleted successfully' };
   }
 };
+
+// Employee Master API Calls
+const DEFAULT_INITIAL_EMPLOYEES = [
+  {
+    id: 1,
+    serialNumber: 1,
+    employeeNumber: 'SDE-001',
+    employeeName: 'R. Balamurugan',
+    designation: 'Managing Director / Senior Engineer',
+    dob: '1985-05-15',
+    phone: '9842492946',
+    email: 'sridurgaenterpriseskkl@gmail.com',
+    address: 'No. 12, Main Road, Thirumalairajan Pattinam, Karaikal - 609606',
+    epfNumber: 'PC1758/0012480',
+    esiNumber: '55000426770000602',
+    bankName: 'State Bank of India',
+    branchName: 'Karaikal Main',
+    accountNumber: '30124587965',
+    ifscCode: 'SBIN0000854',
+    joiningDate: '2015-04-01',
+    releasingDate: '',
+    status: 'Active',
+    bloodGroup: 'O+'
+  }
+];
+
+const getStoredEmployees = () => {
+  const local = localStorage.getItem('sri_durga_employees_master');
+  if (local) {
+    try { return JSON.parse(local); } catch(e) {}
+  }
+  localStorage.setItem('sri_durga_employees_master', JSON.stringify(DEFAULT_INITIAL_EMPLOYEES));
+  return DEFAULT_INITIAL_EMPLOYEES;
+};
+
+const saveStoredEmployees = (employees) => {
+  localStorage.setItem('sri_durga_employees_master', JSON.stringify(employees));
+};
+
+export const fetchEmployees = async (searchQuery = '') => {
+  try {
+    const res = await api.get('/employees', { params: { search: searchQuery } });
+    return res.data || [];
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for fetchEmployees');
+    const employees = getStoredEmployees();
+    if (!searchQuery) return employees;
+    const q = searchQuery.toLowerCase();
+    return employees.filter(
+      e => (e.employeeName && e.employeeName.toLowerCase().includes(q)) ||
+           (e.employeeNumber && e.employeeNumber.toLowerCase().includes(q)) ||
+           (e.designation && e.designation.toLowerCase().includes(q)) ||
+           (e.phone && e.phone.includes(q)) ||
+           (e.epfNumber && e.epfNumber.toLowerCase().includes(q)) ||
+           (e.esiNumber && e.esiNumber.toLowerCase().includes(q))
+    );
+  }
+};
+
+export const createEmployee = async (employeeData) => {
+  try {
+    const res = await api.post('/employees', employeeData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for createEmployee');
+    const employees = getStoredEmployees();
+    const newEmp = {
+      id: Date.now(),
+      serialNumber: employeeData.serialNumber || (employees.length + 1),
+      employeeNumber: employeeData.employeeNumber || `EMP-${String(employees.length + 1).padStart(3, '0')}`,
+      employeeName: employeeData.employeeName,
+      designation: employeeData.designation || '',
+      dob: employeeData.dob || '',
+      phone: employeeData.phone || '',
+      email: employeeData.email || '',
+      address: employeeData.address || '',
+      epfNumber: employeeData.epfNumber || '',
+      esiNumber: employeeData.esiNumber || '',
+      bankName: employeeData.bankName || '',
+      branchName: employeeData.branchName || '',
+      accountNumber: employeeData.accountNumber || '',
+      ifscCode: employeeData.ifscCode || '',
+      joiningDate: employeeData.joiningDate || '',
+      releasingDate: employeeData.releasingDate || '',
+      status: employeeData.status || 'Active',
+      bloodGroup: employeeData.bloodGroup || ''
+    };
+    employees.push(newEmp);
+    saveStoredEmployees(employees);
+    return newEmp;
+  }
+};
+
+export const updateEmployee = async (id, employeeData) => {
+  try {
+    const res = await api.put(`/employees/${id}`, employeeData);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for updateEmployee');
+    const employees = getStoredEmployees();
+    const index = employees.findIndex(e => e.id === id);
+    if (index !== -1) {
+      const updated = {
+        ...employees[index],
+        ...employeeData
+      };
+      employees[index] = updated;
+      saveStoredEmployees(employees);
+      return updated;
+    }
+    throw new Error('Employee not found');
+  }
+};
+
+export const deleteEmployee = async (id) => {
+  try {
+    const res = await api.delete(`/employees/${id}`);
+    return res.data;
+  } catch (err) {
+    console.warn('Backend unavailable, using client storage fallback for deleteEmployee');
+    let employees = getStoredEmployees();
+    employees = employees.filter(e => e.id !== id).map((item, idx) => ({ ...item, serialNumber: idx + 1 }));
+    saveStoredEmployees(employees);
+    return { message: 'Employee deleted successfully' };
+  }
+};
+
+// ==========================================
+// STAFF ATTENDANCE & PAYROLL APIS
+// ==========================================
+
+export const fetchAttendanceByDate = async (dateStr) => {
+  try {
+    const res = await api.get('/attendance', { params: { date: dateStr } });
+    return res.data || [];
+  } catch (err) {
+    console.error('Failed to fetch attendance by date:', err);
+    return [];
+  }
+};
+
+export const fetchAttendanceByMonth = async (month, year) => {
+  try {
+    const res = await api.get('/attendance/month', { params: { month, year } });
+    return res.data || [];
+  } catch (err) {
+    console.error('Failed to fetch attendance by month:', err);
+    return [];
+  }
+};
+
+export const saveDailyAttendanceBatch = async (dateStr, records) => {
+  const res = await api.post('/attendance/batch', records, { params: { date: dateStr } });
+  return res.data;
+};
+
+export const markAllEmployeesPresent = async (dateStr) => {
+  const res = await api.post('/attendance/mark-all-present', null, { params: { date: dateStr } });
+  return res.data;
+};
+
+export const fetchSalariesByMonth = async (salaryMonth) => {
+  try {
+    const res = await api.get('/salaries', { params: { salaryMonth } });
+    return res.data || [];
+  } catch (err) {
+    console.error('Failed to fetch salaries:', err);
+    return [];
+  }
+};
+
+export const fetchAvailableSalaryMonths = async () => {
+  try {
+    const res = await api.get('/salaries/months');
+    return res.data || [];
+  } catch (err) {
+    console.error('Failed to fetch available salary months:', err);
+    return [];
+  }
+};
+
+export const saveSalaryRecord = async (salaryData) => {
+  const res = await api.post('/salaries', salaryData);
+  return res.data;
+};
+
+export const saveSalariesBatch = async (salariesList) => {
+  const res = await api.post('/salaries/batch', salariesList);
+  return res.data;
+};
+
+export const generateMonthlySalaries = async (month, year, totalWorkingDays = 26) => {
+  const res = await api.post('/salaries/generate', { month, year, totalWorkingDays });
+  return res.data;
+};
+
+export const fetchEmployeeAdvances = async (employeeId) => {
+  try {
+    const res = await api.get(`/advances/${employeeId}`);
+    return res.data || [];
+  } catch (err) {
+    console.error('Failed to fetch employee advances:', err);
+    return [];
+  }
+};
+
+export const fetchEmployeeAdvanceBalance = async (employeeId) => {
+  try {
+    const res = await api.get(`/advances/${employeeId}/balance`);
+    return res.data?.balance || 0;
+  } catch (err) {
+    console.error('Failed to fetch advance balance:', err);
+    return 0;
+  }
+};
+
+export const fetchAdvanceSummary = async () => {
+  try {
+    const res = await api.get('/advances/summary');
+    return res.data || {};
+  } catch (err) {
+    console.error('Failed to fetch advance summary:', err);
+    return {};
+  }
+};
+
+export const fetchAllAdvances = async () => {
+  try {
+    const res = await api.get('/advances');
+    return res.data || [];
+  } catch (err) {
+    console.error('Failed to fetch all advances:', err);
+    return [];
+  }
+};
+
+export const saveAdvanceTransaction = async (advanceData) => {
+  const res = await api.post('/advances', advanceData);
+  return res.data;
+};
+
 
 // Delivery Challan API Calls
 export const fetchChallans = async () => {
@@ -1578,4 +1821,5 @@ export const fetchDatabaseSummary = async () => {
   const res = await api.get('/database/summary');
   return res.data;
 };
+
 

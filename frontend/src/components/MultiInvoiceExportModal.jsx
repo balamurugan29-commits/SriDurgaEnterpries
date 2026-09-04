@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Printer, CheckCircle, FileText, Download } from 'lucide-react';
 import { companyLogoBase64 } from '../assets/companyLogo';
 
@@ -39,6 +39,19 @@ export const MultiInvoiceExportModal = ({ isOpen, onClose, selectedChallans = []
     const saved = localStorage.getItem('sri_durga_print_show_declaration');
     return saved !== null ? saved === 'true' : true;
   });
+
+  // Listen for Escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen || !selectedChallans || selectedChallans.length === 0) return null;
 
@@ -126,7 +139,7 @@ export const MultiInvoiceExportModal = ({ isOpen, onClose, selectedChallans = []
   };
 
   return (
-    <div className="no-print-modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 1050, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
+    <div className="no-print-modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 999999, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', overflowY: 'auto' }}>
       
       <div className="glass-panel-print-wrap" style={{ width: '100%', maxWidth: '920px', maxHeight: '94vh', display: 'flex', flexDirection: 'column', background: '#0f172a', border: '1px solid rgba(99, 102, 241, 0.4)', borderRadius: '16px', overflow: 'hidden' }}>
         

@@ -31,6 +31,18 @@ public class DatabaseBackupService {
     private CustomerMasterRepository customerMasterRepository;
 
     @Autowired
+    private EmployeeMasterRepository employeeMasterRepository;
+
+    @Autowired
+    private EmployeeAttendanceRepository attendanceRepository;
+
+    @Autowired
+    private EmployeeSalaryRepository salaryRepository;
+
+    @Autowired
+    private EmployeeAdvanceRepository advanceRepository;
+
+    @Autowired
     private ItemMasterRepository itemMasterRepository;
 
     @Autowired
@@ -66,6 +78,10 @@ public class DatabaseBackupService {
 
         List<CompanyDetails> companyDetails = companyDetailsRepository.findAll();
         List<CustomerMaster> customers = customerMasterRepository.findAll();
+        List<EmployeeMaster> employees = employeeMasterRepository.findAll();
+        List<EmployeeAttendance> attendance = attendanceRepository.findAll();
+        List<EmployeeSalary> salaries = salaryRepository.findAll();
+        List<EmployeeAdvance> advances = advanceRepository.findAll();
         List<ItemMaster> items = itemMasterRepository.findAll();
         List<DeliveryChallan> deliveryChallans = deliveryChallanRepository.findAll();
         List<ProformaInvoice> proformaInvoices = proformaInvoiceRepository.findAll();
@@ -79,6 +95,10 @@ public class DatabaseBackupService {
         Map<String, Integer> counts = new HashMap<>();
         counts.put("companyDetails", companyDetails.size());
         counts.put("customers", customers.size());
+        counts.put("employees", employees.size());
+        counts.put("attendance", attendance.size());
+        counts.put("salaries", salaries.size());
+        counts.put("advances", advances.size());
         counts.put("items", items.size());
         counts.put("deliveryChallans", deliveryChallans.size());
         counts.put("proformaInvoices", proformaInvoices.size());
@@ -97,6 +117,10 @@ public class DatabaseBackupService {
                 .counts(counts)
                 .companyDetails(companyDetails)
                 .customers(customers)
+                .employees(employees)
+                .attendance(attendance)
+                .salaries(salaries)
+                .advances(advances)
                 .items(items)
                 .deliveryChallans(deliveryChallans)
                 .proformaInvoices(proformaInvoices)
@@ -120,7 +144,7 @@ public class DatabaseBackupService {
             throw new IllegalArgumentException("Invalid backup file: Backup data is completely empty.");
         }
 
-        // 1. Clean out existing data in safe foreign key cascade order (child tables first)
+        // 1. Clean out existing data in safe foreign key cascade order
         try {
             entityManager.createNativeQuery("SET REFERENTIAL_INTEGRITY FALSE").executeUpdate();
         } catch (Exception ignored) {}
@@ -139,6 +163,10 @@ public class DatabaseBackupService {
             entityManager.createNativeQuery("DELETE FROM purchase_ledger").executeUpdate();
             entityManager.createNativeQuery("DELETE FROM item_master").executeUpdate();
             entityManager.createNativeQuery("DELETE FROM customer_master").executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM employee_salary").executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM employee_attendance").executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM employee_advance").executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM employee_master").executeUpdate();
             entityManager.createNativeQuery("DELETE FROM company_details").executeUpdate();
             entityManager.flush();
         } finally {
@@ -167,7 +195,47 @@ public class DatabaseBackupService {
             }
         }
 
-        // 4. Restore Items
+        // 4. Restore Employees
+        int empCount = 0;
+        if (backup.getEmployees() != null && !backup.getEmployees().isEmpty()) {
+            for (EmployeeMaster emp : backup.getEmployees()) {
+                emp.setId(null);
+                employeeMasterRepository.save(emp);
+                empCount++;
+            }
+        }
+
+        // 5. Restore Attendance
+        int attCount = 0;
+        if (backup.getAttendance() != null && !backup.getAttendance().isEmpty()) {
+            for (EmployeeAttendance att : backup.getAttendance()) {
+                att.setId(null);
+                attendanceRepository.save(att);
+                attCount++;
+            }
+        }
+
+        // 6. Restore Salaries
+        int salCount = 0;
+        if (backup.getSalaries() != null && !backup.getSalaries().isEmpty()) {
+            for (EmployeeSalary sal : backup.getSalaries()) {
+                sal.setId(null);
+                salaryRepository.save(sal);
+                salCount++;
+            }
+        }
+
+        // 7. Restore Advances
+        int advCount = 0;
+        if (backup.getAdvances() != null && !backup.getAdvances().isEmpty()) {
+            for (EmployeeAdvance adv : backup.getAdvances()) {
+                adv.setId(null);
+                advanceRepository.save(adv);
+                advCount++;
+            }
+        }
+
+        // 8. Restore Items
         int itemCount = 0;
         if (backup.getItems() != null && !backup.getItems().isEmpty()) {
             for (ItemMaster item : backup.getItems()) {
@@ -177,7 +245,7 @@ public class DatabaseBackupService {
             }
         }
 
-        // 5. Restore Delivery Challans / Tax Invoices (with Cascade Items)
+        // 9. Restore Delivery Challans / Tax Invoices (with Cascade Items)
         int challanCount = 0;
         if (backup.getDeliveryChallans() != null && !backup.getDeliveryChallans().isEmpty()) {
             for (DeliveryChallan challan : backup.getDeliveryChallans()) {
@@ -193,7 +261,7 @@ public class DatabaseBackupService {
             }
         }
 
-        // 6. Restore Proforma Invoices (with Cascade Items)
+        // 10. Restore Proforma Invoices (with Cascade Items)
         int proformaCount = 0;
         if (backup.getProformaInvoices() != null && !backup.getProformaInvoices().isEmpty()) {
             for (ProformaInvoice proforma : backup.getProformaInvoices()) {
@@ -209,7 +277,7 @@ public class DatabaseBackupService {
             }
         }
 
-        // 7. Restore Job Cards
+        // 11. Restore Job Cards
         int jobCardCount = 0;
         if (backup.getJobCards() != null && !backup.getJobCards().isEmpty()) {
             for (JobCard jc : backup.getJobCards()) {
@@ -219,7 +287,7 @@ public class DatabaseBackupService {
             }
         }
 
-        // 8. Restore Gate Passes (with Cascade Items)
+        // 12. Restore Gate Passes (with Cascade Items)
         int gatePassCount = 0;
         if (backup.getGatePasses() != null && !backup.getGatePasses().isEmpty()) {
             for (GatePass gp : backup.getGatePasses()) {
@@ -235,7 +303,7 @@ public class DatabaseBackupService {
             }
         }
 
-        // 9. Restore Work Completion Certificates (with Cascade Items)
+        // 13. Restore Work Completion Certificates (with Cascade Items)
         int certCount = 0;
         if (backup.getWorkCompletionCertificates() != null && !backup.getWorkCompletionCertificates().isEmpty()) {
             for (WorkCompletionCertificate cert : backup.getWorkCompletionCertificates()) {
@@ -251,7 +319,7 @@ public class DatabaseBackupService {
             }
         }
 
-        // 10. Restore Sales Ledgers
+        // 14. Restore Sales Ledgers
         int salesCount = 0;
         if (backup.getSalesLedger() != null && !backup.getSalesLedger().isEmpty()) {
             for (SalesLedger sl : backup.getSalesLedger()) {
@@ -261,7 +329,7 @@ public class DatabaseBackupService {
             }
         }
 
-        // 11. Restore Purchase Ledgers
+        // 15. Restore Purchase Ledgers
         int purchaseCount = 0;
         if (backup.getPurchaseLedger() != null && !backup.getPurchaseLedger().isEmpty()) {
             for (PurchaseLedger pl : backup.getPurchaseLedger()) {
@@ -271,7 +339,7 @@ public class DatabaseBackupService {
             }
         }
 
-        // 12. Restore Users (or ensure default admin exists)
+        // 16. Restore Users
         int userCount = 0;
         if (backup.getUsers() != null && !backup.getUsers().isEmpty()) {
             try {
@@ -284,24 +352,6 @@ public class DatabaseBackupService {
                 userRepository.save(u);
                 userCount++;
             }
-        } else if (userRepository.count() == 0) {
-            // Re-seed default admin and staff if users table was empty
-            User admin = new User();
-            admin.setUserId("admin");
-            admin.setPassword(passwordEncoder.encode("admin123"));
-            admin.setFullName("Sri Durga Administrator");
-            admin.setRole("ADMIN");
-            admin.setPermissions("all");
-            userRepository.save(admin);
-
-            User staff = new User();
-            staff.setUserId("staff");
-            staff.setPassword(passwordEncoder.encode("staff123"));
-            staff.setFullName("Office Staff");
-            staff.setRole("STAFF");
-            staff.setPermissions("invoice,card,pass,audit");
-            userRepository.save(staff);
-            userCount = 2;
         }
 
         entityManager.flush();
@@ -313,6 +363,10 @@ public class DatabaseBackupService {
         Map<String, Integer> restoredCounts = new HashMap<>();
         restoredCounts.put("companyDetails", compCount);
         restoredCounts.put("customers", custCount);
+        restoredCounts.put("employees", empCount);
+        restoredCounts.put("attendance", attCount);
+        restoredCounts.put("salaries", salCount);
+        restoredCounts.put("advances", advCount);
         restoredCounts.put("items", itemCount);
         restoredCounts.put("deliveryChallans", challanCount);
         restoredCounts.put("proformaInvoices", proformaCount);
@@ -328,11 +382,14 @@ public class DatabaseBackupService {
         return result;
     }
 
-    @Transactional(readOnly = true)
     public Map<String, Object> getDatabaseSummary() {
         Map<String, Object> summary = new HashMap<>();
         summary.put("companyDetails", companyDetailsRepository.count());
         summary.put("customers", customerMasterRepository.count());
+        summary.put("employees", employeeMasterRepository.count());
+        summary.put("attendance", attendanceRepository.count());
+        summary.put("salaries", salaryRepository.count());
+        summary.put("advances", advanceRepository.count());
         summary.put("items", itemMasterRepository.count());
         summary.put("deliveryChallans", deliveryChallanRepository.count());
         summary.put("proformaInvoices", proformaInvoiceRepository.count());

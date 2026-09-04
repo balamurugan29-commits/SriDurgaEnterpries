@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SettingsProvider, useSettings } from './context/SettingsContext';
@@ -8,22 +8,42 @@ import { AppSettingsModal } from './components/AppSettingsModal';
 import { LoginPage } from './pages/LoginPage';
 import { ShieldAlert } from 'lucide-react';
 
-import { DashboardPage } from './pages/DashboardPage';
-import { MasterPage } from './pages/MasterPage';
-import { CustomerMasterPage } from './pages/CustomerMasterPage';
-import { CompanyDetailsPage } from './pages/CompanyDetailsPage';
-import { WorkCompletionPage } from './pages/WorkCompletionPage';
-import { WorkCompletionListPage } from './pages/WorkCompletionListPage';
-import { ChallanPage } from './pages/ChallanPage';
-import { ChallanListPage } from './pages/ChallanListPage';
-import { JobCardPage } from './pages/JobCardPage';
-import { JobCardListPage } from './pages/JobCardListPage';
-import { GatePassPage } from './pages/GatePassPage';
-import { GatePassListPage } from './pages/GatePassListPage';
-import { SalesLedgerPage } from './pages/SalesLedgerPage';
-import { PurchaseLedgerPage } from './pages/PurchaseLedgerPage';
-import { ProformaInvoicePage } from './pages/ProformaInvoicePage';
-import { ProformaInvoiceListPage } from './pages/ProformaInvoiceListPage';
+// Optimized Lazy-Loaded Page Chunks for Maximum Mobile & Desktop Performance
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const MasterPage = lazy(() => import('./pages/MasterPage').then(m => ({ default: m.MasterPage })));
+const CustomerMasterPage = lazy(() => import('./pages/CustomerMasterPage').then(m => ({ default: m.CustomerMasterPage })));
+const EmployeeMasterPage = lazy(() => import('./pages/EmployeeMasterPage').then(m => ({ default: m.EmployeeMasterPage })));
+const CompanyDetailsPage = lazy(() => import('./pages/CompanyDetailsPage').then(m => ({ default: m.CompanyDetailsPage })));
+const WorkCompletionPage = lazy(() => import('./pages/WorkCompletionPage').then(m => ({ default: m.WorkCompletionPage })));
+const WorkCompletionListPage = lazy(() => import('./pages/WorkCompletionListPage').then(m => ({ default: m.WorkCompletionListPage })));
+const ChallanPage = lazy(() => import('./pages/ChallanPage').then(m => ({ default: m.ChallanPage })));
+const ChallanListPage = lazy(() => import('./pages/ChallanListPage').then(m => ({ default: m.ChallanListPage })));
+const JobCardPage = lazy(() => import('./pages/JobCardPage').then(m => ({ default: m.JobCardPage })));
+const JobCardListPage = lazy(() => import('./pages/JobCardListPage').then(m => ({ default: m.JobCardListPage })));
+const GatePassPage = lazy(() => import('./pages/GatePassPage').then(m => ({ default: m.GatePassPage })));
+const GatePassListPage = lazy(() => import('./pages/GatePassListPage').then(m => ({ default: m.GatePassListPage })));
+const SalesLedgerPage = lazy(() => import('./pages/SalesLedgerPage').then(m => ({ default: m.SalesLedgerPage })));
+const PurchaseLedgerPage = lazy(() => import('./pages/PurchaseLedgerPage').then(m => ({ default: m.PurchaseLedgerPage })));
+const ProformaInvoicePage = lazy(() => import('./pages/ProformaInvoicePage').then(m => ({ default: m.ProformaInvoicePage })));
+const ProformaInvoiceListPage = lazy(() => import('./pages/ProformaInvoiceListPage').then(m => ({ default: m.ProformaInvoiceListPage })));
+const AttendancePayrollPage = lazy(() => import('./pages/AttendancePayrollPage').then(m => ({ default: m.AttendancePayrollPage })));
+
+// Sleek Loading Fallback Component
+const PageLoader = () => (
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '55vh', gap: '0.85rem' }}>
+    <div style={{
+      width: '42px',
+      height: '42px',
+      borderRadius: '50%',
+      border: '3px solid rgba(99, 102, 241, 0.2)',
+      borderTopColor: '#818cf8',
+      animation: 'spin 0.7s linear infinite'
+    }} />
+    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+      Loading module...
+    </span>
+  </div>
+);
 
 // Permission Guard Component for Route Protection
 const PermissionGuard = ({ requiredPermission, children }) => {
@@ -143,28 +163,34 @@ const MainApp = () => {
             padding: '1.5rem 2rem', 
             overflowY: 'auto', 
             maxHeight: isTopLayout ? 'calc(100vh - 110px)' : 'calc(100vh - 65px)',
-            width: '100%',
-            position: 'relative',
-            zIndex: 1
+            width: '100%'
           }}
         >
-          <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<PermissionGuard requiredPermission="dashboard"><DashboardPage setActivePage={handleSetActivePage} /></PermissionGuard>} />
-              <Route path="/master" element={<PermissionGuard requiredPermission="master"><MasterPage /></PermissionGuard>} />
-              <Route path="/customer-master" element={<PermissionGuard requiredPermission="customer-master"><CustomerMasterPage /></PermissionGuard>} />
-              <Route path="/company-details" element={<PermissionGuard requiredPermission="company-details"><CompanyDetailsPage /></PermissionGuard>} />
-              <Route 
-                path="/work-completion" 
-                element={
-                  <PermissionGuard requiredPermission="work-completion">
-                    <WorkCompletionPage 
-                      editingCertificate={editingCertificate}
-                      onCancelEdit={handleClearEditingCertificate}
-                    />
-                  </PermissionGuard>
-                } 
-              />
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/dashboard" element={<PermissionGuard requiredPermission="dashboard"><DashboardPage setActivePage={handleSetActivePage} /></PermissionGuard>} />
+                <Route path="/master" element={<PermissionGuard requiredPermission="master"><MasterPage /></PermissionGuard>} />
+                <Route path="/customer-master" element={<PermissionGuard requiredPermission="customer-master"><CustomerMasterPage /></PermissionGuard>} />
+                <Route path="/employee-master" element={<PermissionGuard requiredPermission="employee-master"><EmployeeMasterPage /></PermissionGuard>} />
+                <Route path="/employee-details" element={<Navigate to="/employee-master" replace />} />
+                <Route path="/employees" element={<Navigate to="/employee-master" replace />} />
+                <Route path="/attendance" element={<PermissionGuard requiredPermission="attendance"><AttendancePayrollPage /></PermissionGuard>} />
+                <Route path="/payroll" element={<Navigate to="/attendance" replace />} />
+                <Route path="/salary" element={<Navigate to="/attendance" replace />} />
+                <Route path="/attendance-payroll" element={<Navigate to="/attendance" replace />} />
+                <Route path="/company-details" element={<PermissionGuard requiredPermission="company-details"><CompanyDetailsPage /></PermissionGuard>} />
+                <Route 
+                  path="/work-completion" 
+                  element={
+                    <PermissionGuard requiredPermission="work-completion">
+                      <WorkCompletionPage 
+                        editingCertificate={editingCertificate}
+                        onCancelEdit={handleClearEditingCertificate}
+                      />
+                    </PermissionGuard>
+                  } 
+                />
               <Route 
                 path="/work-completion-history" 
                 element={
@@ -282,6 +308,7 @@ const MainApp = () => {
                 element={<PermissionGuard requiredPermission="purchase-ledger"><PurchaseLedgerPage /></PermissionGuard>} 
               />
             </Routes>
+          </Suspense>
         </main>
       </div>
 

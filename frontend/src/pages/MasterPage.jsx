@@ -595,7 +595,7 @@ export const MasterPage = () => {
 
       {/* Duplicate Inspection Modal */}
       {duplicateModal.isOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 999999, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div className="glass-panel animate-modal-entry" style={{ width: '100%', maxWidth: '540px', padding: '2rem', background: '#0f172a', border: '1px solid rgba(245, 158, 11, 0.4)', boxShadow: '0 20px 50px rgba(0,0,0,0.9)' }}>
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', marginBottom: '1.25rem', color: '#f59e0b' }}>
@@ -1249,7 +1249,7 @@ export const MasterPage = () => {
           style={{ 
             position: 'fixed', 
             inset: 0, 
-            zIndex: 10000, 
+            zIndex: 999999, 
             background: 'rgba(0,0,0,0.8)', 
             backdropFilter: 'blur(6px)', 
             display: 'flex', 

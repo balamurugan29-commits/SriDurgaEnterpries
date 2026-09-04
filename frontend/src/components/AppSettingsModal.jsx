@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { 
   getServerApiUrl, 
@@ -40,6 +40,19 @@ export const AppSettingsModal = () => {
     setNavMode, 
     resetSettings 
   } = useSettings();
+
+  // Listen for Escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        setIsSettingsOpen(false);
+      }
+    };
+    if (isSettingsOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSettingsOpen, setIsSettingsOpen]);
 
   const [serverUrl, setServerUrl] = useState(getServerApiUrl());
   const [testingConn, setTestingConn] = useState(false);
@@ -136,7 +149,7 @@ export const AppSettingsModal = () => {
         backgroundColor: 'rgba(0, 0, 0, 0.65)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
-        zIndex: 9999,
+        zIndex: 999999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

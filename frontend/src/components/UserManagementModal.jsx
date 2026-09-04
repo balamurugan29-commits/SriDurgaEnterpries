@@ -39,10 +39,10 @@ const PERMISSION_GROUPS = [
     permissions: ['dashboard']
   },
   {
-    name: 'Master Directory',
+    name: 'Master Directory & HR',
     icon: Layers,
     color: '#34d399',
-    permissions: ['master', 'customer-master', 'company-details']
+    permissions: ['master', 'customer-master', 'employee-master', 'attendance', 'company-details']
   },
   {
     name: 'Invoice Management',
@@ -115,6 +115,19 @@ export const UserManagementModal = ({ isOpen, onClose, currentUser }) => {
     }
   }, [isOpen]);
 
+  // Listen for Escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
@@ -172,7 +185,7 @@ export const UserManagementModal = ({ isOpen, onClose, currentUser }) => {
       setSelectedPermissions(ALL_SYSTEM_PERMISSIONS.map(p => p.id));
     } else if (type === 'billing') {
       setSelectedPermissions([
-        'dashboard', 'master', 'customer-master', 'company-details',
+        'dashboard', 'master', 'customer-master', 'employee-master', 'attendance', 'company-details',
         'challan', 'challan-list', 'proforma-invoice', 'proforma-invoice-history',
         'gate-pass', 'gate-pass-list', 'job-card', 'job-card-history',
         'work-completion', 'work-completion-history'
@@ -500,7 +513,7 @@ export const UserManagementModal = ({ isOpen, onClose, currentUser }) => {
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
                             <span style={{ color: 'var(--text-subtle)', fontWeight: 600 }}>Allowed Modules:</span>
                             <span style={{ color: '#34d399', fontWeight: 800 }}>
-                              {u.permissions === 'all' ? 'Full Access (All 15 Modules)' : `${permsList.length} of ${ALL_SYSTEM_PERMISSIONS.length} Modules`}
+                              {u.permissions === 'all' ? `Full Access (All ${ALL_SYSTEM_PERMISSIONS.length} Modules)` : `${permsList.length} of ${ALL_SYSTEM_PERMISSIONS.length} Modules`}
                             </span>
                           </div>
                           

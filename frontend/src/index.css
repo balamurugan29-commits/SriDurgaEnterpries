@@ -97,6 +97,11 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, a, input, select, textarea, [role="button"] {
+  touch-action: manipulation;
 }
 
 body {
@@ -112,6 +117,8 @@ body {
   overflow-x: hidden;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
@@ -611,6 +618,12 @@ input[type="number"] {
    MOBILE RESPONSIVENESS & ADAPTIVE STYLING AUDIT
    ========================================================================== */
 
+/* Global Modal & Popup Overlays */
+.modal-overlay,
+.no-print-modal-overlay {
+  z-index: 999999 !important;
+}
+
 /* Mobile Off-canvas Drawer Backdrop */
 .mobile-drawer-backdrop {
   position: fixed;
@@ -618,7 +631,7 @@ input[type="number"] {
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  z-index: 999;
+  z-index: 99999;
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -679,11 +692,13 @@ input[type="number"] {
     background: var(--bg-card-solid) !important;
     box-shadow: 0 0 30px rgba(0, 0, 0, 0.6) !important;
     animation: slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    -webkit-overflow-scrolling: touch;
   }
 
   .app-main-content {
-    padding: 1rem 0.75rem !important;
-    max-height: calc(100vh - 60px) !important;
+    padding: 0.85rem 0.65rem !important;
+    max-height: calc(100vh - 58px) !important;
+    -webkit-overflow-scrolling: touch;
   }
 
   .top-nav-bar {
@@ -696,7 +711,7 @@ input[type="number"] {
   .responsive-grid-3,
   .responsive-grid-2 {
     grid-template-columns: 1fr !important;
-    gap: 1rem !important;
+    gap: 0.85rem !important;
   }
 
   .responsive-form-row {
@@ -719,27 +734,66 @@ input[type="number"] {
     width: 100% !important;
   }
 
+  .custom-table-container {
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+  }
+
   .custom-table th, 
   .custom-table td {
     padding: 0.65rem 0.75rem !important;
     font-size: 0.8rem !important;
+    white-space: nowrap;
   }
 
   .modal-overlay {
-    padding: 0.5rem !important;
+    padding: 0.35rem !important;
+  }
+
+  .modal-dialog,
+  .modal-card {
+    max-width: 96vw !important;
+    max-height: 94vh !important;
+    border-radius: 14px !important;
   }
 }
 
 @media (max-width: 480px) {
   .btn {
-    padding: 0.5rem 0.875rem;
-    font-size: 0.8rem;
+    padding: 0.55rem 0.85rem;
+    font-size: 0.825rem;
+    min-height: 38px;
   }
   
   .form-input, .form-select, .form-textarea {
-    padding: 0.55rem 0.75rem;
-    font-size: 0.825rem;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.875rem;
+    min-height: 38px;
   }
+
+  .glass-panel {
+    padding: 0.85rem !important;
+    border-radius: 12px !important;
+  }
+}
+
+/* Smooth Touch Scrollbar Styling for Mobile Web and Desktop */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.35);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.6);
 }
 
 /* ==========================================================================

@@ -31,6 +31,18 @@ public class DatabaseBackupDTO {
     private List<CustomerMaster> customers = new ArrayList<>();
 
     @Builder.Default
+    private List<EmployeeMaster> employees = new ArrayList<>();
+
+    @Builder.Default
+    private List<EmployeeAttendance> attendance = new ArrayList<>();
+
+    @Builder.Default
+    private List<EmployeeSalary> salaries = new ArrayList<>();
+
+    @Builder.Default
+    private List<EmployeeAdvance> advances = new ArrayList<>();
+
+    @Builder.Default
     private List<ItemMaster> items = new ArrayList<>();
 
     @Builder.Default

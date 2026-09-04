@@ -39,6 +39,19 @@ export const ItemModal = ({ isOpen, onClose, onSave, editItem, nextSno, availabl
     setError('');
   }, [editItem, isOpen, nextSno, defaultFolder]);
 
+  // Listen for Escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const numRate = parseFloat(rate) || 0;
@@ -81,7 +94,7 @@ export const ItemModal = ({ isOpen, onClose, onSave, editItem, nextSno, availabl
   const folderOptions = Array.from(new Set(['General', defaultFolder, ...availableFolders.filter(Boolean)].filter(Boolean)));
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 999999, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
       <div className="glass-panel" style={{ width: '100%', maxWidth: '640px', padding: '1.75rem', border: '1px solid rgba(99, 102, 241, 0.3)', boxShadow: '0 20px 40px rgba(0,0,0,0.6)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.875rem' }}>
           <div>

@@ -27,6 +27,7 @@ import {
   BookOpen,
   ShoppingBag,
   Users,
+  UserCheck,
   PanelLeftClose,
   PanelLeftOpen
 } from 'lucide-react';
@@ -149,6 +150,12 @@ export const Navbar = ({ activePage, setActivePage }) => {
         return 'Item Master Management';
       case 'customer-master':
         return 'Customer & Party Master Directory';
+      case 'employee-master':
+        return 'Employee Master & Staff Directory';
+      case 'attendance':
+      case 'payroll':
+      case 'salary':
+        return 'Staff Attendance & Monthly Payroll Management';
       case 'company-details':
         return 'Company Details Master Profile';
       case 'challan':
@@ -186,7 +193,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
     }
   };
 
-  const isMasterActive = activePage === 'master' || activePage === 'customer-master' || activePage === 'company-details';
+  const isMasterActive = activePage === 'master' || activePage === 'customer-master' || activePage === 'employee-master' || activePage === 'attendance' || activePage === 'payroll' || activePage === 'salary' || activePage === 'company-details';
   const isCertActive = activePage === 'work-completion' || activePage === 'work-completion-history' || activePage === 'work-completion-list';
   const isInvoiceActive = activePage === 'challan' || activePage === 'challan-list' || activePage === 'challans-list' || activePage === 'proforma-invoice' || activePage === 'proforma-invoice-history' || activePage === 'proforma-invoice-list' || activePage === 'proforma-invoices';
   const isCardActive = activePage === 'job-card' || activePage === 'job-card-history' || activePage === 'job-card-list';
@@ -204,7 +211,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
         padding: '0.625rem 1.5rem', 
         position: 'sticky', 
         top: 0, 
-        zIndex: 500,
+        zIndex: 100,
         background: 'var(--bg-card)',
         backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-color)',
@@ -420,7 +427,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
             flexWrap: 'wrap',
             width: '100%',
             position: 'relative',
-            zIndex: 600
+            zIndex: 105
           }}
         >
           {/* Top Nav: Dashboard */}
@@ -437,7 +444,7 @@ export const Navbar = ({ activePage, setActivePage }) => {
           )}
 
           {/* Top Nav: Master Page Dropdown */}
-          {(canAccess('master') || canAccess('customer-master') || canAccess('company-details')) && (
+          {(canAccess('master') || canAccess('customer-master') || canAccess('employee-master') || canAccess('attendance') || canAccess('company-details')) && (
             <div ref={topDropdownRef} style={{ position: 'relative', zIndex: 99999 }}>
               <button
                 onClick={() => toggleTopDropdown('master')}
@@ -518,6 +525,50 @@ export const Navbar = ({ activePage, setActivePage }) => {
                     >
                       <Building2 size={15} color="#34d399" />
                       <span>Customer Directory</span>
+                    </button>
+                  )}
+                  {canAccess('employee-master') && (
+                    <button
+                      onClick={() => handleTopNavClick('employee-master')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.55rem 0.75rem',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: activePage === 'employee-master' ? 'rgba(99, 102, 241, 0.18)' : 'transparent',
+                        color: 'var(--text-main)',
+                        fontSize: '0.825rem',
+                        fontWeight: activePage === 'employee-master' ? 700 : 500,
+                        cursor: 'pointer',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <Users size={15} color="#818cf8" />
+                      <span>Employee Master</span>
+                    </button>
+                  )}
+                  {canAccess('attendance') && (
+                    <button
+                      onClick={() => handleTopNavClick('attendance')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.55rem 0.75rem',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: activePage === 'attendance' || activePage === 'payroll' || activePage === 'salary' ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
+                        color: 'var(--text-main)',
+                        fontSize: '0.825rem',
+                        fontWeight: activePage === 'attendance' || activePage === 'payroll' || activePage === 'salary' ? 700 : 500,
+                        cursor: 'pointer',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <UserCheck size={15} color="#10b981" />
+                      <span>Attendance & Salary</span>
                     </button>
                   )}
                   {canAccess('company-details') && (

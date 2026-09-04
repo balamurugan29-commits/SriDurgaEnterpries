@@ -1,0 +1,242 @@
+# Sri Durga Enterprises - Database Master Reference Report
+
+Generated on: Wed Aug 26 16:11:18 IST 2026
+
+This document contains a structured reference of all database records, templates, and setup configurations used in the Sri Durga Web Application.
+
+## 👥 1. Customer Master Directory
+
+List of customers seeded in the database for billing and certificates:
+
+| S.No | Customer Name | GSTIN | PAN | State | Phone | Address |
+|---|---|---|---|---|---|---|
+| 1 | M/s, Ocean Sparkle Ltd, Karaikal Port Pvt., Ltd. | 34AAACO2519H1ZR | AAACO2519H | PUDUCHERRY (34) |  | Karaikal Port Pvt., Ltd.,Keezhavanjore,Thirumalairajan Pattinam,
+Karaikal - 609606. |
+| 2 | The G.M (Electrical), Electrical Maintenance | 34AAACO1598A1ZS | AAACO1598A | PUDUCHERRY (34) |  | ONGC, Neravy, Karaikal. |
+
+## 📜 2. Issued Work Completion Certificates History
+
+Active work completion certificate records currently registered in the database:
+
+### Certificate: WCC-04/26-27 (Date: 2026-08-26)
+| Parameter | Value |
+|---|---|
+| **Agency** | SRI DURGA ENTERPRISES, # 10 V.G. Nagar, Kovilpathu, Karaikal |
+| **Rate Contract Ref** | KKL/CAU-ASSET/SUPPORT/2023/1240914/SDE/9010038288 |
+| **Equipment Scope** |  (Material) |
+| **Location / Make** | RMD#GCS / - |
+| **Serial / Capacity** | - / - |
+| **Handed Over / Completed** |  /  |
+| **Performance / Defectives** | OK / NA |
+
+#### Included Items for this Certificate:
+| S.No | RC Item No | Description | Quantity | Unit | Type |
+|---|---|---|---|---|---|
+| 1 | 120.2 | 5.5 HP - 10 HP Induction Motor | 1.00 | Nos | MATERIAL |
+
+---
+
+### Certificate: WCC-01/26-27 (Date: 2026-08-26)
+| Parameter | Value |
+|---|---|
+| **Agency** | SRI DURGA ENTERPRISES, # 10 V.G. Nagar, Kovilpathu, Karaikal |
+| **Rate Contract Ref** | KKL/CAU-ASSET/SUPPORT/2023/1240914/SDE/9010038288 |
+| **Equipment Scope** |  (Material) |
+| **Location / Make** | RMD#GCS / - |
+| **Serial / Capacity** | - / - |
+| **Handed Over / Completed** |  /  |
+| **Performance / Defectives** | OK / NA |
+
+#### Included Items for this Certificate:
+| S.No | RC Item No | Description | Quantity | Unit | Type |
+|---|---|---|---|---|---|
+| 1 | 1.7 | Overhauling of 7.5HP Motor | 1.00 | Nos | MATERIAL |
+| 2 | 1.9 | Overhauling of 15HP Motor | 1.00 | Nos | MATERIAL |
+| 3 | 1.10 | Overhauling of 20HP Motor | 1.00 | Nos | MATERIAL |
+| 4 | 1.11 | Overhauling of 25HP Motor | 1.00 | Nos | MATERIAL |
+| 5 | 1.11 | Overhauling of 25HP Motor | 1.00 | Nos | MATERIAL |
+| 6 | 2.18 | Rewinding of 200HP Motor | 1.00 | Nos | MATERIAL |
+| 7 | 31.4 | BETWEEN 51.0 TO 75.0 AMPS, CONTACTOR / SEPERATE MOUNTING OF DIFFERENT RANGE | 1.00 | Nos | MATERIAL |
+| 8 | 114.3 | S&F of Carbon Brush | 1.00 | Nos | MATERIAL |
+| 9 | 2.3 | Rewinding of 1.5HP Motor | 1.00 | Nos | MATERIAL |
+| 10 | 1.11 | Overhauling of 25HP Motor | 1.00 | Nos | MATERIAL |
+| 11 | 7.1 | S&F of Water proof Canopies for 0.5 to 0.75HP | 1.00 | Nos | MATERIAL |
+| 12 | 16.7 | Rewinding of Main Rotor of Brushless Alternator - 250KVA | 1.00 | Nos | MATERIAL |
+| 13 | 15.1 | Rewinding of Pilot Rotor of Brushless Alternator - 10 to 32KVA | 1.00 | Nos | MATERIAL |
+| 14 | 144 | Fabrication, Supply and Installation of 30HP ATS panel to be made of 14 SWG MS sheet, Powder coated with siemens grey colour of size (950 x 1250 x 400) mm. The panel shall be double door type and size as per the drawing and specification enclosed. Front door should have heavy duty hinges and heavy duty locking arrangement with external lock on the front door. Base frame made up of MS channel of 300mm height as per drawing.                                                                                   (Panel Body with provision for fixing the accessories only) | 1.00 | Nos | MATERIAL |
+| 15 | 57.2 | 144 MMX 144MM | 1.00 | Nos | MATERIAL |
+| 16 | 144 | Fabrication, Supply and Installation of 30HP ATS panel to be made of 14 SWG MS sheet, Powder coated with siemens grey colour of size (950 x 1250 x 400) mm. The panel shall be double door type and size as per the drawing and specification enclosed. Front door should have heavy duty hinges and heavy duty locking arrangement with external lock on the front door. Base frame made up of MS channel of 300mm height as per drawing.                                                                                   (Panel Body with provision for fixing the accessories only) | 1.00 | Nos | MATERIAL |
+| 17 | 136 | S&F of Powder Coated, MS Wall Mounting Brackets for Outdoor Units of 1.5 to 2 ton Split AC | 1.00 | Nos | MATERIAL |
+| 18 | 1.7 | Overhauling of 7.5HP Motor | 1.00 | Nos | MATERIAL |
+| 19 | 7.3 | S&F of Water proof Canopies for 10 to 25HP | 1.00 | Nos | MATERIAL |
+| 20 | 13.4 | Overhauling of brushless Alternator - 63KVA | 1.00 | Nos | MATERIAL |
+| 21 | 16.2 | Rewinding of Main Rotor of Brushless Alternator - 40KVA | 1.00 | Nos | MATERIAL |
+| 22 | 67.6 | MPCB WITH RELAY FUNCTION RATED CURRENT 75 A TYPE 3RV1142KA10 MAKE SIEMENS/SCHNIEDER/TC | 1.00 | Nos | MATERIAL |
+| 23 | 119.4 | 40-50 HP | 1.00 | Nos | MATERIAL |
+| 24 | 120.1 | 3 HP - 5 HP Induction Motor | 1.00 | Nos | MATERIAL |
+
+---
+
+### Certificate: WCC-02/26-27 (Date: 2026-08-26)
+| Parameter | Value |
+|---|---|
+| **Agency** | SRI DURGA ENTERPRISES, # 10 V.G. Nagar, Kovilpathu, Karaikal |
+| **Rate Contract Ref** | KKL/CAU-ASSET/SUPPORT/2023/1240914/SDE/9010038288 |
+| **Equipment Scope** | fan (Service) |
+| **Location / Make** | nrm#GCS / - |
+| **Serial / Capacity** | 124 / - |
+| **Handed Over / Completed** |  /  |
+| **Performance / Defectives** | OK / NA |
+
+#### Included Items for this Certificate:
+| S.No | RC Item No | Description | Quantity | Unit | Type |
+|---|---|---|---|---|---|
+| 1 | 2.20 | Rewinding of Cabin Fan 60W | 10.00 | Nos | SERVICE |
+| 2 | 1.10 | Overhauling of 20HP Motor | 1.00 | Nos | MATERIAL |
+| 3 | 2.14 | Rewinding of 50HP Motor | 1.00 | Nos | MATERIAL |
+| 4 | 134.1 | S&F of Single core 35Sq.mm Copper flexible cable 1.1 kv grade | 11.00 | Mrt | MATERIAL |
+| 5 | 24.10 | 170 - 185 AMPS | 1.00 | Nos | MATERIAL |
+| 6 | 57.2 | 144 MMX 144MM | 1.00 | Nos | MATERIAL |
+| 7 | 19.2 | P&R of Diodes of Brushless Alternator - 40KVA | 1.00 | Nos | MATERIAL |
+| 8 | 61.11 | S&F of Bearing 6211 | 1.00 | Nos | MATERIAL |
+| 9 | 61.5 | S&F of Bearing 6205 | 1.00 | Nos | MATERIAL |
+| 10 | 35 | S&F of Timer, ON delay/ Star-Delta, NO+NC | 10.00 | Nos | MATERIAL |
+| 11 | 1.8 | Overhauling of 10HP Motor | 1.00 | Nos | SERVICE |
+| 12 | 1.12 | Overhauling of 30HP Motor | 1.00 | Nos | SERVICE |
+| 13 | 25.2 | 110 AMPS | 1.00 | Nos | SERVICE |
+| 14 | 144 | Fabrication, Supply and Installation of 30HP ATS panel to be made of 14 SWG MS sheet, Powder coated with siemens grey colour of size (950 x 1250 x 400) mm. The panel shall be double door type and size as per the drawing and specification enclosed. Front door should have heavy duty hinges and heavy duty locking arrangement with external lock on the front door. Base frame made up of MS channel of 300mm height as per drawing.                                                                                   (Panel Body with provision for fixing the accessories only) | 1.00 | Nos | SERVICE |
+
+---
+
+### Certificate: WCC-09/26-27 (Date: 2026-08-26)
+| Parameter | Value |
+|---|---|
+| **Agency** | SRI DURGA ENTERPRISES, # 10 V.G. Nagar, Kovilpathu, Karaikal |
+| **Rate Contract Ref** | KKL/CAU-ASSET/SUPPORT/2023/1240914/SDE/9010038288 |
+| **Equipment Scope** |  (Material) |
+| **Location / Make** | RMD#GCS / - |
+| **Serial / Capacity** | - / - |
+| **Handed Over / Completed** |  /  |
+| **Performance / Defectives** | OK / NA |
+
+#### Included Items for this Certificate:
+| S.No | RC Item No | Description | Quantity | Unit | Type |
+|---|---|---|---|---|---|
+| 1 | 1.10 | Overhauling of 20HP Motor | 1.00 | Nos | MATERIAL |
+| 2 | 5.1 | S&F of Sheet Metal Fan Cover for 0.5 to 0.75HP | 1.00 | Nos | MATERIAL |
+| 3 | 61.16 | S&F of Bearing 6306 | 1.00 | Nos | MATERIAL |
+| 4 | 7.4 | S&F of Water proof Canopies for 30 to 60HP | 1.00 | Nos | MATERIAL |
+| 5 | 52.2 | 0 TO 600V | 1.00 | Nos | MATERIAL |
+| 6 | 38 | BATTERY CHARGING UNIT SMPS TYPE WITH 12/24 VOLT 10/20A | 1.00 | Nos | MATERIAL |
+| 7 | 36 | S&F of Single Phase Preventer | 1.00 | Nos | MATERIAL |
+| 8 | 3.5 | Painting of 3HP Motor | 1.00 | Nos | MATERIAL |
+| 9 | 1.8 | Overhauling of 10HP Motor | 1.00 | Nos | MATERIAL |
+
+---
+
+## 📦 3. Item Master Catalog (First 100 Reference Records)
+
+Active items seeded in the Item Master catalog:
+
+| S.No | Item Code | Description | Default Qty | Unit | Base Rate (₹) | Service Charge (₹) |
+|---|---|---|---|---|---|---|
+| 1 | 1.1 | Overhauling of 0.5 to 0.75HP Motor | 0.00 | Nos | 150.00 | 0.00 |
+| 2 | 1.2 | Overhauling of 1HP Motor | 0.00 | Nos | 150.00 | 0.00 |
+| 3 | 1.3 | Overhauling of 1.5HP Motor | 0.00 | Nos | 150.00 | 0.00 |
+| 4 | 1.4 | Overhauling of 2HP Motor | 0.00 | Nos | 200.00 | 0.00 |
+| 5 | 1.5 | Overhauling of 3HP Motor | 0.00 | Nos | 200.00 | 0.00 |
+| 6 | 1.6 | Overhauling of 5HP Motor | 0.00 | Nos | 500.00 | 0.00 |
+| 7 | 1.7 | Overhauling of 7.5HP Motor | 0.00 | Nos | 500.00 | 0.00 |
+| 8 | 1.8 | Overhauling of 10HP Motor | 0.00 | Nos | 500.00 | 0.00 |
+| 9 | 1.9 | Overhauling of 15HP Motor | 0.00 | Nos | 550.00 | 0.00 |
+| 10 | 1.10 | Overhauling of 20HP Motor | 0.00 | Nos | 550.00 | 0.00 |
+| 11 | 1.11 | Overhauling of 25HP Motor | 0.00 | Nos | 550.00 | 0.00 |
+| 12 | 1.12 | Overhauling of 30HP Motor | 0.00 | Nos | 700.00 | 0.00 |
+| 13 | 1.13 | Overhauling of 40HP Motor | 0.00 | Nos | 700.00 | 0.00 |
+| 14 | 1.14 | Overhauling of 50HP Motor | 0.00 | Nos | 1000.00 | 0.00 |
+| 15 | 1.15 | Overhauling of 60HP Motor | 0.00 | Nos | 1000.00 | 0.00 |
+| 16 | 1.16 | Overhauling of 75HP Motor | 0.00 | Nos | 1500.00 | 0.00 |
+| 17 | 1.17 | Overhauling of 100HP Motor | 0.00 | Nos | 2000.00 | 0.00 |
+| 18 | 1.18 | Overhauling of 200HP Motor | 0.00 | Nos | 2800.00 | 0.00 |
+| 19 | 2.1 | Rewinding of 0.5 to 0.75HP Motor | 0.00 | Nos | 2800.00 | 0.00 |
+| 20 | 2.2 | Rewinding of 1HP Motor | 0.00 | Nos | 3800.00 | 0.00 |
+| 21 | 2.3 | Rewinding of 1.5HP Motor | 0.00 | Nos | 5000.00 | 0.00 |
+| 22 | 2.4 | Rewinding of 2HP Motor | 0.00 | Nos | 5000.00 | 0.00 |
+| 23 | 2.5 | Rewinding of 3HP Motor | 0.00 | Nos | 5000.00 | 0.00 |
+| 24 | 2.6 | Rewinding of 5HP Motor | 0.00 | Nos | 7500.00 | 0.00 |
+| 25 | 2.7 | Rewinding of 7.5HP Motor | 0.00 | Nos | 10000.00 | 0.00 |
+| 26 | 2.8 | Rewinding of 10HP Motor | 0.00 | Nos | 11000.00 | 0.00 |
+| 27 | 2.9 | Rewinding of 15HP Motor | 0.00 | Nos | 12000.00 | 0.00 |
+| 28 | 2.10 | Rewinding of 20HP Motor | 0.00 | Nos | 15000.00 | 0.00 |
+| 29 | 2.11 | Rewinding of 25HP Motor | 0.00 | Nos | 28000.00 | 0.00 |
+| 30 | 2.12 | Rewinding of 30HP Motor | 0.00 | Nos | 29000.00 | 0.00 |
+| 31 | 2.13 | Rewinding of 40HP Motor | 0.00 | Nos | 30000.00 | 0.00 |
+| 32 | 2.14 | Rewinding of 50HP Motor | 0.00 | Nos | 32000.00 | 0.00 |
+| 33 | 2.15 | Rewinding of 60HP Motor | 0.00 | Nos | 33000.00 | 0.00 |
+| 34 | 2.16 | Rewinding of 75HP Motor | 0.00 | Nos | 40000.00 | 0.00 |
+| 35 | 2.17 | Rewinding of 100HP Motor | 0.00 | Nos | 79000.00 | 0.00 |
+| 36 | 2.18 | Rewinding of 200HP Motor | 0.00 | Nos | 100000.00 | 0.00 |
+| 37 | 2.19 | Rewinding of Ceiling Fan 60W | 0.00 | Nos | 550.00 | 0.00 |
+| 38 | 2.20 | Rewinding of Cabin Fan 60W | 0.00 | Nos | 550.00 | 0.00 |
+| 39 | 3.1 | Painting of 0.5 to 0.75HP Motor | 0.00 | Nos | 150.00 | 0.00 |
+| 40 | 3.2 | Painting of 1HP Motor | 0.00 | Nos | 200.00 | 0.00 |
+| 41 | 3.3 | Painting of 1.5HP Motor | 0.00 | Nos | 200.00 | 0.00 |
+| 42 | 3.4 | Painting of 2HP Motor | 0.00 | Nos | 200.00 | 0.00 |
+| 43 | 3.5 | Painting of 3HP Motor | 0.00 | Nos | 200.00 | 0.00 |
+| 44 | 3.6 | Painting of 5HP Motor | 0.00 | Nos | 500.00 | 0.00 |
+| 45 | 3.7 | Painting of 7.5HP Motor | 0.00 | Nos | 500.00 | 0.00 |
+| 46 | 3.8 | Painting of 10HP Motor | 0.00 | Nos | 500.00 | 0.00 |
+| 47 | 3.9 | Painting of 15HP Motor | 0.00 | Nos | 500.00 | 0.00 |
+| 48 | 3.10 | Painting of 20HP Motor | 0.00 | Nos | 700.00 | 0.00 |
+| 49 | 3.11 | Painting of 25HP Motor | 0.00 | Nos | 700.00 | 0.00 |
+| 50 | 3.12 | Painting of 30HP Motor | 0.00 | Nos | 700.00 | 0.00 |
+| 51 | 3.13 | Painting of 40HP Motor | 0.00 | Nos | 700.00 | 0.00 |
+| 52 | 3.14 | Painting of 50HP Motor | 0.00 | Nos | 800.00 | 0.00 |
+| 53 | 3.15 | Painting of 60HP Motor | 0.00 | Nos | 800.00 | 0.00 |
+| 54 | 3.16 | Painting of 75HP Motor | 0.00 | Nos | 1000.00 | 0.00 |
+| 55 | 3.17 | Painting of 100HP Motor | 0.00 | Nos | 1500.00 | 0.00 |
+| 56 | 3.18 | Painting of 200HP Motor | 0.00 | Nos | 1500.00 | 0.00 |
+| 57 | 3.19 | Painting of Ceiling Fan 60W | 0.00 | Nos | 100.00 | 0.00 |
+| 58 | 3.20 | Painting of Cabin Fan 60W | 0.00 | Nos | 100.00 | 0.00 |
+| 59 | 4.1 | S&F of Cast iron Fan Assembly for 0.5 to 0.75HP | 0.00 | Nos | 300.00 | 0.00 |
+| 60 | 4.2 | S&F of Cast iron Fan Assembly for 1 to 2HP | 0.00 | Nos | 800.00 | 0.00 |
+| 61 | 4.3 | S&F of Cast iron Fan Assembly for 3 to 7.5HP | 0.00 | Nos | 1000.00 | 0.00 |
+| 62 | 4.4 | S&F of Fan Assembly for 10 to 25HP | 0.00 | Nos | 1500.00 | 0.00 |
+| 63 | 4.5 | S&F of Fan Assembly for 30 to 60HP | 0.00 | Nos | 1500.00 | 0.00 |
+| 64 | 4.6 | S&F of Cast iron Fan Assembly for 75 to 100HP | 0.00 | Nos | 4000.00 | 0.00 |
+| 65 | 4.7 | S&F of Cast iron Fan Assembly for 200HP | 0.00 | Nos | 5000.00 | 0.00 |
+| 66 | 5.1 | S&F of Sheet Metal Fan Cover for 0.5 to 0.75HP | 0.00 | Nos | 500.00 | 0.00 |
+| 67 | 5.2 | S&F of Sheet Metal Fan Cover for 1 to 2HP | 0.00 | Nos | 1200.00 | 0.00 |
+| 68 | 5.3 | S&F of Sheet Metal Fan Cover for 3 to 7.5HP | 0.00 | Nos | 1200.00 | 0.00 |
+| 69 | 5.4 | S&F of Sheet Metal Fan Cover for 10 to 25HP | 0.00 | Nos | 2000.00 | 0.00 |
+| 70 | 5.5 | S&F of Sheet Metal Fan Cover for 30 to 60HP | 0.00 | Nos | 2500.00 | 0.00 |
+| 71 | 5.6 | S&F of Sheet Metal Fan Cover for 75 to 100HP | 0.00 | Nos | 7500.00 | 0.00 |
+| 72 | 5.7 | S&F of Sheet Metal Fan Cover for 200HP | 0.00 | Nos | 7500.00 | 0.00 |
+| 73 | 6.1 | S&F of Terminal Stud for 1 TO 3HP | 0.00 | Nos | 500.00 | 0.00 |
+| 74 | 6.2 | S&F of Terminal Stud for 5HP | 0.00 | Nos | 650.00 | 0.00 |
+| 75 | 6.3 | S&F of Terminal Stud for 7.5 to 10HP | 0.00 | Nos | 800.00 | 0.00 |
+| 76 | 6.4 | S&F of Terminal Stud for 20 to 30HP | 0.00 | Nos | 1200.00 | 0.00 |
+| 77 | 6.5 | S&F of Terminal Stud for 40HP | 0.00 | Nos | 1200.00 | 0.00 |
+| 78 | 6.6 | S&F of Terminal Stud for 50HP | 0.00 | Nos | 1200.00 | 0.00 |
+| 79 | 6.7 | S&F of Terminal Stud for 60HP | 0.00 | Nos | 1200.00 | 0.00 |
+| 80 | 6.8 | S&F of Terminal Stud for 75HP | 0.00 | Nos | 1500.00 | 0.00 |
+| 81 | 6.9 | S&F of Terminal Stud for 100HP | 0.00 | Nos | 3000.00 | 0.00 |
+| 82 | 6.10 | S&F of Terminal Stud for 200HP | 0.00 | Nos | 3000.00 | 0.00 |
+| 83 | 7.1 | S&F of Water proof Canopies for 0.5 to 0.75HP | 0.00 | Nos | 3000.00 | 100.00 |
+| 84 | 7.2 | S&F of Water proof Canopies for 3 to 7.5HP | 0.00 | Nos | 5800.00 | 100.00 |
+| 85 | 7.3 | S&F of Water proof Canopies for 10 to 25HP | 0.00 | Nos | 7500.00 | 100.00 |
+| 86 | 7.4 | S&F of Water proof Canopies for 30 to 60HP | 0.00 | Nos | 9000.00 | 200.00 |
+| 87 | 7.5 | S&F of Water proof Canopies for 75 to 100HP | 0.00 | Nos | 11000.00 | 200.00 |
+| 88 | 7.6 | S&F of Water proof Canopies for Push button station / Junction box | 0.00 | Nos | 2000.00 | 50.00 |
+| 89 | 8 | Dyanamic Balancing of Impeller - 7.5-15HP Blower Motor | 0.00 | Nos | 6500.00 | 0.00 |
+| 90 | 9.1 | Overhauling of Slip ring Alternator - 63KVA | 0.00 | Nos | 2000.00 | 0.00 |
+| 91 | 9.2 | Overhauling of Slip ring Alternator - 180KVA | 0.00 | Nos | 3000.00 | 0.00 |
+| 92 | 10.1 | Rewinding of Main Rotor of Slip ring Alternator - 63KVA | 0.00 | Nos | 5000.00 | 0.00 |
+| 93 | 10.2 | Rewinding of Main Rotor of Slip ring Alternator - 180KVA | 0.00 | Nos | 10000.00 | 0.00 |
+| 94 | 11.1 | Rewinding of Main Field of Slip ring Alternator - 63KVA | 0.00 | Nos | 5000.00 | 0.00 |
+| 95 | 11.2 | Rewinding of Main Field of Slip ring Alternator - 180KVA | 0.00 | Nos | 26000.00 | 0.00 |
+| 96 | 12.1 | Providing & Replacement of Slip ring unit - 63KVA | 0.00 | Nos | 3500.00 | 0.00 |
+| 97 | 12.2 | Providing & Replacement of Slip ring unit - 180KVA | 0.00 | Nos | 5000.00 | 0.00 |
+| 98 | 13.1 | Overhauling of brushless Alternator - 10 to 32KVA | 0.00 | Nos | 2000.00 | 0.00 |
+| 99 | 13.2 | Overhauling of brushless Alternator - 40KVA | 0.00 | Nos | 3000.00 | 0.00 |
+| 100 | 13.3 | Overhauling of brushless Alternator - 50KVA | 0.00 | Nos | 4000.00 | 0.00 |
