@@ -127,16 +127,85 @@ public class AttendancePayrollService {
 
     @Transactional
     public EmployeeSalary saveSalaryRecord(EmployeeSalary salary) {
-        // Auto-compute Net Credit = Total Wages + Leave Wage + Incentive - LOP - EPF_ESI - Adv Deducted
-        double totalWages = salary.getTotalWages() != null ? salary.getTotalWages() : 0.0;
-        double leaveWage = salary.getLeaveWage() != null ? salary.getLeaveWage() : 0.0;
-        double incentive = salary.getIncentive() != null ? salary.getIncentive() : 0.0;
-        double epfAndEsi = salary.getEpfAndEsi() != null ? salary.getEpfAndEsi() : 0.0;
-        double lop = salary.getLop() != null ? salary.getLop() : 0.0;
-        double advDeducted = salary.getAdvDeducted() != null ? salary.getAdvDeducted() : 0.0;
+        double workingDays = (salary.getTotalWorkingDays() != null && salary.getTotalWorkingDays() > 0) ? salary.getTotalWorkingDays() : 26.0;
+        double monthlySalary = (salary.getMonthlySalary() != null && salary.getMonthlySalary() > 0) 
+            ? salary.getMonthlySalary() 
+            : ((salary.getTotalWages() != null && salary.getTotalWages() > 0) ? salary.getTotalWages() : 20000.0);
+        
+        salary.setTotalWorkingDays(workingDays);
+        salary.setMonthlySalary(monthlySalary);
 
-        double netCredit = totalWages + leaveWage + incentive - lop - epfAndEsi - advDeducted;
-        salary.setNetCredit(Math.round(netCredit * 100.0) / 100.0);
+        // Per day rate = monthlySalary / workingDays
+        double perDayRate = Math.round((monthlySalary / workingDays) * 100.0) / 100.0;
+        salary.setPerDayRate(perDayRate);
+
+        // Basic wage per day is editable (default 400.0 or from input)
+        double basicRate = (salary.getBasicRate() != null && salary.getBasicRate() >= 0) ? salary.getBasicRate() : 400.0;
+        // Other wage per day = Per day rate - Basic wage
+        double othersRate = Math.max(0.0, Math.round((perDayRate - basicRate) * 100.0) / 100.0);
+        
+        salary.setBasicRate(basicRate);
+        salary.setOthersRate(othersRate);
+
+        double presentDays = salary.getPresentDays() != null ? salary.getPresentDays() : 0.0;
+        double leaveDays = salary.getLeaveDays() != null ? salary.getLeaveDays() : 0.0;
+        double absentDays = salary.getAbsentDays() != null ? salary.getAbsentDays() : 0.0;
+        double otHours = salary.getOvertimeHours() != null ? salary.getOvertimeHours() : 0.0;
+
+        // Earned Basic = Basic wage * Present days
+        double earnedBasic = Math.round((basicRate * presentDays) * 100.0) / 100.0;
+        // Earned Others = Other wage * Present days
+        double earnedOthers = Math.round((othersRate * presentDays) * 100.0) / 100.0;
+        // OT Amount = OT Hours * (Per Day / 8)
+        double otAmount = (salary.getOtAmount() != null && salary.getOtAmount() > 0) 
+            ? salary.getOtAmount() 
+            : Math.round((otHours * (perDayRate / 8.0)) * 100.0) / 100.0;
+        
+        salary.setEarnedBasic(earnedBasic);
+        salary.setEarnedOthers(earnedOthers);
+        salary.setOtAmount(otAmount);
+
+        // Total wages (Earned Total) = Earned Basic + Earned Others + OT Amount
+        double totalWages = Math.round((earnedBasic + earnedOthers + otAmount) * 100.0) / 100.0;
+        salary.setTotalWages(totalWages);
+
+        // Leave wage & LOP (Absent Days * Per Day Rate)
+        double leaveWage = Math.round((leaveDays * perDayRate) * 100.0) / 100.0;
+        double lop = Math.round((absentDays * perDayRate) * 100.0) / 100.0;
+        salary.setLeaveWage(leaveWage);
+        salary.setLop(lop);
+
+        // EPF: MIN(earnedBasic, 15000) * 12%
+        double epfWage = Math.min(earnedBasic, 15000.0);
+        double epf = (salary.getEpf() != null && salary.getEpf() > 0)
+            ? salary.getEpf()
+            : Math.round((epfWage * 0.12) * 100.0) / 100.0;
+        salary.setEpf(epf);
+
+        // ESIC: MIN(totalWages, 21000) * 0.75%
+        double esicWage = Math.min(totalWages, 21000.0);
+        double esi = (salary.getEsi() != null && salary.getEsi() > 0)
+            ? salary.getEsi()
+            : Math.round((esicWage * 0.0075) * 100.0) / 100.0;
+        salary.setEsi(esi);
+        salary.setEpfAndEsi(Math.round((epf + esi) * 100.0) / 100.0);
+
+        double bonus = salary.getBonus() != null ? salary.getBonus() : 0.0;
+        double incentive = salary.getIncentive() != null ? salary.getIncentive() : 0.0;
+        salary.setBonus(bonus);
+        salary.setIncentive(incentive);
+
+        // Grand Total = Total wages + Leave wage + Bonus - (EPF + ESI)
+        double grandTotal = Math.round((totalWages + leaveWage + bonus - epf - esi) * 100.0) / 100.0;
+        salary.setGrandTotal(grandTotal);
+
+        // Advance deductions
+        double advDeducted = salary.getAdvDeducted() != null ? salary.getAdvDeducted() : 0.0;
+        salary.setAdvDeducted(advDeducted);
+
+        // Net Credit = Total wage + Leave wage - (EPF + ESI) - Advance Deducted + Bonus + Incentive
+        double netCredit = Math.round((grandTotal - advDeducted + incentive) * 100.0) / 100.0;
+        salary.setNetCredit(netCredit);
 
         // Fetch employee coordinates if missing
         if (salary.getEmployeeId() != null) {
@@ -243,31 +312,14 @@ public class AttendancePayrollService {
             sal.setHalfDays(halfDayCount);
             sal.setOvertimeHours(totalOt);
 
-            // Default wages if not set
-            if (sal.getTotalWages() == null || sal.getTotalWages() == 0) {
-                sal.setTotalWages(23500.0); // Default base standard
-            }
-
-            // Calculations
-            double dailyWage = sal.getTotalWages() / workingDays;
-            double leaveWage = Math.round((leaveCount * dailyWage) * 100.0) / 100.0;
-            double lop = Math.round((absentCount * dailyWage) * 100.0) / 100.0;
-
-            sal.setLeaveWage(leaveWage);
-            sal.setLop(lop);
-
-            if (sal.getIncentive() == null) sal.setIncentive(0.0);
-            if (sal.getEpfAndEsi() == null) sal.setEpfAndEsi(1205.13); // Standard statutory deduction
-            if (sal.getAdvDeducted() == null) sal.setAdvDeducted(0.0);
-            if (sal.getCurrentAdvance() == null) sal.setCurrentAdvance(0.0);
+            double monthlyWage = (emp.getMonthlySalary() != null && emp.getMonthlySalary() > 0) ? emp.getMonthlySalary() : 20000.0;
+            double basicWage = (emp.getBasicRate() != null && emp.getBasicRate() >= 0) ? emp.getBasicRate() : 400.0;
+            sal.setMonthlySalary(monthlyWage);
+            sal.setBasicRate(basicWage);
 
             // Balance advance from ledger
             Double advanceBalance = advanceRepository.calculateRunningBalance(emp.getId());
             sal.setBalanceAdvance(advanceBalance != null ? advanceBalance : 0.0);
-
-            // Net Credit Calculation
-            double netCredit = sal.getTotalWages() + sal.getLeaveWage() + sal.getIncentive() - sal.getLop() - sal.getEpfAndEsi() - sal.getAdvDeducted();
-            sal.setNetCredit(Math.round(netCredit * 100.0) / 100.0);
 
             // Coordinates
             sal.setBankName(emp.getBankName());
@@ -278,7 +330,7 @@ public class AttendancePayrollService {
             sal.setPaymentStatus(sal.getPaymentStatus() != null ? sal.getPaymentStatus() : "PENDING");
             sal.setPaymentMode("Bank Transfer");
 
-            resultList.add(salaryRepository.save(sal));
+            resultList.add(saveSalaryRecord(sal));
         }
 
         return resultList;

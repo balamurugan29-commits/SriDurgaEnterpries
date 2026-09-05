@@ -173,11 +173,15 @@ const MainApp = () => {
                 <Route path="/master" element={<PermissionGuard requiredPermission="master"><MasterPage /></PermissionGuard>} />
                 <Route path="/customer-master" element={<PermissionGuard requiredPermission="customer-master"><CustomerMasterPage /></PermissionGuard>} />
                 <Route path="/employee-master" element={<PermissionGuard requiredPermission="employee-master"><EmployeeMasterPage /></PermissionGuard>} />
+                <Route path="/employee master" element={<Navigate to="/employee-master" replace />} />
+                <Route path="/employee_master" element={<Navigate to="/employee-master" replace />} />
                 <Route path="/employee-details" element={<Navigate to="/employee-master" replace />} />
                 <Route path="/employees" element={<Navigate to="/employee-master" replace />} />
                 <Route path="/attendance" element={<PermissionGuard requiredPermission="attendance"><AttendancePayrollPage /></PermissionGuard>} />
                 <Route path="/payroll" element={<Navigate to="/attendance" replace />} />
                 <Route path="/salary" element={<Navigate to="/attendance" replace />} />
+                <Route path="/salary-page" element={<Navigate to="/attendance" replace />} />
+                <Route path="/salary page" element={<Navigate to="/attendance" replace />} />
                 <Route path="/attendance-payroll" element={<Navigate to="/attendance" replace />} />
                 <Route path="/company-details" element={<PermissionGuard requiredPermission="company-details"><CompanyDetailsPage /></PermissionGuard>} />
                 <Route 
@@ -307,6 +311,7 @@ const MainApp = () => {
                 path="/purchase-ledger" 
                 element={<PermissionGuard requiredPermission="purchase-ledger"><PurchaseLedgerPage /></PermissionGuard>} 
               />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </Suspense>
         </main>

@@ -72,6 +72,15 @@ public class EmployeeMaster {
     @Column(name = "blood_group", length = 20)
     private String bloodGroup;
 
+    @Column(name = "monthly_salary")
+    private Double monthlySalary = 26000.0;
+
+    @Column(name = "min_wage")
+    private Double minWage = 600.0;
+
+    @Column(name = "basic_rate")
+    private Double basicRate = 400.0;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 

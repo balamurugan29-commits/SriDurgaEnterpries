@@ -516,6 +516,53 @@ input[type="number"] {
   background-color: #f8fafc !important;
 }
 
+/* Compact Table for Payroll & High-Density Sheets */
+.compact-sheet-table th {
+  padding: 0.75rem 0.5rem !important;
+  font-size: 0.75rem !important;
+  white-space: nowrap;
+}
+
+.compact-sheet-table td {
+  padding: 0.45rem 0.5rem !important;
+  font-size: 0.825rem !important;
+  vertical-align: middle;
+}
+
+/* Number Input in High-Density Tables */
+.table-num-input {
+  width: 100% !important;
+  min-width: 58px;
+  padding: 0.4rem 0.45rem !important;
+  font-size: 0.85rem !important;
+  font-weight: 700;
+  border-radius: 8px !important;
+  background: var(--input-bg) !important;
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  outline: none;
+  transition: all 0.15s ease;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.table-num-input::-webkit-inner-spin-button,
+.table-num-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.table-num-input:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 2.5px rgba(99, 102, 241, 0.25) !important;
+}
+
+[data-theme="light"] .table-num-input {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1.5px solid #cbd5e1 !important;
+}
+
 /* Badge styling */
 .badge {
   display: inline-flex;

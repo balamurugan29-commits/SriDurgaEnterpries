@@ -84,12 +84,17 @@ export const EmployeeModal = ({ isOpen, onClose, onSave, employee }) => {
   // Statutory Compliance (EPF / ESI)
   const [epfNumber, setEpfNumber] = useState('');
   const [esiNumber, setEsiNumber] = useState('');
-  
-  // Bank & Salary Coordinates
+
+  // Banking & Financial Details
   const [bankName, setBankName] = useState('');
   const [branchName, setBranchName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [ifscCode, setIfscCode] = useState('');
+  
+  // Salary & Wage Defaults
+  const [monthlySalary, setMonthlySalary] = useState(20000);
+  const [minWage, setMinWage] = useState(600);
+  const [basicRate, setBasicRate] = useState(400);
 
   useEffect(() => {
     if (employee) {
@@ -110,6 +115,9 @@ export const EmployeeModal = ({ isOpen, onClose, onSave, employee }) => {
       setBranchName(employee.branchName || '');
       setAccountNumber(employee.accountNumber || '');
       setIfscCode(employee.ifscCode || '');
+      setMonthlySalary(employee.monthlySalary !== undefined ? employee.monthlySalary : 20000);
+      setMinWage(employee.minWage !== undefined ? employee.minWage : 600);
+      setBasicRate(employee.basicRate !== undefined ? employee.basicRate : 400);
       setActiveTab('profile');
     } else {
       setEmployeeName('');
@@ -129,6 +137,9 @@ export const EmployeeModal = ({ isOpen, onClose, onSave, employee }) => {
       setBranchName('');
       setAccountNumber('');
       setIfscCode('');
+      setMonthlySalary(20000);
+      setMinWage(600);
+      setBasicRate(400);
       setActiveTab('profile');
     }
   }, [employee, isOpen]);
@@ -177,7 +188,10 @@ export const EmployeeModal = ({ isOpen, onClose, onSave, employee }) => {
       bankName: bankName.trim(),
       branchName: branchName.trim(),
       accountNumber: accountNumber.trim(),
-      ifscCode: ifscCode.trim().toUpperCase()
+      ifscCode: ifscCode.trim().toUpperCase(),
+      monthlySalary: parseFloat(monthlySalary) || 26000,
+      minWage: parseFloat(minWage) || 600,
+      basicRate: parseFloat(basicRate) || 400
     });
   };
 
@@ -677,6 +691,75 @@ export const EmployeeModal = ({ isOpen, onClose, onSave, employee }) => {
                         onChange={e => setIfscCode(e.target.value.toUpperCase())}
                         style={{ textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 700, fontSize: '0.875rem' }}
                       />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Standard Wage & Salary Config */}
+                <div style={{
+                  background: 'rgba(59, 130, 246, 0.05)',
+                  border: '1px solid rgba(59, 130, 246, 0.25)',
+                  borderRadius: '12px',
+                  padding: '1.15rem 1.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.9rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid rgba(59, 130, 246, 0.15)', paddingBottom: '0.5rem' }}>
+                    <CreditCard size={17} color="#60a5fa" />
+                    <h4 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#60a5fa' }}>
+                      Standard Wage & Rate Structure
+                    </h4>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.78rem', marginBottom: '4px' }}>
+                        Monthly Wage (₹)
+                      </label>
+                      <input
+                        type="number"
+                        step="500"
+                        className="form-input"
+                        placeholder="e.g. 20000"
+                        value={monthlySalary}
+                        onChange={e => {
+                          const val = Number(e.target.value) || 0;
+                          setMonthlySalary(val);
+                        }}
+                        style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.875rem' }}
+                      />
+                      <span style={{ fontSize: '0.68rem', color: '#818cf8' }}>Per Day Rate: ₹{((monthlySalary || 0) / 26).toFixed(2)}</span>
+                    </div>
+
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.78rem', marginBottom: '4px' }}>
+                        Basic Wage / Day (₹)
+                      </label>
+                      <input
+                        type="number"
+                        step="10"
+                        className="form-input"
+                        placeholder="e.g. 400"
+                        value={basicRate}
+                        onChange={e => setBasicRate(Number(e.target.value) || 0)}
+                        style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.875rem', background: 'rgba(99, 102, 241, 0.08)' }}
+                        title="Basic Wage per day (Editable, default ₹400)"
+                      />
+                      <span style={{ fontSize: '0.68rem', color: '#60a5fa' }}>Standard Basic Rate</span>
+                    </div>
+
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.78rem', marginBottom: '4px' }}>
+                        Other Wage / Day (₹)
+                      </label>
+                      <div 
+                        className="form-input" 
+                        style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.875rem', background: 'rgba(255, 255, 255, 0.04)', color: '#a78bfa', display: 'flex', alignItems: 'center' }}
+                      >
+                        ₹{Math.max(0, ((monthlySalary || 0) / 26) - (basicRate || 0)).toFixed(2)}
+                      </div>
+                      <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>= Per Day - Basic Wage</span>
                     </div>
                   </div>
                 </div>

@@ -182,57 +182,113 @@ export const AttendancePayrollPage = () => {
 
   // Helper to recompute mathematical columns for a single salary / attendance row
   const computeSalaryRow = (row) => {
-    const workingDays = Number(row.totalWorkingDays) > 0 ? Number(row.totalWorkingDays) : 26;
-    const totalWages = Number(row.totalWages) || 0;
+    const workingDays = Number(row.totalWorkingDays) > 0 ? Number(row.totalWorkingDays) : (globalWorkingDays || 26);
+    const monthlySalary = Number(row.monthlySalary) > 0 
+      ? Number(row.monthlySalary) 
+      : (Number(row.totalWages) > 0 ? Number(row.totalWages) : 20000);
+
+    // Per Day Rate = Per Month / Working Days (e.g. 26)
+    const perDayRate = workingDays > 0 ? Math.round((monthlySalary / workingDays) * 100) / 100 : 0;
+
+    // Basic Wage per day is editable (default 400)
+    const basicRate = (row.basicRate !== undefined && row.basicRate !== null && !isNaN(row.basicRate)) 
+      ? Number(row.basicRate) 
+      : 400.0;
+
+    // Other Wage / Day = Per Day Rate - Basic Wage
+    const othersRate = Math.max(0, Math.round((perDayRate - basicRate) * 100) / 100);
+
     const presentDays = Number(row.presentDays) || 0;
     const leaveDays = Number(row.leaveDays) || 0;
     const absentDays = Number(row.absentDays) || 0;
     const halfDays = Number(row.halfDays) || 0;
     const overtimeHours = Number(row.overtimeHours) || 0;
+
+    // Earned Basic = Basic Wage * Present Days
+    const earnedBasic = Math.round((basicRate * presentDays) * 100) / 100;
+
+    // Earned Others = Other Wage * Present Days
+    const earnedOthers = Math.round((othersRate * presentDays) * 100) / 100;
+
+    // OT Amount = Overtime Hours * (Per Day / 8)
+    const otAmount = (row.otAmount !== undefined && Number(row.otAmount) > 0)
+      ? Number(row.otAmount)
+      : (overtimeHours > 0 ? Math.round((overtimeHours * (perDayRate / 8)) * 100) / 100 : 0);
+
+    // Total Wages (Earned Total) = Earned Basic + Earned Others + OT Amount
+    const totalWages = Math.round((earnedBasic + earnedOthers + otAmount) * 100) / 100;
+
+    // Leave Wage = Leave Days * Per Day Rate
+    const leaveWage = Math.round((leaveDays * perDayRate) * 100) / 100;
+
+    // LOP = Absent Days * Per Day Rate
+    const lop = Math.round((absentDays * perDayRate) * 100) / 100;
+
+    // EPF = Basic Wage * Present Days * 12% (with ₹15,000 cap rule: if earnedBasic > 15000, cap at 15000; if <= 15000, use earnedBasic)
+    const epfWage = Math.min(earnedBasic, 15000);
+    let epf = (row.epf !== undefined && row.epf !== null && !isNaN(row.epf) && Number(row.epf) >= 0 && row.isCustomEpf)
+      ? Number(row.epf)
+      : Math.round((epfWage * 0.12) * 100) / 100;
+
+    // ESI = Total Wages * 0.75% (with ₹21,000 cap rule: if totalWages > 21000, cap at 21000; if <= 21000, use totalWages)
+    const esicWage = Math.min(totalWages, 21000);
+    let esi = (row.esi !== undefined && row.esi !== null && !isNaN(row.esi) && Number(row.esi) >= 0 && row.isCustomEsi)
+      ? Number(row.esi)
+      : Math.round((esicWage * 0.0075) * 100) / 100;
+
+    // Deducted EPF & ESI = EPF + ESI
+    const epfAndEsi = Math.round((epf + esi) * 100) / 100;
+
+    const bonus = Number(row.bonus) || 0;
     const incentive = Number(row.incentive) || 0;
-    const epfAndEsi = Number(row.epfAndEsi) || 0;
+
+    // Grand Total = Total Earned + Leave Wage + Bonus - (EPF + ESI)
+    const grandTotal = Math.round((totalWages + leaveWage + bonus - epf - esi) * 100) / 100;
+
     const advDeducted = Number(row.advDeducted) || 0;
     const currentAdvance = Number(row.currentAdvance) || 0;
-    
+
     // Running advance balance
     const baseAdvBalance = (row.prevAdvanceBalance !== undefined) 
       ? Number(row.prevAdvanceBalance) 
       : (advanceBalances[row.employeeId] !== undefined ? Number(advanceBalances[row.employeeId]) : Number(row.balanceAdvance || 0) + Number(row.advDeducted || 0));
 
-    // Daily wage rate = Total wages / Working days
-    const dailyWage = workingDays > 0 ? (totalWages / workingDays) : 0;
-    
-    // Leave Wage = Leave Days * Daily Wage
-    const leaveWage = Math.round((leaveDays * dailyWage) * 100) / 100;
-    
-    // LOP = Absent Days * Daily Wage
-    const lop = Math.round((absentDays * dailyWage) * 100) / 100;
-    
-    // Net Credit = Total Wages + Leave Wage + Incentive - LOP - EPF_ESI - Adv Deducted
-    const netCredit = Math.round((totalWages + leaveWage + incentive - lop - epfAndEsi - advDeducted) * 100) / 100;
-    
+    // Net Credit = Total wage + Leave wage - Deducted (EPF + ESI) - Adv deducted + Bonus + Incentive
+    const netCredit = Math.round((totalWages + leaveWage - epfAndEsi - advDeducted + bonus + incentive) * 100) / 100;
+
     // Balance Advance = Previous Balance + Current Advance - Adv Deducted
     const balanceAdvance = Math.max(0, Math.round((baseAdvBalance + currentAdvance - advDeducted) * 100) / 100);
 
     return {
       ...row,
       totalWorkingDays: workingDays,
-      totalWages,
+      monthlySalary,
+      perDayRate,
+      basicRate,
+      othersRate,
       presentDays,
       leaveDays,
       absentDays,
       halfDays,
       overtimeHours,
-      incentive,
-      epfAndEsi,
-      advDeducted,
-      currentAdvance,
-      dailyWage: Math.round(dailyWage * 100) / 100,
+      earnedBasic,
+      earnedOthers,
+      otAmount,
+      totalWages,
       leaveWage,
       lop,
+      epf,
+      esi,
+      epfAndEsi,
+      bonus,
+      incentive,
+      grandTotal,
+      advDeducted,
+      currentAdvance,
       netCredit,
       balanceAdvance,
-      prevAdvanceBalance: baseAdvBalance
+      prevAdvanceBalance: baseAdvBalance,
+      dailyWage: perDayRate
     };
   };
 
@@ -247,6 +303,8 @@ export const AttendancePayrollPage = () => {
     const rows = activeEmps.map(emp => {
       const existing = salaries.find(s => s.employeeId === emp.id);
       const advBal = advanceBalances[emp.id] || 0;
+      const empMonthlySalary = emp.monthlySalary || 20000.0;
+      const empBasicRate = emp.basicRate !== undefined ? emp.basicRate : 400.0;
 
       if (existing) {
         return computeSalaryRow({
@@ -254,6 +312,8 @@ export const AttendancePayrollPage = () => {
           employeeName: emp.employeeName,
           employeeNumber: emp.employeeNumber,
           designation: emp.designation,
+          monthlySalary: existing.monthlySalary || empMonthlySalary,
+          basicRate: existing.basicRate !== undefined ? existing.basicRate : empBasicRate,
           prevAdvanceBalance: (existing.balanceAdvance !== undefined && existing.advDeducted !== undefined)
             ? Number(existing.balanceAdvance) + Number(existing.advDeducted)
             : advBal
@@ -269,17 +329,17 @@ export const AttendancePayrollPage = () => {
         salaryMonth: salaryMonthStr,
         month: selectedMonth,
         year: selectedYear,
+        monthlySalary: empMonthlySalary,
+        basicRate: empBasicRate,
         totalWorkingDays: globalWorkingDays,
         presentDays: globalWorkingDays,
         leaveDays: 0,
         absentDays: 0,
         halfDays: 0,
         overtimeHours: 0,
-        totalWages: 23500.0,
-        leaveWage: 0.0,
-        lop: 0.0,
+        otAmount: 0.0,
+        bonus: 0.0,
         incentive: 0.0,
-        epfAndEsi: 1205.13,
         advDeducted: 0.0,
         currentAdvance: 0.0,
         balanceAdvance: advBal,
@@ -290,7 +350,7 @@ export const AttendancePayrollPage = () => {
     });
 
     setMonthlySheetData(rows);
-  }, [employees, salaries, advanceBalances, salaryMonthStr, selectedMonth, selectedYear]);
+  }, [employees, salaries, advanceBalances, salaryMonthStr, selectedMonth, selectedYear, globalWorkingDays]);
 
   // Handle cell edit in Month-End Sheet
   const handleMonthlySheetFieldChange = (empId, field, rawValue) => {
@@ -300,7 +360,10 @@ export const AttendancePayrollPage = () => {
           ? rawValue 
           : (parseFloat(rawValue) || 0);
 
-        const updatedRow = { ...row, [field]: val };
+        const isCustomEpf = field === 'epf' ? true : row.isCustomEpf;
+        const isCustomEsi = field === 'esi' ? true : row.isCustomEsi;
+
+        const updatedRow = { ...row, [field]: val, isCustomEpf, isCustomEsi };
         return computeSalaryRow(updatedRow);
       }
       return row;
@@ -522,32 +585,50 @@ export const AttendancePayrollPage = () => {
 
   // Overall Statistics
   const sheetStats = useMemo(() => {
+    let totalMonthlyPool = 0;
     let totalGross = 0;
     let totalNet = 0;
     let totalLeaveWage = 0;
+    let totalEpf = 0;
+    let totalEsi = 0;
     let totalEpfEsi = 0;
     let totalLop = 0;
+    let totalBonus = 0;
+    let totalIncentive = 0;
+    let totalGrandTotal = 0;
     let totalAdvDeducted = 0;
     let totalBalanceAdvance = 0;
     let paidCount = 0;
 
     monthlySheetData.forEach(s => {
+      totalMonthlyPool += (s.monthlySalary || 0);
       totalGross += (s.totalWages || 0);
       totalLeaveWage += (s.leaveWage || 0);
-      totalNet += (s.netCredit || 0);
-      totalEpfEsi += (s.epfAndEsi || 0);
+      totalEpf += (s.epf || 0);
+      totalEsi += (s.esi || 0);
+      totalEpfEsi += (s.epfAndEsi || (s.epf || 0) + (s.esi || 0));
       totalLop += (s.lop || 0);
+      totalBonus += (s.bonus || 0);
+      totalIncentive += (s.incentive || 0);
+      totalGrandTotal += (s.grandTotal || 0);
+      totalNet += (s.netCredit || 0);
       totalAdvDeducted += (s.advDeducted || 0);
       totalBalanceAdvance += (s.balanceAdvance || 0);
       if (s.paymentStatus === 'PAID') paidCount++;
     });
 
     return { 
+      totalMonthlyPool,
       totalGross, 
       totalLeaveWage,
-      totalNet, 
+      totalEpf,
+      totalEsi,
       totalEpfEsi, 
       totalLop, 
+      totalBonus,
+      totalIncentive,
+      totalGrandTotal,
+      totalNet, 
       totalAdvDeducted, 
       totalBalanceAdvance, 
       paidCount, 
@@ -859,36 +940,54 @@ export const AttendancePayrollPage = () => {
           
           {/* Formula & Calculation Logic Guide Ribbon */}
           <div style={{
-            background: 'rgba(59, 130, 246, 0.08)',
-            border: '1px solid rgba(59, 130, 246, 0.25)',
-            borderRadius: '12px',
-            padding: '0.75rem 1.25rem',
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%)',
+            border: '1.5px solid rgba(59, 130, 246, 0.3)',
+            borderRadius: '14px',
+            padding: '0.85rem 1.25rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
             gap: '0.75rem',
             fontSize: '0.78rem',
-            color: 'var(--text-muted)'
+            color: 'var(--text-main)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.2)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#60a5fa', fontWeight: 700 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#60a5fa', fontWeight: 800, fontSize: '0.825rem' }}>
                 <Calculator size={16} />
-                <span>Salary Calculation Formula:</span>
+                <span>Salary Calculation Engine:</span>
               </div>
-              <span>• <strong>Daily Wage</strong> = Total Wages ÷ Working Days</span>
-              <span>• <strong style={{ color: '#38bdf8' }}>Leave Wage (+)</strong> = Paid Leave Days × Daily Wage</span>
-              <span>• <strong style={{ color: '#f87171' }}>LOP Deduction (-)</strong> = Absent Days × Daily Wage</span>
-              <span>• <strong style={{ color: '#34d399' }}>Net Credit (=)</strong> = Wages + Leave Wage + Incentive - LOP - EPF/ESI - Adv Deducted</span>
+              <span style={{ background: 'rgba(0,0,0,0.25)', padding: '2px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <strong>Per Day</strong> = Per Month ÷ 26
+              </span>
+              <span style={{ background: 'rgba(0,0,0,0.25)', padding: '2px 8px', borderRadius: '6px', border: '1px solid rgba(96, 165, 250, 0.3)' }}>
+                <strong style={{ color: '#60a5fa' }}>Basic Wage</strong> = Editable (₹400/day)
+              </span>
+              <span style={{ background: 'rgba(0,0,0,0.25)', padding: '2px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <strong style={{ color: '#a78bfa' }}>Other Wage</strong> = Per Day - Basic
+              </span>
+              <span style={{ background: 'rgba(0,0,0,0.25)', padding: '2px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <strong style={{ color: '#38bdf8' }}>Total Wage</strong> = Basic + Other + OT
+              </span>
+              <span style={{ background: 'rgba(0,0,0,0.25)', padding: '2px 8px', borderRadius: '6px', border: '1px solid rgba(248, 113, 113, 0.3)' }}>
+                <strong style={{ color: '#f87171' }}>EPF 12%</strong> = MIN(Basic × P, ₹15,000) × 12%
+              </span>
+              <span style={{ background: 'rgba(0,0,0,0.25)', padding: '2px 8px', borderRadius: '6px', border: '1px solid rgba(251, 146, 60, 0.3)' }}>
+                <strong style={{ color: '#fb923c' }}>ESI 0.75%</strong> = MIN(Total, ₹21,000) × 0.75%
+              </span>
+              <span style={{ background: 'rgba(0,0,0,0.25)', padding: '2px 8px', borderRadius: '6px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                <strong style={{ color: '#34d399' }}>Net Credit</strong> = Total - (EPF + ESI) - Adv + Bonus + Inc
+              </span>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <button
                 onClick={handleAutoFillFullMonth}
                 className="btn btn-outline"
-                style={{ padding: '0.3rem 0.6rem', fontSize: '0.72rem', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.4)' }}
+                style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 700, color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.4)', background: 'rgba(56, 189, 248, 0.1)' }}
               >
-                <Zap size={12} />
+                <Zap size={13} />
                 <span>Set All 26 Present</span>
               </button>
             </div>
@@ -910,49 +1009,49 @@ export const AttendancePayrollPage = () => {
 
             <div className="glass-panel" style={{ padding: '1rem 1.25rem' }}>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                Total Standard Gross Wages
+                Total Earned Gross Wages
               </div>
               <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#818cf8', marginTop: '4px', fontFamily: 'monospace' }}>
                 Rs. {formatCurrency(sheetStats.totalGross)}
               </div>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-subtle)' }}>
-                Base Wage Pool
+                Basic + Others + OT pool
               </span>
             </div>
 
             <div className="glass-panel" style={{ padding: '1rem 1.25rem' }}>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                Leave Wages Added (+)
-              </div>
-              <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#38bdf8', marginTop: '4px', fontFamily: 'monospace' }}>
-                Rs. {formatCurrency(sheetStats.totalLeaveWage)}
-              </div>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-subtle)' }}>
-                Paid Leave Allowance
-              </span>
-            </div>
-
-            <div className="glass-panel" style={{ padding: '1rem 1.25rem' }}>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                Total LOP Deductions (-)
+                Total EPF Deductions (12%)
               </div>
               <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#f87171', marginTop: '4px', fontFamily: 'monospace' }}>
-                Rs. {formatCurrency(sheetStats.totalLop)}
+                Rs. {formatCurrency(sheetStats.totalEpf)}
               </div>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-subtle)' }}>
-                Loss of Pay from Absences
+                12% on Basic (Max ₹15k wage)
               </span>
             </div>
 
             <div className="glass-panel" style={{ padding: '1rem 1.25rem' }}>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                Total EPF/ESI + Advances Deducted
+                Total ESI Deductions (0.75%)
               </div>
-              <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#fbbf24', marginTop: '4px', fontFamily: 'monospace' }}>
-                Rs. {formatCurrency(sheetStats.totalEpfEsi + sheetStats.totalAdvDeducted)}
+              <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#fb923c', marginTop: '4px', fontFamily: 'monospace' }}>
+                Rs. {formatCurrency(sheetStats.totalEsi)}
               </div>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-subtle)' }}>
-                Compliance & Loan Repayments
+                0.75% on Total (Max ₹21k wage)
+              </span>
+            </div>
+
+            <div className="glass-panel" style={{ padding: '1rem 1.25rem' }}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                Total Advances Deducted
+              </div>
+              <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#fbbf24', marginTop: '4px', fontFamily: 'monospace' }}>
+                Rs. {formatCurrency(sheetStats.totalAdvDeducted)}
+              </div>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-subtle)' }}>
+                Staff loan recovery
               </span>
             </div>
           </div>
@@ -993,31 +1092,39 @@ export const AttendancePayrollPage = () => {
             </div>
 
             <div className="custom-table-container" style={{ border: 'none', borderRadius: 0, overflowX: 'auto' }}>
-              <table className="custom-table" style={{ minWidth: '1450px' }}>
+              <table className="custom-table compact-sheet-table" style={{ minWidth: '2280px' }}>
                 <thead>
                   <tr>
-                    <th style={{ width: '40px', textAlign: 'center' }}>S.No</th>
-                    <th style={{ width: '190px' }}>Employee Name & ID</th>
-                    <th style={{ width: '80px', textAlign: 'center' }} title="Total Working Days in Month">W.Days</th>
-                    <th style={{ width: '90px', textAlign: 'center', background: 'rgba(16, 185, 129, 0.1)' }} title="Present Days">Present (P)</th>
-                    <th style={{ width: '90px', textAlign: 'center', background: 'rgba(56, 189, 248, 0.1)' }} title="Paid Leave Days (Eligible for Leave Wage)">Paid Leave</th>
-                    <th style={{ width: '90px', textAlign: 'center', background: 'rgba(239, 68, 68, 0.1)' }} title="Absent / Loss of Pay Days (Deducted as LOP)">Absent / LOP</th>
-                    <th style={{ width: '80px', textAlign: 'center' }} title="Overtime in Hours">OT (Hrs)</th>
-                    <th style={{ width: '110px', textAlign: 'right' }} title="Gross Standard Wages">Total wages</th>
-                    <th style={{ width: '100px', textAlign: 'right', color: '#38bdf8' }} title="Paid Leave Allowance: Leave Days × Daily Wage">Leave Wage (+)</th>
-                    <th style={{ width: '90px', textAlign: 'right' }} title="Incentive / Bonus">Incentive</th>
-                    <th style={{ width: '100px', textAlign: 'right', color: '#f87171' }} title="EPF & ESI Statutory Deductions">EPF & ESI (-)</th>
-                    <th style={{ width: '100px', textAlign: 'right', color: '#f87171' }} title="Loss of Pay: Absent Days × Daily Wage">LOP (-)</th>
-                    <th style={{ width: '105px', textAlign: 'right', color: '#fbbf24' }} title="Advance Deducted this month">Adv Deducted</th>
-                    <th style={{ width: '125px', textAlign: 'right', background: 'rgba(16, 185, 129, 0.2)' }} title="Net Take-Home Salary: Total Wages + Leave Wage + Incentive - LOP - EPF/ESI - Adv Deducted">Net Credit (=)</th>
-                    <th style={{ width: '120px', textAlign: 'right', background: 'rgba(251, 191, 36, 0.12)' }} title="Remaining Loan / Advance Balance">Bal Advance</th>
-                    <th style={{ width: '85px', textAlign: 'center' }}>Action</th>
+                    <th style={{ width: '45px', minWidth: '45px', textAlign: 'center' }}>S.No</th>
+                    <th style={{ width: '200px', minWidth: '190px' }}>Employee Name & ID</th>
+                    <th style={{ width: '125px', minWidth: '120px', textAlign: 'right' }} title="Per Month Salary (Standard Gross)">Per Month (₹)</th>
+                    <th style={{ width: '75px', minWidth: '70px', textAlign: 'center' }} title="Total Working Days in Month">W.Days</th>
+                    <th style={{ width: '95px', minWidth: '90px', textAlign: 'right', color: '#818cf8' }} title="Per Day Rate = Per Month / W.Days">Per Day</th>
+                    <th style={{ width: '120px', minWidth: '115px', textAlign: 'right', color: '#60a5fa' }} title="Basic Wage per day (Editable, e.g. ₹400)">Basic Wage (₹)</th>
+                    <th style={{ width: '105px', minWidth: '100px', textAlign: 'right', color: '#a78bfa' }} title="Other Wage / Day = Per Day - Basic Wage">Other Wage</th>
+                    <th style={{ width: '85px', minWidth: '80px', textAlign: 'center', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontWeight: 800 }} title="Present Days (P)">P</th>
+                    <th style={{ width: '85px', minWidth: '80px', textAlign: 'center', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', fontWeight: 800 }} title="Paid Leave (PL)">PL</th>
+                    <th style={{ width: '85px', minWidth: '80px', textAlign: 'center', background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', fontWeight: 800 }} title="Absent Days (A / LOP)">A</th>
+                    <th style={{ width: '80px', minWidth: '75px', textAlign: 'center' }} title="Overtime Hours">OT (h)</th>
+                    <th style={{ width: '115px', minWidth: '110px', textAlign: 'right', color: '#60a5fa' }} title="Earned Basic = Basic Wage × Present Days">Earned Basic</th>
+                    <th style={{ width: '115px', minWidth: '110px', textAlign: 'right', color: '#a78bfa' }} title="Earned Others = Other Wage × Present Days">Earned Others</th>
+                    <th style={{ width: '120px', minWidth: '115px', textAlign: 'right', fontWeight: 800 }} title="Total Wages = Earned Basic + Earned Others + OT">Total Wages</th>
+                    <th style={{ width: '110px', minWidth: '105px', textAlign: 'right', color: '#f87171' }} title="EPF = MIN(Earned Basic, ₹15,000) × 12%">EPF 12% (-)</th>
+                    <th style={{ width: '105px', minWidth: '100px', textAlign: 'right', color: '#fb923c' }} title="ESI = MIN(Total Wages, ₹21,000) × 0.75%">ESI 0.75% (-)</th>
+                    <th style={{ width: '120px', minWidth: '115px', textAlign: 'right', color: '#ec4899', fontWeight: 700 }} title="Deducted EPF & ESI = EPF + ESI">Deducted (EPF+ESI)</th>
+                    <th style={{ width: '95px', minWidth: '90px', textAlign: 'right' }} title="Bonus">Bonus (+)</th>
+                    <th style={{ width: '95px', minWidth: '90px', textAlign: 'right' }} title="Incentive">Incentive (+)</th>
+                    <th style={{ width: '120px', minWidth: '115px', textAlign: 'right', color: '#818cf8', fontWeight: 800 }} title="Grand Total = Total Wages + Leave Wage + Bonus - (EPF + ESI)">Grand Total</th>
+                    <th style={{ width: '110px', minWidth: '105px', textAlign: 'right', color: '#fbbf24' }} title="Advance Deducted this month">Adv Deducted</th>
+                    <th style={{ width: '135px', minWidth: '130px', textAlign: 'right', background: 'rgba(16, 185, 129, 0.2)' }} title="Net Credit = Total Wage - Deducted EPF&ESI - Adv Deducted + Bonus + Incentive">Net Credit (=)</th>
+                    <th style={{ width: '120px', minWidth: '115px', textAlign: 'right', background: 'rgba(251, 191, 36, 0.12)' }} title="Remaining Loan / Advance Balance">Bal Advance</th>
+                    <th style={{ width: '85px', minWidth: '80px', textAlign: 'center' }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredMonthlySheet.length === 0 ? (
                     <tr>
-                      <td colSpan={16} style={{ padding: '3.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      <td colSpan={24} style={{ padding: '3.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                         <Users size={32} style={{ margin: '0 auto 0.5rem auto', color: '#818cf8' }} />
                         <p style={{ margin: 0, fontSize: '0.9rem' }}>No active employees found. Add employees in Employee Master first.</p>
                       </td>
@@ -1032,14 +1139,27 @@ export const AttendancePayrollPage = () => {
 
                         {/* Name & ID */}
                         <td>
-                          <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.88rem' }}>
+                          <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.85rem' }}>
                             {row.employeeName}
                           </div>
-                          <div style={{ fontSize: '0.7rem', color: '#818cf8', display: 'flex', gap: '0.35rem' }}>
+                          <div style={{ fontSize: '0.68rem', color: '#818cf8', display: 'flex', gap: '0.3rem' }}>
                             <span>{row.employeeNumber || 'ID #' + row.employeeId}</span>
                             <span>•</span>
                             <span>{row.designation || 'Staff'}</span>
                           </div>
+                        </td>
+
+                        {/* Per Month Salary (editable) */}
+                        <td>
+                          <input
+                            type="number"
+                            step="500"
+                            className="table-num-input"
+                            style={{ textAlign: 'right', fontWeight: 800, fontFamily: 'monospace' }}
+                            value={row.monthlySalary || 20000}
+                            onChange={e => handleMonthlySheetFieldChange(row.employeeId, 'monthlySalary', e.target.value)}
+                            title="Monthly Gross Salary Standard"
+                          />
                         </td>
 
                         {/* Total Working Days */}
@@ -1048,153 +1168,216 @@ export const AttendancePayrollPage = () => {
                             type="number"
                             min="1"
                             max="31"
-                            className="form-input"
-                            style={{ padding: '0.25rem 0.35rem', fontSize: '0.8rem', textAlign: 'center', fontWeight: 700 }}
+                            className="table-num-input"
+                            style={{ textAlign: 'center', fontWeight: 700 }}
                             value={row.totalWorkingDays}
                             onChange={e => handleMonthlySheetFieldChange(row.employeeId, 'totalWorkingDays', e.target.value)}
                           />
                         </td>
 
-                        {/* Present Days */}
-                        <td style={{ background: 'rgba(16, 185, 129, 0.05)' }}>
+                        {/* Per Day Rate (Calculated: Per Month / W.Days) */}
+                        <td style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: '#818cf8', fontSize: '0.8rem' }}>
+                          ₹{formatCurrency(row.perDayRate)}
+                        </td>
+
+                        {/* Basic Wage / Day (Editable, default 400) */}
+                        <td>
+                          <input
+                            type="number"
+                            step="10"
+                            className="table-num-input"
+                            style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: '#60a5fa', borderColor: 'rgba(96, 165, 250, 0.45)', background: 'rgba(96, 165, 250, 0.06)' }}
+                            value={row.basicRate !== undefined ? row.basicRate : 400}
+                            onChange={e => handleMonthlySheetFieldChange(row.employeeId, 'basicRate', e.target.value)}
+                            title="Basic Wage per day (Editable)"
+                          />
+                        </td>
+
+                        {/* Other Wage / Day (Calculated: Per Day - Basic Wage) */}
+                        <td style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: '#a78bfa', fontSize: '0.8rem' }}>
+                          ₹{formatCurrency(row.othersRate)}
+                        </td>
+
+                        {/* Present Days (P) */}
+                        <td style={{ background: 'rgba(16, 185, 129, 0.05)', textAlign: 'center' }}>
                           <input
                             type="number"
                             step="0.5"
                             min="0"
                             max={row.totalWorkingDays || 31}
-                            className="form-input"
+                            className="table-num-input"
                             style={{ 
-                              padding: '0.25rem 0.35rem', 
-                              fontSize: '0.825rem', 
                               textAlign: 'center', 
                               fontWeight: 800, 
                               color: '#34d399',
-                              borderColor: 'rgba(16, 185, 129, 0.4)'
+                              borderColor: 'rgba(16, 185, 129, 0.5)',
+                              background: 'rgba(16, 185, 129, 0.08)'
                             }}
-                            value={row.presentDays}
+                            value={row.presentDays !== undefined ? row.presentDays : ''}
                             onChange={e => handleMonthlySheetFieldChange(row.employeeId, 'presentDays', e.target.value)}
+                            placeholder="0"
                           />
                         </td>
 
-                        {/* Paid Leave Days */}
-                        <td style={{ background: 'rgba(56, 189, 248, 0.05)' }}>
+                        {/* Paid Leave Days (PL) */}
+                        <td style={{ background: 'rgba(56, 189, 248, 0.05)', textAlign: 'center' }}>
                           <input
                             type="number"
                             step="0.5"
                             min="0"
-                            className="form-input"
+                            className="table-num-input"
                             style={{ 
-                              padding: '0.25rem 0.35rem', 
-                              fontSize: '0.825rem', 
                               textAlign: 'center', 
                               fontWeight: 800, 
                               color: '#38bdf8',
-                              borderColor: 'rgba(56, 189, 248, 0.4)'
+                              borderColor: 'rgba(56, 189, 248, 0.5)',
+                              background: 'rgba(56, 189, 248, 0.08)'
                             }}
-                            value={row.leaveDays}
+                            value={row.leaveDays !== undefined ? row.leaveDays : ''}
                             onChange={e => handleMonthlySheetFieldChange(row.employeeId, 'leaveDays', e.target.value)}
+                            placeholder="0"
                           />
                         </td>
 
-                        {/* Absent / LOP Days */}
-                        <td style={{ background: 'rgba(239, 68, 68, 0.05)' }}>
+                        {/* Absent Days (A) */}
+                        <td style={{ background: 'rgba(239, 68, 68, 0.05)', textAlign: 'center' }}>
                           <input
                             type="number"
                             step="0.5"
                             min="0"
-                            className="form-input"
+                            className="table-num-input"
                             style={{ 
-                              padding: '0.25rem 0.35rem', 
-                              fontSize: '0.825rem', 
                               textAlign: 'center', 
                               fontWeight: 800, 
                               color: '#f87171',
-                              borderColor: 'rgba(239, 68, 68, 0.4)'
+                              borderColor: 'rgba(239, 68, 68, 0.5)',
+                              background: 'rgba(239, 68, 68, 0.08)'
                             }}
-                            value={row.absentDays}
+                            value={row.absentDays !== undefined ? row.absentDays : ''}
                             onChange={e => handleMonthlySheetFieldChange(row.employeeId, 'absentDays', e.target.value)}
+                            placeholder="0"
                           />
                         </td>
 
                         {/* OT Hours */}
-                        <td>
+                        <td style={{ textAlign: 'center' }}>
                           <input
                             type="number"
                             step="0.5"
                             min="0"
-                            className="form-input"
-                            style={{ padding: '0.25rem 0.35rem', fontSize: '0.8rem', textAlign: 'center' }}
-                            value={row.overtimeHours}
+                            className="table-num-input"
+                            style={{ 
+                              textAlign: 'center',
+                              color: '#c084fc',
+                              borderColor: 'rgba(192, 132, 252, 0.35)',
+                              background: 'rgba(192, 132, 252, 0.05)'
+                            }}
+                            value={row.overtimeHours !== undefined ? row.overtimeHours : ''}
                             onChange={e => handleMonthlySheetFieldChange(row.employeeId, 'overtimeHours', e.target.value)}
+                            placeholder="0"
                           />
                         </td>
 
-                        {/* Total Wages */}
-                        <td>
-                          <input
-                            type="number"
-                            step="100"
-                            className="form-input"
-                            style={{ padding: '0.25rem 0.4rem', fontSize: '0.8rem', textAlign: 'right', fontWeight: 700, fontFamily: 'monospace' }}
-                            value={row.totalWages}
-                            onChange={e => handleMonthlySheetFieldChange(row.employeeId, 'totalWages', e.target.value)}
-                          />
+                        {/* Earned Basic = Basic Rate × P */}
+                        <td style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: '#60a5fa', fontSize: '0.8rem' }}>
+                          ₹{formatCurrency(row.earnedBasic)}
                         </td>
 
-                        {/* Leave Wage (+) */}
-                        <td style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: '#38bdf8' }}>
-                          Rs. {formatCurrency(row.leaveWage)}
+                        {/* Earned Others = Others Rate × P */}
+                        <td style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: '#a78bfa', fontSize: '0.8rem' }}>
+                          ₹{formatCurrency(row.earnedOthers)}
                         </td>
 
-                        {/* Incentive */}
-                        <td>
-                          <input
-                            type="number"
-                            step="50"
-                            className="form-input"
-                            style={{ padding: '0.25rem 0.35rem', fontSize: '0.8rem', textAlign: 'right', fontFamily: 'monospace' }}
-                            value={row.incentive}
-                            onChange={e => handleMonthlySheetFieldChange(row.employeeId, 'incentive', e.target.value)}
-                          />
+                        {/* Total Wages = Earned Basic + Earned Others + OT */}
+                        <td style={{ textAlign: 'right', fontWeight: 800, fontFamily: 'monospace', color: 'var(--text-main)', fontSize: '0.825rem' }}>
+                          ₹{formatCurrency(row.totalWages)}
                         </td>
 
-                        {/* EPF & ESI */}
+                        {/* EPF (12% of Earned Basic, max ₹15k wage) */}
                         <td>
                           <input
                             type="number"
                             step="10"
-                            className="form-input"
-                            style={{ padding: '0.25rem 0.35rem', fontSize: '0.8rem', textAlign: 'right', color: '#f87171', fontFamily: 'monospace' }}
-                            value={row.epfAndEsi}
-                            onChange={e => handleMonthlySheetFieldChange(row.employeeId, 'epfAndEsi', e.target.value)}
+                            className="table-num-input"
+                            style={{ textAlign: 'right', color: '#f87171', fontFamily: 'monospace', fontWeight: 700, borderColor: 'rgba(248, 113, 113, 0.35)', background: 'rgba(248, 113, 113, 0.05)' }}
+                            value={row.epf !== undefined ? row.epf : ''}
+                            onChange={e => handleMonthlySheetFieldChange(row.employeeId, 'epf', e.target.value)}
+                            title="EPF Deduction = MIN(Basic × P, 15000) × 12%"
+                            placeholder="0"
                           />
                         </td>
 
-                        {/* LOP (-) */}
-                        <td style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: '#f87171' }}>
-                          Rs. {formatCurrency(row.lop)}
+                        {/* ESI (0.75% of Total Wages, max ₹21k wage) */}
+                        <td>
+                          <input
+                            type="number"
+                            step="5"
+                            className="table-num-input"
+                            style={{ textAlign: 'right', color: '#fb923c', fontFamily: 'monospace', fontWeight: 700, borderColor: 'rgba(251, 146, 60, 0.35)', background: 'rgba(251, 146, 60, 0.05)' }}
+                            value={row.esi !== undefined ? row.esi : ''}
+                            onChange={e => handleMonthlySheetFieldChange(row.employeeId, 'esi', e.target.value)}
+                            title="ESI Deduction = MIN(Total Wage, 21000) × 0.75%"
+                            placeholder="0"
+                          />
                         </td>
 
-                        {/* Adv Deducted */}
+                        {/* Deducted EPF & ESI */}
+                        <td style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: '#ec4899', fontSize: '0.8rem' }}>
+                          ₹{formatCurrency(row.epfAndEsi)}
+                        </td>
+
+                        {/* Bonus (+) */}
                         <td>
                           <input
                             type="number"
                             step="100"
-                            className="form-input"
-                            style={{ padding: '0.25rem 0.35rem', fontSize: '0.8rem', textAlign: 'right', color: '#fbbf24', fontFamily: 'monospace' }}
-                            value={row.advDeducted}
-                            onChange={e => handleMonthlySheetFieldChange(row.employeeId, 'advDeducted', e.target.value)}
+                            className="table-num-input"
+                            style={{ textAlign: 'right', fontFamily: 'monospace' }}
+                            value={row.bonus !== undefined ? row.bonus : 0}
+                            onChange={e => handleMonthlySheetFieldChange(row.employeeId, 'bonus', e.target.value)}
+                            placeholder="0"
                           />
                         </td>
 
-                        {/* Net Credit (=) */}
-                        <td style={{ textAlign: 'right', fontWeight: 900, fontSize: '0.95rem', fontFamily: 'monospace', color: '#34d399', background: 'rgba(16, 185, 129, 0.12)' }}>
-                          Rs. {formatCurrency(row.netCredit)}
+                        {/* Incentive (+) */}
+                        <td>
+                          <input
+                            type="number"
+                            step="50"
+                            className="table-num-input"
+                            style={{ textAlign: 'right', fontFamily: 'monospace' }}
+                            value={row.incentive !== undefined ? row.incentive : 0}
+                            onChange={e => handleMonthlySheetFieldChange(row.employeeId, 'incentive', e.target.value)}
+                            placeholder="0"
+                          />
+                        </td>
+
+                        {/* Grand Total = Total Wages + Leave Wage + Bonus - (EPF + ESI) */}
+                        <td style={{ textAlign: 'right', fontWeight: 800, fontFamily: 'monospace', color: '#818cf8', fontSize: '0.85rem' }}>
+                          ₹{formatCurrency(row.grandTotal)}
+                        </td>
+
+                        {/* Adv Deducted (-) */}
+                        <td>
+                          <input
+                            type="number"
+                            step="100"
+                            className="table-num-input"
+                            style={{ textAlign: 'right', color: '#fbbf24', fontFamily: 'monospace', fontWeight: 700, borderColor: 'rgba(251, 191, 36, 0.4)', background: 'rgba(251, 191, 36, 0.05)' }}
+                            value={row.advDeducted !== undefined ? row.advDeducted : 0}
+                            onChange={e => handleMonthlySheetFieldChange(row.employeeId, 'advDeducted', e.target.value)}
+                            placeholder="0"
+                          />
+                        </td>
+
+                        {/* Net Credit (=) = Total Wage + Leave Wage - (EPF+ESI) - Adv Deducted + Bonus + Incentive */}
+                        <td style={{ textAlign: 'right', fontWeight: 900, fontSize: '0.925rem', fontFamily: 'monospace', color: '#34d399', background: 'rgba(16, 185, 129, 0.12)' }}>
+                          ₹{formatCurrency(row.netCredit)}
                         </td>
 
                         {/* Balance Advance */}
                         <td style={{ textAlign: 'right', fontWeight: 800, fontFamily: 'monospace', color: '#fbbf24', background: 'rgba(251, 191, 36, 0.08)' }}>
-                          Rs. {formatCurrency(row.balanceAdvance)}
+                          ₹{formatCurrency(row.balanceAdvance)}
                         </td>
 
                         {/* Actions: View / Print Official Payslip */}
@@ -1229,7 +1412,7 @@ export const AttendancePayrollPage = () => {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                 <Info size={15} color="#38bdf8" />
-                <span>Edits are instantly computed in memory. Click <strong>"Save Monthly Attendance & Update Payroll"</strong> to persist to records & slip print.</span>
+                <span>Formulas are live calculated. Click <strong>"Save Monthly Attendance & Update Payroll"</strong> to persist to records & slip print.</span>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -1597,28 +1780,33 @@ export const AttendancePayrollPage = () => {
             </div>
 
             <div className="custom-table-container" style={{ border: 'none', borderRadius: 0, overflowX: 'auto' }}>
-              <table className="custom-table" style={{ minWidth: '1300px' }}>
+              <table className="custom-table compact-sheet-table" style={{ minWidth: '1650px' }}>
                 <thead>
                   <tr>
-                    <th style={{ width: '45px', textAlign: 'center' }}>S.No</th>
-                    <th style={{ width: '200px' }}>Employee Full Name</th>
-                    <th style={{ width: '120px', textAlign: 'right' }}>Total wages</th>
-                    <th style={{ width: '110px', textAlign: 'right' }}>Leave Wage</th>
-                    <th style={{ width: '100px', textAlign: 'right' }}>Incentive</th>
-                    <th style={{ width: '110px', textAlign: 'right' }}>EPF & ESI</th>
-                    <th style={{ width: '100px', textAlign: 'right' }}>LOP</th>
-                    <th style={{ width: '110px', textAlign: 'right' }}>Adv Deducted</th>
-                    <th style={{ width: '130px', textAlign: 'right', background: 'rgba(16, 185, 129, 0.15)' }}>Net Credit</th>
-                    <th style={{ width: '110px', textAlign: 'right' }}>Cur. Advance</th>
-                    <th style={{ width: '130px', textAlign: 'right', background: 'rgba(251, 191, 36, 0.15)' }}>Balance Advance</th>
-                    <th style={{ width: '110px', textAlign: 'center' }}>Status</th>
-                    <th style={{ width: '120px', textAlign: 'center' }}>Actions</th>
+                    <th style={{ width: '40px', textAlign: 'center' }}>S.No</th>
+                    <th style={{ width: '180px' }}>Employee Full Name</th>
+                    <th style={{ width: '100px', textAlign: 'right' }}>Per Month (₹)</th>
+                    <th style={{ width: '90px', textAlign: 'right', color: '#818cf8' }}>Per Day</th>
+                    <th style={{ width: '85px', textAlign: 'right', color: '#60a5fa' }}>Basic / Day</th>
+                    <th style={{ width: '85px', textAlign: 'right', color: '#a78bfa' }}>Other / Day</th>
+                    <th style={{ width: '95px', textAlign: 'center' }}>P / PL / A</th>
+                    <th style={{ width: '110px', textAlign: 'right', fontWeight: 800 }}>Total Wages</th>
+                    <th style={{ width: '95px', textAlign: 'right', color: '#f87171' }}>EPF 12%</th>
+                    <th style={{ width: '90px', textAlign: 'right', color: '#fb923c' }}>ESI 0.75%</th>
+                    <th style={{ width: '100px', textAlign: 'right', color: '#ec4899', fontWeight: 700 }}>Deducted (EPF+ESI)</th>
+                    <th style={{ width: '100px', textAlign: 'right' }}>Bonus & Inc.</th>
+                    <th style={{ width: '110px', textAlign: 'right', color: '#818cf8', fontWeight: 800 }}>Grand Total</th>
+                    <th style={{ width: '100px', textAlign: 'right', color: '#fbbf24' }}>Adv Deducted</th>
+                    <th style={{ width: '125px', textAlign: 'right', background: 'rgba(16, 185, 129, 0.15)', fontWeight: 900 }}>Net Credit</th>
+                    <th style={{ width: '115px', textAlign: 'right', background: 'rgba(251, 191, 36, 0.12)' }}>Balance Advance</th>
+                    <th style={{ width: '95px', textAlign: 'center' }}>Status</th>
+                    <th style={{ width: '85px', textAlign: 'center' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredSalaries.length === 0 ? (
                     <tr>
-                      <td colSpan={13} style={{ padding: '3.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      <td colSpan={18} style={{ padding: '3.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                         <DollarSign size={32} style={{ margin: '0 auto 0.6rem auto', color: '#34d399' }} />
                         <p style={{ margin: '0 0 0.5rem 0', fontWeight: 600 }}>No saved salary records found for {salaryMonthStr}.</p>
                         <button onClick={handleGenerateSalaries} className="btn btn-primary" style={{ fontSize: '0.825rem', margin: '0 auto' }}>
@@ -1635,59 +1823,88 @@ export const AttendancePayrollPage = () => {
                         </td>
 
                         <td>
-                          <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.925rem' }}>
+                          <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.9rem' }}>
                             {sal.employeeName}
                           </div>
-                          <div style={{ fontSize: '0.7rem', color: '#818cf8', display: 'flex', gap: '0.35rem' }}>
+                          <div style={{ fontSize: '0.68rem', color: '#818cf8', display: 'flex', gap: '0.3rem' }}>
                             <span>{sal.employeeNumber || 'ID #' + sal.employeeId}</span>
                             <span>•</span>
                             <span>{sal.designation || 'Staff'}</span>
                           </div>
                         </td>
 
-                        {/* Total Wages */}
+                        {/* Monthly Salary */}
                         <td style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace' }}>
-                          Rs. {formatCurrency(sal.totalWages)}
+                          ₹{formatCurrency(sal.monthlySalary || sal.totalWages || 20000)}
                         </td>
 
-                        {/* Leave Wage */}
-                        <td style={{ textAlign: 'right', fontFamily: 'monospace', color: '#38bdf8' }}>
-                          Rs. {formatCurrency(sal.leaveWage)}
+                        {/* Per Day Rate */}
+                        <td style={{ textAlign: 'right', fontFamily: 'monospace', color: '#818cf8', fontWeight: 700 }}>
+                          ₹{formatCurrency(sal.perDayRate || (sal.totalWages && sal.totalWorkingDays ? sal.totalWages / sal.totalWorkingDays : 769.23))}
                         </td>
 
-                        {/* Incentive */}
-                        <td style={{ textAlign: 'right', fontFamily: 'monospace', color: sal.incentive > 0 ? '#34d399' : 'var(--text-muted)' }}>
-                          Rs. {formatCurrency(sal.incentive)}
+                        {/* Basic / Day */}
+                        <td style={{ textAlign: 'right', fontFamily: 'monospace', color: '#60a5fa', fontWeight: 700 }}>
+                          ₹{formatCurrency(sal.basicRate !== undefined ? sal.basicRate : 400)}
                         </td>
 
-                        {/* EPF & ESI */}
-                        <td style={{ textAlign: 'right', fontFamily: 'monospace', color: '#f87171' }}>
-                          Rs. {formatCurrency(sal.epfAndEsi)}
+                        {/* Other / Day */}
+                        <td style={{ textAlign: 'right', fontFamily: 'monospace', color: '#a78bfa', fontWeight: 700 }}>
+                          ₹{formatCurrency(sal.othersRate !== undefined ? sal.othersRate : Math.max(0, (sal.perDayRate || 769.23) - (sal.basicRate || 400)))}
                         </td>
 
-                        {/* LOP */}
-                        <td style={{ textAlign: 'right', fontFamily: 'monospace', color: '#f87171' }}>
-                          Rs. {formatCurrency(sal.lop)}
+                        {/* Attendance Roster Summary */}
+                        <td style={{ textAlign: 'center', fontSize: '0.78rem', fontFamily: 'monospace' }}>
+                          <span style={{ color: '#34d399', fontWeight: 800 }}>{sal.presentDays || 0}P</span>
+                          {' / '}
+                          <span style={{ color: '#38bdf8' }}>{sal.leaveDays || 0}PL</span>
+                          {' / '}
+                          <span style={{ color: '#f87171' }}>{sal.absentDays || 0}A</span>
+                        </td>
+
+                        {/* Total Wages */}
+                        <td style={{ textAlign: 'right', fontWeight: 800, fontFamily: 'monospace', color: 'var(--text-main)' }}>
+                          ₹{formatCurrency(sal.totalWages)}
+                        </td>
+
+                        {/* EPF 12% */}
+                        <td style={{ textAlign: 'right', fontFamily: 'monospace', color: '#f87171', fontWeight: 700 }}>
+                          ₹{formatCurrency(sal.epf || 0)}
+                        </td>
+
+                        {/* ESI 0.75% */}
+                        <td style={{ textAlign: 'right', fontFamily: 'monospace', color: '#fb923c', fontWeight: 700 }}>
+                          ₹{formatCurrency(sal.esi || 0)}
+                        </td>
+
+                        {/* Deducted EPF & ESI */}
+                        <td style={{ textAlign: 'right', fontFamily: 'monospace', color: '#ec4899', fontWeight: 700 }}>
+                          ₹{formatCurrency(sal.epfAndEsi || ((sal.epf || 0) + (sal.esi || 0)))}
+                        </td>
+
+                        {/* Bonus & Incentive */}
+                        <td style={{ textAlign: 'right', fontFamily: 'monospace', color: (sal.bonus > 0 || sal.incentive > 0) ? '#34d399' : 'var(--text-muted)' }}>
+                          ₹{formatCurrency((sal.bonus || 0) + (sal.incentive || 0))}
+                        </td>
+
+                        {/* Grand Total */}
+                        <td style={{ textAlign: 'right', fontFamily: 'monospace', color: '#818cf8', fontWeight: 800 }}>
+                          ₹{formatCurrency(sal.grandTotal || (sal.totalWages - (sal.epfAndEsi || 0)))}
                         </td>
 
                         {/* Adv Deducted */}
-                        <td style={{ textAlign: 'right', fontFamily: 'monospace', color: '#fbbf24' }}>
-                          Rs. {formatCurrency(sal.advDeducted)}
+                        <td style={{ textAlign: 'right', fontFamily: 'monospace', color: '#fbbf24', fontWeight: 700 }}>
+                          ₹{formatCurrency(sal.advDeducted)}
                         </td>
 
                         {/* Net Credit */}
                         <td style={{ textAlign: 'right', fontWeight: 900, fontSize: '0.95rem', fontFamily: 'monospace', color: '#34d399', background: 'rgba(16, 185, 129, 0.1)' }}>
-                          Rs. {formatCurrency(sal.netCredit)}
-                        </td>
-
-                        {/* Current Advance */}
-                        <td style={{ textAlign: 'right', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
-                          Rs. {formatCurrency(sal.currentAdvance)}
+                          ₹{formatCurrency(sal.netCredit)}
                         </td>
 
                         {/* Balance Advance */}
                         <td style={{ textAlign: 'right', fontWeight: 800, fontFamily: 'monospace', color: '#fbbf24', background: 'rgba(251, 191, 36, 0.1)' }}>
-                          Rs. {formatCurrency(sal.balanceAdvance)}
+                          ₹{formatCurrency(sal.balanceAdvance)}
                         </td>
 
                         {/* Payment Status */}

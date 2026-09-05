@@ -358,86 +358,174 @@ export const SalarySlipPrintModal = ({ isOpen, onClose, salary, companyDetails =
               marginBottom: '16px'
             }}>
               <tbody>
-                <tr>
-                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '13px', width: '55%' }}>
-                    Total wages
+                {/* Rate Structure Row */}
+                <tr style={{ background: '#f8fafc' }}>
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12px', width: '55%' }}>
+                    Per Month Standard / W.Days
                   </td>
-                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '13px', fontFamily: 'monospace' }}>
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12px', fontFamily: 'monospace' }}>
+                    Rs. {formatCurrency(salary.monthlySalary || salary.totalWages || 20000)} / {salary.totalWorkingDays || 26} Days
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12px' }}>
+                    Per Day Rate (Basic + Other)
+                  </td>
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12px', fontFamily: 'monospace' }}>
+                    Rs. {formatCurrency(salary.perDayRate || 769.23)}/day (Basic: Rs. {formatCurrency(salary.basicRate !== undefined ? salary.basicRate : 400)} + Other: Rs. {formatCurrency(salary.othersRate !== undefined ? salary.othersRate : Math.max(0, (salary.perDayRate || 769.23) - (salary.basicRate || 400)))})
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12.5px' }}>
+                    Attendance Summary
+                  </td>
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace' }}>
+                    Present: <strong>{salary.presentDays || 0}</strong> | PL: <strong>{salary.leaveDays || 0}</strong> | Abs: <strong>{salary.absentDays || 0}</strong>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12.5px' }}>
+                    Earned Basic (Basic × Present)
+                  </td>
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace' }}>
+                    Rs. {formatCurrency(salary.earnedBasic !== undefined ? salary.earnedBasic : ((salary.basicRate || 400) * (salary.presentDays || 0)))}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12.5px' }}>
+                    Earned Others (Other × Present)
+                  </td>
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace' }}>
+                    Rs. {formatCurrency(salary.earnedOthers !== undefined ? salary.earnedOthers : ((salary.othersRate || 369.23) * (salary.presentDays || 0)))}
+                  </td>
+                </tr>
+
+                {salary.otAmount > 0 && (
+                  <tr>
+                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12.5px' }}>
+                      Overtime Wages ({salary.overtimeHours || 0} Hours)
+                    </td>
+                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace' }}>
+                      Rs. {formatCurrency(salary.otAmount)}
+                    </td>
+                  </tr>
+                )}
+
+                <tr style={{ background: '#f1f5f9' }}>
+                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 800, fontSize: '13px' }}>
+                    Total Earned Wages
+                  </td>
+                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 800, textAlign: 'right', fontSize: '13px', fontFamily: 'monospace' }}>
                     Rs. {formatCurrency(salary.totalWages)}
                   </td>
                 </tr>
 
+                {salary.leaveWage > 0 && (
+                  <tr>
+                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12.5px' }}>
+                      Leave Wage (+)
+                    </td>
+                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace' }}>
+                      Rs. {formatCurrency(salary.leaveWage)}
+                    </td>
+                  </tr>
+                )}
+
+                {salary.bonus > 0 && (
+                  <tr>
+                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12.5px' }}>
+                      Bonus (+)
+                    </td>
+                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace' }}>
+                      Rs. {formatCurrency(salary.bonus)}
+                    </td>
+                  </tr>
+                )}
+
+                {salary.incentive > 0 && (
+                  <tr>
+                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12.5px' }}>
+                      Incentive (+)
+                    </td>
+                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace' }}>
+                      Rs. {formatCurrency(salary.incentive)}
+                    </td>
+                  </tr>
+                )}
+
+                {/* Deductions */}
                 <tr>
-                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '13px' }}>
-                    Leave Wage
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12.5px' }}>
+                    EPF Deduction (12% of Basic, Max ₹15k wage) (-)
                   </td>
-                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '13px', fontFamily: 'monospace' }}>
-                    Rs. {formatCurrency(salary.leaveWage)}
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace', color: '#b91c1c' }}>
+                    Rs. {formatCurrency(salary.epf || 0)}
                   </td>
                 </tr>
 
                 <tr>
-                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '13px' }}>
-                    Incentive
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12.5px' }}>
+                    ESIC Deduction (0.75% of Total, Max ₹21k wage) (-)
                   </td>
-                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '13px', fontFamily: 'monospace' }}>
-                    Rs. {formatCurrency(salary.incentive)}
-                  </td>
-                </tr>
-
-                <tr>
-                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '13px' }}>
-                    EPF & ESI
-                  </td>
-                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '13px', fontFamily: 'monospace', color: '#b91c1c' }}>
-                    Rs. {formatCurrency(salary.epfAndEsi)}
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace', color: '#b91c1c' }}>
+                    Rs. {formatCurrency(salary.esi || 0)}
                   </td>
                 </tr>
 
-                <tr>
-                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '13px' }}>
-                    LOP
+                <tr style={{ background: '#fef2f2' }}>
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, fontSize: '12.5px', color: '#991b1b' }}>
+                    Total Deductions (EPF + ESI) (-)
                   </td>
-                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '13px', fontFamily: 'monospace', color: '#b91c1c' }}>
-                    Rs. {formatCurrency(salary.lop)}
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace', color: '#991b1b' }}>
+                    Rs. {formatCurrency(salary.epfAndEsi || ((salary.epf || 0) + (salary.esi || 0)))}
                   </td>
                 </tr>
 
-                <tr>
-                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '13px' }}>
-                    Adv Deducted
-                  </td>
-                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '13px', fontFamily: 'monospace', color: '#b91c1c' }}>
-                    Rs. {formatCurrency(salary.advDeducted)}
-                  </td>
-                </tr>
+                {salary.grandTotal > 0 && (
+                  <tr style={{ background: '#f8fafc' }}>
+                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 800, fontSize: '12.5px' }}>
+                      Grand Total (Total + Leave Wage + Bonus - EPF - ESI)
+                    </td>
+                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 800, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace', color: '#1e3a8a' }}>
+                      Rs. {formatCurrency(salary.grandTotal)}
+                    </td>
+                  </tr>
+                )}
+
+                {salary.advDeducted > 0 && (
+                  <tr>
+                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12.5px' }}>
+                      Advance Deducted (-)
+                    </td>
+                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace', color: '#b91c1c' }}>
+                      Rs. {formatCurrency(salary.advDeducted)}
+                    </td>
+                  </tr>
+                )}
 
                 <tr style={{ background: '#f1f5f9' }}>
                   <td style={{ padding: '8px 12px', border: '1.5px solid #000000', fontWeight: 900, fontSize: '13.5px', textTransform: 'uppercase' }}>
-                    Net Credit
+                    Net Credit (Take-Home Pay)
                   </td>
                   <td style={{ padding: '8px 12px', border: '1.5px solid #000000', fontWeight: 900, textAlign: 'right', fontSize: '14.5px', fontFamily: 'monospace', color: '#047857' }}>
                     Rs. {formatCurrency(salary.netCredit)}
                   </td>
                 </tr>
 
-                <tr>
-                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '13px' }}>
-                    Current Advance
-                  </td>
-                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '13px', fontFamily: 'monospace' }}>
-                    Rs. {formatCurrency(salary.currentAdvance)}
-                  </td>
-                </tr>
-
-                <tr style={{ background: '#fffbeb' }}>
-                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 700, fontSize: '13px' }}>
-                    Balance Advance
-                  </td>
-                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 900, textAlign: 'right', fontSize: '13.5px', fontFamily: 'monospace', color: '#b45309' }}>
-                    Rs. {formatCurrency(salary.balanceAdvance)}
-                  </td>
-                </tr>
+                {salary.balanceAdvance > 0 && (
+                  <tr style={{ background: '#fffbeb' }}>
+                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, fontSize: '12px' }}>
+                      Remaining Advance / Loan Balance
+                    </td>
+                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 900, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace', color: '#b45309' }}>
+                      Rs. {formatCurrency(salary.balanceAdvance)}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
 

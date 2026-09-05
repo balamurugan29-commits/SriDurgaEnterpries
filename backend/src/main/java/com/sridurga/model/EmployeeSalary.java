@@ -60,27 +60,63 @@ public class EmployeeSalary {
     @Column(name = "overtime_hours")
     private Double overtimeHours = 0.0;
 
-    // Financial Wage Parameters
+    // Financial Wage Breakdown
+    @Column(name = "monthly_salary")
+    private Double monthlySalary = 26000.0; // Standard monthly gross (e.g., 26000)
+
+    @Column(name = "per_day_rate")
+    private Double perDayRate = 1000.0; // monthlySalary / totalWorkingDays
+
+    @Column(name = "min_wage")
+    private Double minWage = 600.0; // Minimum wage standard per day
+
+    @Column(name = "basic_rate")
+    private Double basicRate = 400.0; // Per Day Rate - Min Wage
+
+    @Column(name = "others_rate")
+    private Double othersRate = 400.0; // perDayRate - basicRate
+
+    @Column(name = "earned_basic")
+    private Double earnedBasic = 0.0; // basicRate * presentDays
+
+    @Column(name = "earned_others")
+    private Double earnedOthers = 0.0; // othersRate * presentDays
+
+    @Column(name = "ot_amount")
+    private Double otAmount = 0.0; // Overtime earnings
+
     @Column(name = "total_wages", nullable = false)
-    private Double totalWages = 0.0; // Gross / Total monthly wages
+    private Double totalWages = 0.0; // Total earned wages (earnedBasic + earnedOthers + otAmount)
 
     @Column(name = "leave_wage")
-    private Double leaveWage = 0.0; // Leave wage
-
-    @Column(name = "incentive")
-    private Double incentive = 0.0; // Allowances / Incentive
-
-    @Column(name = "epf_and_esi")
-    private Double epfAndEsi = 0.0; // Statutory deductions (EPF & ESI)
+    private Double leaveWage = 0.0; // Paid Leave allowance
 
     @Column(name = "lop")
-    private Double lop = 0.0; // Loss Of Pay deduction
+    private Double lop = 0.0; // Loss Of Pay deduction (absentDays * perDayRate)
+
+    @Column(name = "epf")
+    private Double epf = 0.0; // EPF 12% = (basicRate * presentDays) * 0.12
+
+    @Column(name = "esi")
+    private Double esi = 0.0; // ESI = (earnedBasic + earnedOthers + otAmount) * 0.75% (if monthlySalary <= 21000)
+
+    @Column(name = "epf_and_esi")
+    private Double epfAndEsi = 0.0; // Total EPF + ESI
+
+    @Column(name = "bonus")
+    private Double bonus = 0.0; // Bonus (+)
+
+    @Column(name = "incentive")
+    private Double incentive = 0.0; // Allowances / Incentive (+)
+
+    @Column(name = "grand_total")
+    private Double grandTotal = 0.0; // Total - (EPF + ESI)
 
     @Column(name = "adv_deducted")
-    private Double advDeducted = 0.0; // Advance deducted from salary
+    private Double advDeducted = 0.0; // Advance deducted from salary (-)
 
     @Column(name = "net_credit", nullable = false)
-    private Double netCredit = 0.0; // Net take-home salary payable
+    private Double netCredit = 0.0; // Net take-home salary payable: Grand Total - Advance + Incentive
 
     @Column(name = "current_advance")
     private Double currentAdvance = 0.0; // Advance taken during this month
