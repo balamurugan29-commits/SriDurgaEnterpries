@@ -558,7 +558,11 @@ export const AttendancePayrollPage = () => {
       }
       loadSalaries();
     } catch (err) {
-      setToast({ message: 'Failed to record advance: ' + err.message, type: 'error' });
+      if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+        setToast({ message: 'Session expired. Please log out and log in again to record staff advances.', type: 'error' });
+      } else {
+        setToast({ message: 'Failed to record advance: ' + (err.response?.data?.message || err.message), type: 'error' });
+      }
     }
   };
 

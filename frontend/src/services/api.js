@@ -43,15 +43,17 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor to handle session expiry (401 Unauthorized)
+// Response interceptor to handle session expiry (401 Unauthorized / 403 Forbidden)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      if (!error.config?.url?.includes('/auth/login')) {
-        localStorage.removeItem('sri_durga_user');
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new Event('sri_durga_auth_expired'));
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      if (!error.config?.url?.includes('/auth/login') && !error.config?.url?.includes('/auth/ping')) {
+        if (error.response.status === 401) {
+          localStorage.removeItem('sri_durga_user');
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('sri_durga_auth_expired'));
+          }
         }
       }
     }
