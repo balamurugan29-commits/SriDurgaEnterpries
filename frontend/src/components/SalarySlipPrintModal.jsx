@@ -358,7 +358,7 @@ export const SalarySlipPrintModal = ({ isOpen, onClose, salary, companyDetails =
               marginBottom: '16px'
             }}>
               <tbody>
-                {/* Rate Structure Row */}
+                {/* 1. Per Month Standard / W.Days */}
                 <tr style={{ background: '#f8fafc' }}>
                   <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12px', width: '55%' }}>
                     Per Month Standard / W.Days
@@ -368,39 +368,43 @@ export const SalarySlipPrintModal = ({ isOpen, onClose, salary, companyDetails =
                   </td>
                 </tr>
 
-                <tr>
-                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12px' }}>
-                    Per Day Rate (Basic + Other)
+                {/* 2. Total Deductions (EPF + ESI) (-) */}
+                <tr style={{ background: '#fef2f2' }}>
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, fontSize: '12.5px', color: '#991b1b' }}>
+                    Total Deductions (EPF + ESI) (-)
                   </td>
-                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12px', fontFamily: 'monospace' }}>
-                    Rs. {formatCurrency(salary.perDayRate || 769.23)}/day (Basic: Rs. {formatCurrency(salary.basicRate !== undefined ? salary.basicRate : 400)} + Other: Rs. {formatCurrency(salary.othersRate !== undefined ? salary.othersRate : Math.max(0, (salary.perDayRate || 769.23) - (salary.basicRate || 400)))})
-                  </td>
-                </tr>
-
-                <tr>
-                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12.5px' }}>
-                    Attendance Summary
-                  </td>
-                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace' }}>
-                    Present: <strong>{salary.presentDays || 0}</strong> | PL: <strong>{salary.leaveDays || 0}</strong> | Abs: <strong>{salary.absentDays || 0}</strong>
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace', color: '#991b1b' }}>
+                    Rs. {formatCurrency(salary.epfAndEsi || ((salary.epf || 0) + (salary.esi || 0)))}
                   </td>
                 </tr>
 
+                {/* 3. Leave Taken */}
                 <tr>
                   <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12.5px' }}>
-                    Earned Basic (Basic × Present)
+                    Leave Taken
                   </td>
                   <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace' }}>
-                    Rs. {formatCurrency(salary.earnedBasic !== undefined ? salary.earnedBasic : ((salary.basicRate || 400) * (salary.presentDays || 0)))}
+                    {salary.absentDays || 0} Days
                   </td>
                 </tr>
 
+                {/* 4. Total Earned Wages */}
+                <tr style={{ background: '#f1f5f9' }}>
+                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 800, fontSize: '13px' }}>
+                    Total Earned Wages
+                  </td>
+                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 800, textAlign: 'right', fontSize: '13px', fontFamily: 'monospace' }}>
+                    Rs. {formatCurrency(salary.totalWages)}
+                  </td>
+                </tr>
+
+                {/* 5. Paid Leave */}
                 <tr>
                   <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12.5px' }}>
-                    Earned Others (Other × Present)
+                    Paid Leave
                   </td>
                   <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace' }}>
-                    Rs. {formatCurrency(salary.earnedOthers !== undefined ? salary.earnedOthers : ((salary.othersRate || 369.23) * (salary.presentDays || 0)))}
+                    {salary.leaveDays || 0} Days {salary.leaveWage > 0 ? `(Rs. ${formatCurrency(salary.leaveWage)})` : ''}
                   </td>
                 </tr>
 
@@ -411,26 +415,6 @@ export const SalarySlipPrintModal = ({ isOpen, onClose, salary, companyDetails =
                     </td>
                     <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace' }}>
                       Rs. {formatCurrency(salary.otAmount)}
-                    </td>
-                  </tr>
-                )}
-
-                <tr style={{ background: '#f1f5f9' }}>
-                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 800, fontSize: '13px' }}>
-                    Total Earned Wages
-                  </td>
-                  <td style={{ padding: '7px 12px', border: '1px solid #000000', fontWeight: 800, textAlign: 'right', fontSize: '13px', fontFamily: 'monospace' }}>
-                    Rs. {formatCurrency(salary.totalWages)}
-                  </td>
-                </tr>
-
-                {salary.leaveWage > 0 && (
-                  <tr>
-                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12.5px' }}>
-                      Leave Wage (+)
-                    </td>
-                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace' }}>
-                      Rs. {formatCurrency(salary.leaveWage)}
                     </td>
                   </tr>
                 )}
@@ -457,44 +441,25 @@ export const SalarySlipPrintModal = ({ isOpen, onClose, salary, companyDetails =
                   </tr>
                 )}
 
-                {/* Deductions */}
+                {/* 6. Current Advance (Taken during current salary month) */}
                 <tr>
                   <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12.5px' }}>
-                    EPF Deduction (12% of Basic, Max ₹15k wage) (-)
+                    Current Advance
                   </td>
-                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace', color: '#b91c1c' }}>
-                    Rs. {formatCurrency(salary.epf || 0)}
-                  </td>
-                </tr>
-
-                <tr>
-                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '12.5px' }}>
-                    ESIC Deduction (0.75% of Total, Max ₹21k wage) (-)
-                  </td>
-                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace', color: '#b91c1c' }}>
-                    Rs. {formatCurrency(salary.esi || 0)}
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace', color: '#b45309' }}>
+                    Rs. {formatCurrency(Number(salary.currentAdvance) || 0)}
                   </td>
                 </tr>
 
-                <tr style={{ background: '#fef2f2' }}>
-                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, fontSize: '12.5px', color: '#991b1b' }}>
-                    Total Deductions (EPF + ESI) (-)
+                {/* 7. Grand Total (Total + Leave Wage + Bonus - EPF - ESI) */}
+                <tr style={{ background: '#f8fafc' }}>
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 800, fontSize: '12.5px' }}>
+                    Grand Total (Total + Leave Wage + Bonus - EPF - ESI)
                   </td>
-                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace', color: '#991b1b' }}>
-                    Rs. {formatCurrency(salary.epfAndEsi || ((salary.epf || 0) + (salary.esi || 0)))}
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 800, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace', color: '#1e3a8a' }}>
+                    Rs. {formatCurrency(salary.grandTotal)}
                   </td>
                 </tr>
-
-                {salary.grandTotal > 0 && (
-                  <tr style={{ background: '#f8fafc' }}>
-                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 800, fontSize: '12.5px' }}>
-                      Grand Total (Total + Leave Wage + Bonus - EPF - ESI)
-                    </td>
-                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 800, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace', color: '#1e3a8a' }}>
-                      Rs. {formatCurrency(salary.grandTotal)}
-                    </td>
-                  </tr>
-                )}
 
                 {salary.advDeducted > 0 && (
                   <tr>
@@ -507,21 +472,36 @@ export const SalarySlipPrintModal = ({ isOpen, onClose, salary, companyDetails =
                   </tr>
                 )}
 
+                {/* 8. NET CREDIT (TAKE-HOME PAY) */}
                 <tr style={{ background: '#f1f5f9' }}>
                   <td style={{ padding: '8px 12px', border: '1.5px solid #000000', fontWeight: 900, fontSize: '13.5px', textTransform: 'uppercase' }}>
-                    Net Credit (Take-Home Pay)
+                    NET CREDIT (TAKE-HOME PAY)
                   </td>
                   <td style={{ padding: '8px 12px', border: '1.5px solid #000000', fontWeight: 900, textAlign: 'right', fontSize: '14.5px', fontFamily: 'monospace', color: '#047857' }}>
                     Rs. {formatCurrency(salary.netCredit)}
                   </td>
                 </tr>
 
-                {salary.balanceAdvance > 0 && (
+                {/* 9. Total Advance (Previous Advance + Current Advance) */}
+                <tr style={{ background: '#fffbeb' }}>
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, fontSize: '12px' }}>
+                    Total Advance
+                  </td>
+                  <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 900, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace', color: '#b45309' }}>
+                    Rs. {formatCurrency(
+                      (salary.totalAdvance !== undefined && salary.totalAdvance !== null && Number(salary.totalAdvance) > 0)
+                        ? Number(salary.totalAdvance)
+                        : (Number(salary.previousAdvance !== undefined ? salary.previousAdvance : (salary.prevAdvanceBalance || 0)) + Number(salary.currentAdvance || 0)) || Number(salary.balanceAdvance || 0)
+                    )}
+                  </td>
+                </tr>
+
+                {salary.advDeducted > 0 && salary.balanceAdvance > 0 && (
                   <tr style={{ background: '#fffbeb' }}>
-                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 700, fontSize: '12px' }}>
-                      Remaining Advance / Loan Balance
+                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 600, fontSize: '11.5px', color: '#78350f' }}>
+                      Remaining Advance Balance
                     </td>
-                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 900, textAlign: 'right', fontSize: '12.5px', fontFamily: 'monospace', color: '#b45309' }}>
+                    <td style={{ padding: '6px 12px', border: '1px solid #000000', fontWeight: 800, textAlign: 'right', fontSize: '12px', fontFamily: 'monospace', color: '#78350f' }}>
                       Rs. {formatCurrency(salary.balanceAdvance)}
                     </td>
                   </tr>

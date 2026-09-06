@@ -112,17 +112,23 @@ public class EmployeeSalary {
     @Column(name = "grand_total")
     private Double grandTotal = 0.0; // Total - (EPF + ESI)
 
-    @Column(name = "adv_deducted")
-    private Double advDeducted = 0.0; // Advance deducted from salary (-)
-
-    @Column(name = "net_credit", nullable = false)
-    private Double netCredit = 0.0; // Net take-home salary payable: Grand Total - Advance + Incentive
+    @Column(name = "previous_advance")
+    private Double previousAdvance = 0.0; // Outstanding advance balance prior to this month
 
     @Column(name = "current_advance")
     private Double currentAdvance = 0.0; // Advance taken during this month
 
+    @Column(name = "total_advance")
+    private Double totalAdvance = 0.0; // Total accumulated advance: previousAdvance + currentAdvance
+
+    @Column(name = "adv_deducted")
+    private Double advDeducted = 0.0; // Advance deducted from salary (-)
+
     @Column(name = "balance_advance")
-    private Double balanceAdvance = 0.0; // Cumulative remaining advance balance
+    private Double balanceAdvance = 0.0; // Cumulative remaining advance balance (totalAdvance - advDeducted)
+
+    @Column(name = "net_credit", nullable = false)
+    private Double netCredit = 0.0; // Net take-home salary payable: Grand Total - Advance + Incentive
 
     // Payment Tracking
     @Column(name = "payment_status", length = 50)

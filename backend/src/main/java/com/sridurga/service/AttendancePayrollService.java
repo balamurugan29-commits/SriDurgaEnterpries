@@ -199,11 +199,25 @@ public class AttendancePayrollService {
         double grandTotal = Math.round((totalWages + leaveWage + bonus - epf - esi) * 100.0) / 100.0;
         salary.setGrandTotal(grandTotal);
 
+        // Advance calculations
+        double prevAdv = salary.getPreviousAdvance() != null ? salary.getPreviousAdvance() : 0.0;
+        double curAdv = salary.getCurrentAdvance() != null ? salary.getCurrentAdvance() : 0.0;
+        double totAdv = (salary.getTotalAdvance() != null && salary.getTotalAdvance() > 0)
+            ? salary.getTotalAdvance()
+            : Math.round((prevAdv + curAdv) * 100.0) / 100.0;
+        salary.setPreviousAdvance(prevAdv);
+        salary.setCurrentAdvance(curAdv);
+        salary.setTotalAdvance(totAdv);
+
         // Advance deductions
         double advDeducted = salary.getAdvDeducted() != null ? salary.getAdvDeducted() : 0.0;
         salary.setAdvDeducted(advDeducted);
 
-        // Net Credit = Total wage + Leave wage - (EPF + ESI) - Advance Deducted + Bonus + Incentive
+        // Balance Advance = Total Advance - Adv Deducted
+        double balAdv = Math.max(0.0, Math.round((totAdv - advDeducted) * 100.0) / 100.0);
+        salary.setBalanceAdvance(balAdv);
+
+        // Net Credit = Grand Total - Advance Deducted + Incentive
         double netCredit = Math.round((grandTotal - advDeducted + incentive) * 100.0) / 100.0;
         salary.setNetCredit(netCredit);
 
@@ -216,17 +230,6 @@ public class AttendancePayrollService {
                 if (salary.getEpfNumber() == null || salary.getEpfNumber().isEmpty()) salary.setEpfNumber(emp.getEpfNumber());
                 if (salary.getEsiNumber() == null || salary.getEsiNumber().isEmpty()) salary.setEsiNumber(emp.getEsiNumber());
             });
-
-            // Update advance balance if current advance or deduction is present
-            Double currentBalance = advanceRepository.calculateRunningBalance(salary.getEmployeeId());
-            double newBalance = (currentBalance != null ? currentBalance : 0.0);
-            if (salary.getCurrentAdvance() != null && salary.getCurrentAdvance() > 0) {
-                newBalance += salary.getCurrentAdvance();
-            }
-            if (salary.getAdvDeducted() != null && salary.getAdvDeducted() > 0) {
-                newBalance -= salary.getAdvDeducted();
-            }
-            salary.setBalanceAdvance(Math.max(0.0, Math.round(newBalance * 100.0) / 100.0));
         }
 
         Optional<EmployeeSalary> existing = salaryRepository.findByEmployeeIdAndSalaryMonth(salary.getEmployeeId(), salary.getSalaryMonth());
@@ -317,9 +320,13 @@ public class AttendancePayrollService {
             sal.setMonthlySalary(monthlyWage);
             sal.setBasicRate(basicWage);
 
-            // Balance advance from ledger
+            // Advance calculations from ledger
             Double advanceBalance = advanceRepository.calculateRunningBalance(emp.getId());
-            sal.setBalanceAdvance(advanceBalance != null ? advanceBalance : 0.0);
+            double totalAdvBal = advanceBalance != null ? advanceBalance : 0.0;
+            sal.setPreviousAdvance(totalAdvBal);
+            sal.setCurrentAdvance(0.0);
+            sal.setTotalAdvance(totalAdvBal);
+            sal.setBalanceAdvance(totalAdvBal);
 
             // Coordinates
             sal.setBankName(emp.getBankName());

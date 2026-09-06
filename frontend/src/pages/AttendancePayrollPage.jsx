@@ -245,19 +245,24 @@ export const AttendancePayrollPage = () => {
     // Grand Total = Total Earned + Leave Wage + Bonus - (EPF + ESI)
     const grandTotal = Math.round((totalWages + leaveWage + bonus - epf - esi) * 100) / 100;
 
-    const advDeducted = Number(row.advDeducted) || 0;
+    const prevAdvance = (row.previousAdvance !== undefined && row.previousAdvance !== null) 
+      ? Number(row.previousAdvance) 
+      : ((row.prevAdvanceBalance !== undefined && row.prevAdvanceBalance !== null)
+          ? Number(row.prevAdvanceBalance)
+          : (advanceBalances[row.employeeId] !== undefined ? Number(advanceBalances[row.employeeId]) : Number(row.balanceAdvance || 0)));
+
     const currentAdvance = Number(row.currentAdvance) || 0;
 
-    // Running advance balance
-    const baseAdvBalance = (row.prevAdvanceBalance !== undefined) 
-      ? Number(row.prevAdvanceBalance) 
-      : (advanceBalances[row.employeeId] !== undefined ? Number(advanceBalances[row.employeeId]) : Number(row.balanceAdvance || 0) + Number(row.advDeducted || 0));
+    // Total Advance = Previous Advance + Current Advance (Auto-Calculated)
+    const totalAdvance = Math.round((prevAdvance + currentAdvance) * 100) / 100;
+
+    const advDeducted = Number(row.advDeducted) || 0;
+
+    // Balance Advance = Total Advance - Adv Deducted
+    const balanceAdvance = Math.max(0, Math.round((totalAdvance - advDeducted) * 100) / 100);
 
     // Net Credit = Total wage + Leave wage - Deducted (EPF + ESI) - Adv deducted + Bonus + Incentive
     const netCredit = Math.round((totalWages + leaveWage - epfAndEsi - advDeducted + bonus + incentive) * 100) / 100;
-
-    // Balance Advance = Previous Balance + Current Advance - Adv Deducted
-    const balanceAdvance = Math.max(0, Math.round((baseAdvBalance + currentAdvance - advDeducted) * 100) / 100);
 
     return {
       ...row,
@@ -283,11 +288,13 @@ export const AttendancePayrollPage = () => {
       bonus,
       incentive,
       grandTotal,
-      advDeducted,
+      previousAdvance: prevAdvance,
       currentAdvance,
-      netCredit,
+      totalAdvance,
+      advDeducted,
       balanceAdvance,
-      prevAdvanceBalance: baseAdvBalance,
+      netCredit,
+      prevAdvanceBalance: prevAdvance,
       dailyWage: perDayRate
     };
   };
@@ -307,6 +314,16 @@ export const AttendancePayrollPage = () => {
       const empBasicRate = emp.basicRate !== undefined ? emp.basicRate : 400.0;
 
       if (existing) {
+        const prevAdv = (existing.previousAdvance !== undefined && existing.previousAdvance !== null)
+          ? Number(existing.previousAdvance)
+          : ((existing.balanceAdvance !== undefined && existing.advDeducted !== undefined)
+              ? Math.max(0, Number(existing.balanceAdvance) + Number(existing.advDeducted) - Number(existing.currentAdvance || 0))
+              : advBal);
+        const curAdv = Number(existing.currentAdvance) || 0;
+        const totAdv = (existing.totalAdvance !== undefined && existing.totalAdvance !== null && Number(existing.totalAdvance) > 0)
+          ? Number(existing.totalAdvance)
+          : Math.round((prevAdv + curAdv) * 100) / 100;
+
         return computeSalaryRow({
           ...existing,
           employeeName: emp.employeeName,
@@ -314,9 +331,10 @@ export const AttendancePayrollPage = () => {
           designation: emp.designation,
           monthlySalary: existing.monthlySalary || empMonthlySalary,
           basicRate: existing.basicRate !== undefined ? existing.basicRate : empBasicRate,
-          prevAdvanceBalance: (existing.balanceAdvance !== undefined && existing.advDeducted !== undefined)
-            ? Number(existing.balanceAdvance) + Number(existing.advDeducted)
-            : advBal
+          previousAdvance: prevAdv,
+          currentAdvance: curAdv,
+          totalAdvance: totAdv,
+          prevAdvanceBalance: prevAdv
         });
       }
 
@@ -340,8 +358,10 @@ export const AttendancePayrollPage = () => {
         otAmount: 0.0,
         bonus: 0.0,
         incentive: 0.0,
-        advDeducted: 0.0,
+        previousAdvance: advBal,
         currentAdvance: 0.0,
+        totalAdvance: advBal,
+        advDeducted: 0.0,
         balanceAdvance: advBal,
         prevAdvanceBalance: advBal,
         paymentStatus: 'PENDING',
@@ -1119,7 +1139,10 @@ export const AttendancePayrollPage = () => {
                     <th style={{ width: '95px', minWidth: '90px', textAlign: 'right' }} title="Bonus">Bonus (+)</th>
                     <th style={{ width: '95px', minWidth: '90px', textAlign: 'right' }} title="Incentive">Incentive (+)</th>
                     <th style={{ width: '120px', minWidth: '115px', textAlign: 'right', color: '#818cf8', fontWeight: 800 }} title="Grand Total = Total Wages + Leave Wage + Bonus - (EPF + ESI)">Grand Total</th>
-                    <th style={{ width: '110px', minWidth: '105px', textAlign: 'right', color: '#fbbf24' }} title="Advance Deducted this month">Adv Deducted</th>
+                    <th style={{ width: '105px', minWidth: '100px', textAlign: 'right', color: '#94a3b8' }} title="Previous Outstanding Advance Balance">Prev Adv</th>
+                    <th style={{ width: '115px', minWidth: '110px', textAlign: 'right', color: '#f59e0b' }} title="Advance Taken during Current Salary Month">Current Adv</th>
+                    <th style={{ width: '115px', minWidth: '110px', textAlign: 'right', color: '#fbbf24', background: 'rgba(245, 158, 11, 0.15)', fontWeight: 800 }} title="Total Advance = Prev Adv + Current Adv (Auto-Calculated)">Total Adv</th>
+                    <th style={{ width: '110px', minWidth: '105px', textAlign: 'right', color: '#f87171' }} title="Advance Deducted this month">Adv Deducted</th>
                     <th style={{ width: '135px', minWidth: '130px', textAlign: 'right', background: 'rgba(16, 185, 129, 0.2)' }} title="Net Credit = Total Wage - Deducted EPF&ESI - Adv Deducted + Bonus + Incentive">Net Credit (=)</th>
                     <th style={{ width: '120px', minWidth: '115px', textAlign: 'right', background: 'rgba(251, 191, 36, 0.12)' }} title="Remaining Loan / Advance Balance">Bal Advance</th>
                     <th style={{ width: '85px', minWidth: '80px', textAlign: 'center' }}>Action</th>
@@ -1128,7 +1151,7 @@ export const AttendancePayrollPage = () => {
                 <tbody>
                   {filteredMonthlySheet.length === 0 ? (
                     <tr>
-                      <td colSpan={24} style={{ padding: '3.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      <td colSpan={27} style={{ padding: '3.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                         <Users size={32} style={{ margin: '0 auto 0.5rem auto', color: '#818cf8' }} />
                         <p style={{ margin: 0, fontSize: '0.9rem' }}>No active employees found. Add employees in Employee Master first.</p>
                       </td>
@@ -1271,7 +1294,7 @@ export const AttendancePayrollPage = () => {
                             min="0"
                             className="table-num-input"
                             style={{ 
-                              textAlign: 'center',
+                              textAlign: 'center', 
                               color: '#c084fc',
                               borderColor: 'rgba(192, 132, 252, 0.35)',
                               background: 'rgba(192, 132, 252, 0.05)'
@@ -1361,16 +1384,50 @@ export const AttendancePayrollPage = () => {
                           ₹{formatCurrency(row.grandTotal)}
                         </td>
 
+                        {/* Prev Adv (Previous Outstanding Advance) */}
+                        <td>
+                          <input
+                            type="number"
+                            step="100"
+                            className="table-num-input"
+                            style={{ textAlign: 'right', color: '#94a3b8', fontFamily: 'monospace', fontWeight: 600 }}
+                            value={row.previousAdvance !== undefined ? row.previousAdvance : (row.prevAdvanceBalance || 0)}
+                            onChange={e => handleMonthlySheetFieldChange(row.employeeId, 'previousAdvance', e.target.value)}
+                            placeholder="0"
+                            title="Previous Outstanding Advance"
+                          />
+                        </td>
+
+                        {/* Current Adv (Taken during Current Salary Month) */}
+                        <td>
+                          <input
+                            type="number"
+                            step="100"
+                            className="table-num-input"
+                            style={{ textAlign: 'right', color: '#f59e0b', fontFamily: 'monospace', fontWeight: 700, borderColor: 'rgba(245, 158, 11, 0.45)', background: 'rgba(245, 158, 11, 0.08)' }}
+                            value={row.currentAdvance !== undefined ? row.currentAdvance : 0}
+                            onChange={e => handleMonthlySheetFieldChange(row.employeeId, 'currentAdvance', e.target.value)}
+                            placeholder="0"
+                            title="Advance / Loan taken during current month"
+                          />
+                        </td>
+
+                        {/* Total Adv = Prev Adv + Current Adv (Auto-Calculated) */}
+                        <td style={{ textAlign: 'right', fontWeight: 900, fontFamily: 'monospace', color: '#fbbf24', background: 'rgba(245, 158, 11, 0.12)', fontSize: '0.85rem' }} title="Total Advance = Prev Adv + Current Adv">
+                          ₹{formatCurrency(row.totalAdvance !== undefined ? row.totalAdvance : (Number(row.previousAdvance || 0) + Number(row.currentAdvance || 0)))}
+                        </td>
+
                         {/* Adv Deducted (-) */}
                         <td>
                           <input
                             type="number"
                             step="100"
                             className="table-num-input"
-                            style={{ textAlign: 'right', color: '#fbbf24', fontFamily: 'monospace', fontWeight: 700, borderColor: 'rgba(251, 191, 36, 0.4)', background: 'rgba(251, 191, 36, 0.05)' }}
+                            style={{ textAlign: 'right', color: '#f87171', fontFamily: 'monospace', fontWeight: 700, borderColor: 'rgba(248, 113, 113, 0.4)', background: 'rgba(248, 113, 113, 0.05)' }}
                             value={row.advDeducted !== undefined ? row.advDeducted : 0}
                             onChange={e => handleMonthlySheetFieldChange(row.employeeId, 'advDeducted', e.target.value)}
                             placeholder="0"
+                            title="Advance Deducted from this month payout"
                           />
                         </td>
 
@@ -1379,8 +1436,8 @@ export const AttendancePayrollPage = () => {
                           ₹{formatCurrency(row.netCredit)}
                         </td>
 
-                        {/* Balance Advance */}
-                        <td style={{ textAlign: 'right', fontWeight: 800, fontFamily: 'monospace', color: '#fbbf24', background: 'rgba(251, 191, 36, 0.08)' }}>
+                        {/* Balance Advance (Total Adv - Adv Deducted) */}
+                        <td style={{ textAlign: 'right', fontWeight: 800, fontFamily: 'monospace', color: '#fbbf24', background: 'rgba(251, 191, 36, 0.08)' }} title="Remaining Advance Balance = Total Adv - Adv Deducted">
                           ₹{formatCurrency(row.balanceAdvance)}
                         </td>
 
