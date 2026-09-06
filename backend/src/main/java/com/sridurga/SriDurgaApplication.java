@@ -48,7 +48,8 @@ public class SriDurgaApplication {
 			}
 
 			// 2. Seed Default Staff User (staff / staff123)
-			if (userRepository.findByUserId("staff").isEmpty()) {
+			java.util.Optional<User> staffOpt = userRepository.findByUserId("staff");
+			if (staffOpt.isEmpty()) {
 				User staff = new User();
 				staff.setUserId("staff");
 				staff.setPassword(passwordEncoder.encode("staff123"));
@@ -57,6 +58,12 @@ public class SriDurgaApplication {
 				staff.setPermissions("dashboard,master,customer-master,employee-master,attendance,challan,challan-list,proforma-invoice,proforma-invoice-history,gate-pass,gate-pass-list,job-card,job-card-history,work-completion,work-completion-history");
 				userRepository.save(staff);
 				System.out.println(">>> Initialized default user: staff / staff123");
+			} else {
+				User staff = staffOpt.get();
+				if (!"STAFF".equalsIgnoreCase(staff.getRole())) {
+					staff.setRole("STAFF");
+					userRepository.save(staff);
+				}
 			}
 
 			// 3. Preserve Client Office Master Profile (Ocean Sparkle Ltd with GSTIN, PAN, etc.)
