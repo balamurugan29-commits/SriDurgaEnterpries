@@ -30,14 +30,30 @@ public class PurchaseLedgerController {
 
     @PostMapping
     public ResponseEntity<?> createPurchaseLedger(@RequestBody PurchaseLedger ledger) {
-        String inv = ledger.getInvoiceNo() != null ? ledger.getInvoiceNo().trim() : "";
         String dealer = ledger.getDealerStoreName() != null ? ledger.getDealerStoreName().trim() : "";
+        if (dealer.isEmpty() && ledger.getSupplierRemarks() != null && !ledger.getSupplierRemarks().trim().isEmpty()) {
+            dealer = ledger.getSupplierRemarks().trim();
+            ledger.setDealerStoreName(dealer);
+        } else if (dealer.isEmpty()) {
+            dealer = "Dealer Store";
+            ledger.setDealerStoreName(dealer);
+        }
 
-        // Check duplicate only if invoiceNo is NOT a dash / placeholder / empty and dealer is provided
-        if (!inv.isEmpty() && !inv.equals("-") && !inv.equalsIgnoreCase("N/A") && !dealer.isEmpty()) {
-            boolean exists = purchaseLedgerRepository.existsByDealerStoreNameIgnoreCaseAndInvoiceNoIgnoreCase(dealer, inv);
+        String inv = ledger.getInvoiceNo() != null ? ledger.getInvoiceNo().trim() : "";
+        if (inv.isEmpty()) {
+            inv = "-";
+            ledger.setInvoiceNo(inv);
+        }
+
+        if (ledger.getInvoiceDate() == null) {
+            ledger.setInvoiceDate(java.time.LocalDate.now());
+        }
+
+        // Check duplicate only if invoiceNo is NOT a dash / placeholder / empty, dealer is provided, and invoiceDate matches
+        if (!inv.isEmpty() && !inv.equals("-") && !inv.equalsIgnoreCase("N/A")) {
+            boolean exists = purchaseLedgerRepository.existsByDealerStoreNameIgnoreCaseAndInvoiceNoIgnoreCaseAndInvoiceDate(dealer, inv, ledger.getInvoiceDate());
             if (exists) {
-                return ResponseEntity.badRequest().body("Duplicate entry: A bill with Invoice No. '" + inv + "' already exists for dealer '" + dealer + "'!");
+                return ResponseEntity.badRequest().body("Duplicate entry: A bill with Invoice No. '" + inv + "' dated " + ledger.getInvoiceDate() + " already exists for dealer '" + dealer + "'!");
             }
         }
         if (ledger.getSerialNumber() == null) {
@@ -51,29 +67,53 @@ public class PurchaseLedgerController {
     @PostMapping("/bulk")
     public List<PurchaseLedger> bulkCreatePurchaseLedgers(@RequestBody List<PurchaseLedger> ledgers) {
         long currentCount = purchaseLedgerRepository.count();
-        List<PurchaseLedger> toSave = new java.util.ArrayList<>();
+        List<PurchaseLedger> savedList = new java.util.ArrayList<>();
         java.util.Set<String> seenInBatch = new java.util.HashSet<>();
 
         for (int i = 0; i < ledgers.size(); i++) {
             PurchaseLedger l = ledgers.get(i);
-            String inv = l.getInvoiceNo() != null ? l.getInvoiceNo().trim() : "";
             String dealer = l.getDealerStoreName() != null ? l.getDealerStoreName().trim() : "";
+            if (dealer.isEmpty() && l.getSupplierRemarks() != null && !l.getSupplierRemarks().trim().isEmpty()) {
+                dealer = l.getSupplierRemarks().trim();
+                l.setDealerStoreName(dealer);
+            } else if (dealer.isEmpty()) {
+                dealer = "Dealer Store";
+                l.setDealerStoreName(dealer);
+            }
 
-            if (!inv.isEmpty() && !inv.equals("-") && !inv.equalsIgnoreCase("N/A") && !dealer.isEmpty()) {
-                String key = dealer.toUpperCase() + "___" + inv.toUpperCase();
-                if (seenInBatch.contains(key) || purchaseLedgerRepository.existsByDealerStoreNameIgnoreCaseAndInvoiceNoIgnoreCase(dealer, inv)) {
-                    continue; // Skip duplicate for same dealer
+            String inv = l.getInvoiceNo() != null ? l.getInvoiceNo().trim() : "";
+            if (inv.isEmpty()) {
+                inv = "-";
+                l.setInvoiceNo(inv);
+            }
+
+            if (l.getInvoiceDate() == null) {
+                l.setInvoiceDate(java.time.LocalDate.now());
+            }
+
+            if (!inv.equals("-") && !inv.equalsIgnoreCase("N/A")) {
+                String dateKey = l.getInvoiceDate() != null ? l.getInvoiceDate().toString() : "";
+                String key = dealer.toUpperCase() + "___" + inv.toUpperCase() + "___" + dateKey;
+                if (seenInBatch.contains(key) || purchaseLedgerRepository.existsByDealerStoreNameIgnoreCaseAndInvoiceNoIgnoreCaseAndInvoiceDate(dealer, inv, l.getInvoiceDate())) {
+                    continue; // Skip duplicate only for same dealer + same invoice + same date
                 }
                 seenInBatch.add(key);
             }
 
             if (l.getSerialNumber() == null) {
-                l.setSerialNumber((int) (currentCount + toSave.size() + 1));
+                l.setSerialNumber((int) (currentCount + savedList.size() + 1));
             }
             l.computeBalance();
-            toSave.add(l);
+
+            try {
+                PurchaseLedger saved = purchaseLedgerRepository.save(l);
+                savedList.add(saved);
+            } catch (Exception ex) {
+                // Log and continue saving rest of batch
+                System.err.println("Could not save purchase bill: " + inv + " for dealer: " + dealer + ". Reason: " + ex.getMessage());
+            }
         }
-        return purchaseLedgerRepository.saveAll(toSave);
+        return savedList;
     }
 
     @PutMapping("/{id}")

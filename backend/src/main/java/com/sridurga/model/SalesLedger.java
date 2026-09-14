@@ -16,10 +16,10 @@ public class SalesLedger {
     @Column(name = "serial_number")
     private Integer serialNumber;
 
-    @Column(name = "invoice_no", nullable = false)
-    private String invoiceNo;
+    @Column(name = "invoice_no")
+    private String invoiceNo = "-";
 
-    @Column(name = "invoice_date", nullable = false)
+    @Column(name = "invoice_date")
     private LocalDate invoiceDate;
 
     @Column(name = "billed_to_remarks", columnDefinition = "TEXT")
@@ -69,12 +69,26 @@ public class SalesLedger {
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
+        if (this.invoiceNo == null || this.invoiceNo.trim().isEmpty()) {
+            this.invoiceNo = "-";
+        }
+        if (this.invoiceDate == null) {
+            this.invoiceDate = LocalDate.now();
+        }
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
         this.updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
+        if (this.invoiceNo == null || this.invoiceNo.trim().isEmpty()) {
+            this.invoiceNo = "-";
+        }
+        if (this.invoiceDate == null) {
+            this.invoiceDate = LocalDate.now();
+        }
         this.updatedAt = LocalDateTime.now();
     }
 

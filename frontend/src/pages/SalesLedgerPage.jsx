@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { 
   fetchChallans,
   fetchSalesLedgers, 
   createSalesLedger, 
+  bulkCreateSalesLedgers,
   updateSalesLedger, 
   deleteSalesLedger 
 } from '../services/api';
@@ -35,7 +37,11 @@ import {
   Square,
   SlidersHorizontal,
   FileDown,
-  FileText
+  FileText,
+  FileUp,
+  AlertCircle,
+  Check,
+  Eye
 } from 'lucide-react';
 
 const SALES_EXPORT_COLUMNS = [
@@ -120,6 +126,22 @@ export const SalesLedgerPage = () => {
   const [exportIncludeTotals, setExportIncludeTotals] = useState(true);
   const [exportScope, setExportScope] = useState('FILTERED'); // 'FILTERED' or 'ALL'
 
+  // Excel Upload & Duplicates Modal States
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isDuplicatesModalOpen, setIsDuplicatesModalOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [previewRows, setPreviewRows] = useState([]);
+  const [duplicateRows, setDuplicateRows] = useState([]);
+  const [uploadStats, setUploadStats] = useState({
+    totalRows: 0,
+    duplicateRows: 0,
+    totalAmount: 0,
+    totalPassed: 0,
+    totalBalance: 0
+  });
+  const fileInputRef = useRef(null);
+
   // Customer Opening Balance Map from localStorage
   const [customerOpenings, setCustomerOpenings] = useState(() => {
     try {
@@ -186,14 +208,22 @@ export const SalesLedgerPage = () => {
       const savedMap = new Map();
       (savedLedgers || []).forEach(l => {
         if (l.invoiceNo) {
-          savedMap.set(l.invoiceNo.trim().toUpperCase(), l);
+          const inv = l.invoiceNo.trim().toUpperCase();
+          const dt = (l.invoiceDate || '').trim();
+          if (dt) {
+            savedMap.set(`${inv}___${dt}`, l);
+          }
+          if (!savedMap.has(inv)) {
+            savedMap.set(inv, l);
+          }
         }
       });
 
       // 3. Auto-populate each Tax Invoice into Sales Ledger
       const autoFetchedList = (challans || []).map((c, idx) => {
         const invNo = (c.challanNumber || c.challanNo || `INV-${idx + 1}`).trim();
-        const saved = savedMap.get(invNo.toUpperCase()) || {};
+        const challanDt = (c.challanDate || c.date || '').trim();
+        const saved = (challanDt ? savedMap.get(`${invNo.toUpperCase()}___${challanDt}`) : null) || savedMap.get(invNo.toUpperCase()) || {};
 
         // Calculate SubTotal
         const items = c.items || [];
@@ -246,10 +276,19 @@ export const SalesLedgerPage = () => {
         };
       });
 
-      // 4. Also include any standalone manual entries created directly in Sales Ledger
-      const existingChallanInvNos = new Set((challans || []).map(c => (c.challanNumber || c.challanNo || '').trim().toUpperCase()));
+      // 4. Also include any standalone manual entries or imported Excel entries created directly in Sales Ledger
+      const existingChallanKeys = new Set((challans || []).map(c => {
+        const inv = (c.challanNumber || c.challanNo || '').trim().toUpperCase();
+        const dt = (c.challanDate || c.date || '').trim();
+        return dt ? `${inv}___${dt}` : inv;
+      }).filter(Boolean));
+
       const standaloneEntries = (savedLedgers || []).filter(l => {
-        return l.invoiceNo && !existingChallanInvNos.has(l.invoiceNo.trim().toUpperCase());
+        if (!l.invoiceNo) return false;
+        const inv = l.invoiceNo.trim().toUpperCase();
+        const dt = (l.invoiceDate || '').trim();
+        const fullKey = dt ? `${inv}___${dt}` : inv;
+        return !existingChallanKeys.has(fullKey);
       }).map(l => ({
         ...l,
         isFromChallan: false,
@@ -428,7 +467,10 @@ export const SalesLedgerPage = () => {
 
     try {
       const existingSaved = await fetchSalesLedgers();
-      const found = (existingSaved || []).find(l => (l.invoiceNo || '').trim().toUpperCase() === item.invoiceNo.toUpperCase());
+      const found = (existingSaved || []).find(l => 
+        (l.invoiceNo || '').trim().toUpperCase() === item.invoiceNo.toUpperCase() &&
+        (!item.invoiceDate || !l.invoiceDate || l.invoiceDate === item.invoiceDate)
+      );
       if (found && found.id) {
         await updateSalesLedger(found.id, payload);
       } else {
@@ -491,9 +533,12 @@ export const SalesLedgerPage = () => {
       if (editingItem && typeof editingItem.id === 'number') {
         await updateSalesLedger(editingItem.id, payload);
       } else {
-        // Find if this invoiceNo was previously saved in sales_ledger
+        // Find if this invoiceNo was previously saved in sales_ledger with same date
         const existingSaved = await fetchSalesLedgers();
-        const found = (existingSaved || []).find(l => (l.invoiceNo || '').trim().toUpperCase() === payload.invoiceNo.toUpperCase());
+        const found = (existingSaved || []).find(l => 
+          (l.invoiceNo || '').trim().toUpperCase() === payload.invoiceNo.toUpperCase() &&
+          (!payload.invoiceDate || !l.invoiceDate || l.invoiceDate === payload.invoiceDate)
+        );
         if (found && found.id && typeof found.id === 'number') {
           await updateSalesLedger(found.id, payload);
         } else {
@@ -539,7 +584,10 @@ export const SalesLedgerPage = () => {
       };
 
       const existingSaved = await fetchSalesLedgers();
-      const found = (existingSaved || []).find(l => (l.invoiceNo || '').trim().toUpperCase() === item.invoiceNo.toUpperCase());
+      const found = (existingSaved || []).find(l => 
+        (l.invoiceNo || '').trim().toUpperCase() === item.invoiceNo.toUpperCase() &&
+        (!item.invoiceDate || !l.invoiceDate || l.invoiceDate === item.invoiceDate)
+      );
       if (found && found.id) {
         await updateSalesLedger(found.id, payload);
       } else {
@@ -884,6 +932,294 @@ export const SalesLedgerPage = () => {
     periodPreset !== 'ALL' ? periodPreset : null
   ].filter(Boolean).length;
 
+  // Robust Date Parser for Excel Input (Supports Serial, DD/MM/YYYY, YYYY-MM-DD)
+  const parseExcelDate = (val) => {
+    if (!val && val !== 0) return '';
+    if (typeof val === 'number') {
+      const date = new Date(Math.round((val - 25569) * 86400 * 1000));
+      return isNaN(date.getTime()) ? '' : date.toISOString().split('T')[0];
+    }
+    const str = String(val).trim();
+    if (!str) return '';
+    const dmyMatch = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+    if (dmyMatch) {
+      const day = dmyMatch[1].padStart(2, '0');
+      const month = dmyMatch[2].padStart(2, '0');
+      const year = dmyMatch[3];
+      return `${year}-${month}-${day}`;
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+      return str;
+    }
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) {
+      return d.toISOString().split('T')[0];
+    }
+    return str;
+  };
+
+  // Handle Excel/CSV File Selection & Parsing for Sales Ledger
+  const handleFileSelected = (file) => {
+    if (!file) return;
+    setUploadFile(file);
+    setUploading(true);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+        if (jsonRows.length < 2) {
+          setToast({ message: 'The selected file contains no data rows.', type: 'error' });
+          setUploading(false);
+          return;
+        }
+
+        // Header detection
+        let headerIdx = -1;
+        let customerCol = -1, invNoCol = -1, dateCol = -1, taxableCol = -1;
+        let igstCol = -1, sgstCol = -1, ugstCol = -1, taxCol = -1, totalCol = -1;
+        let itTdsCol = -1, gstTdsCol = -1, passedCol = -1, passDateCol = -1, modeCol = -1, remarksCol = -1;
+
+        for (let r = 0; r < Math.min(6, jsonRows.length); r++) {
+          const row = jsonRows[r];
+          row.forEach((cell, cIdx) => {
+            const h = String(cell || '').trim().toLowerCase();
+            if (h.includes('customer') || h.includes('billed to') || h.includes('party') || h.includes('client') || (h.includes('name') && !h.includes('item'))) customerCol = cIdx;
+            else if (h.includes('invoice no') || h.includes('bill no') || h.includes('inv no') || h.includes('invoice #') || h.includes('bill #') || (h.includes('invoice') && !h.includes('date'))) invNoCol = cIdx;
+            else if (h.includes('passed date') || h.includes('paid date') || h.includes('pay date') || h.includes('receipt date')) passDateCol = cIdx;
+            else if ((h.includes('invoice date') || h.includes('inv date') || h === 'date' || h.includes('bill date')) && dateCol === -1) dateCol = cIdx;
+            else if (h.includes('taxable') || h.includes('base') || h.includes('basic')) taxableCol = cIdx;
+            else if (h.includes('igst')) igstCol = cIdx;
+            else if (h.includes('sgst')) sgstCol = cIdx;
+            else if (h.includes('ugst') || h.includes('cgst')) ugstCol = cIdx;
+            else if (h === 'tax' || h.includes('tax amount') || h.includes('gst amount') || h === 'gst' || h.includes('total tax')) taxCol = cIdx;
+            else if (h.includes('it tds') || h.includes('it-tds') || h.includes('it_tds')) itTdsCol = cIdx;
+            else if (h.includes('gst tds') || h.includes('gst-tds') || h.includes('gst_tds')) gstTdsCol = cIdx;
+            else if (h.includes('total') || h.includes('gross') || h.includes('bill amt') || h.includes('net amount') || h.includes('invoice value')) totalCol = cIdx;
+            else if (h.includes('passed') || h.includes('paid') || h.includes('received') || h.includes('collected')) passedCol = cIdx;
+            else if (h.includes('mode') || h.includes('payment mode')) modeCol = cIdx;
+            else if (h.includes('remark') || h.includes('notes') || h.includes('comment')) remarksCol = cIdx;
+          });
+          if (customerCol !== -1 || invNoCol !== -1 || totalCol !== -1) {
+            headerIdx = r;
+            break;
+          }
+        }
+
+        if (headerIdx === -1) {
+          headerIdx = 0;
+          customerCol = 1; invNoCol = 2; dateCol = 3; taxableCol = 4; taxCol = 5; totalCol = 6; passedCol = 7; passDateCol = 8; modeCol = 9; remarksCol = 10;
+        }
+
+        const parsed = [];
+        const duplicatesList = [];
+        const isDashOrEmpty = (val) => {
+          if (!val && val !== 0) return true;
+          const s = String(val).trim();
+          return !s || s === '-' || s === '--' || s.toUpperCase() === 'N/A' || s.toUpperCase() === 'NA';
+        };
+
+        // Existing keys per (Customer + Invoice No + Invoice Date)
+        const existingKeys = new Set(
+          ledgerEntries.map(e => {
+            const c = (e.billedTo || e.billedToRemarks || '').trim().toUpperCase();
+            const inv = (e.invoiceNo || '').trim().toUpperCase();
+            const dt = (e.invoiceDate || '').trim();
+            return (inv && !isDashOrEmpty(inv)) ? `${c}___${inv}___${dt}` : null;
+          }).filter(Boolean)
+        );
+
+        let duplicateCount = 0;
+        let sumTotal = 0;
+        let sumPassed = 0;
+
+        for (let r = headerIdx + 1; r < jsonRows.length; r++) {
+          const row = jsonRows[r];
+          if (!row || row.every(c => String(c || '').trim() === '')) continue;
+
+          const customerName = customerCol !== -1 ? String(row[customerCol] || '').trim() : '';
+          const rawInv = invNoCol !== -1 ? String(row[invNoCol] || '').trim() : '';
+          if (!customerName && !rawInv) continue;
+
+          const parsedDate = dateCol !== -1 ? parseExcelDate(row[dateCol]) : '';
+          const invoiceDate = parsedDate || new Date().toISOString().split('T')[0];
+          const taxableAmount = taxableCol !== -1 ? (parseFloat(row[taxableCol]) || 0) : 0;
+          const igst = igstCol !== -1 ? (parseFloat(row[igstCol]) || 0) : 0;
+          const sgst = sgstCol !== -1 ? (parseFloat(row[sgstCol]) || 0) : 0;
+          const ugst = ugstCol !== -1 ? (parseFloat(row[ugstCol]) || 0) : 0;
+
+          let taxAmount = taxCol !== -1 ? (parseFloat(row[taxCol]) || 0) : (igst + sgst + ugst);
+          let totalAmount = totalCol !== -1 ? (parseFloat(row[totalCol]) || 0) : 0;
+          if (totalAmount === 0 && (taxableAmount > 0 || taxAmount > 0)) {
+            totalAmount = taxableAmount + taxAmount;
+          }
+          if (taxAmount === 0 && totalAmount > taxableAmount) {
+            taxAmount = totalAmount - taxableAmount;
+          }
+
+          const itTds = itTdsCol !== -1 ? (parseFloat(row[itTdsCol]) || 0) : 0;
+          const gstTds = gstTdsCol !== -1 ? (parseFloat(row[gstTdsCol]) || 0) : 0;
+          const passedAmount = passedCol !== -1 ? (parseFloat(row[passedCol]) || 0) : 0;
+
+          // Duplicate check ONLY for the SAME Customer with the SAME Invoice No and SAME Date
+          const custKey = customerName.trim().toUpperCase();
+          const invKey = rawInv.trim().toUpperCase();
+          if (invKey && !isDashOrEmpty(invKey)) {
+            const rowKey = `${custKey}___${invKey}___${invoiceDate}`;
+            if (existingKeys.has(rowKey)) {
+              duplicateCount++;
+              duplicatesList.push({
+                rowNum: r + 1,
+                billedTo: customerName || 'Customer',
+                invoiceNo: rawInv,
+                invoiceDate: invoiceDate || '-',
+                taxableAmount,
+                taxAmount,
+                totalAmount,
+                passedAmount,
+                reason: 'Already exists for this Customer with same Date in Database'
+              });
+              continue; // Skip duplicate only for same customer + same invoice + same date
+            }
+            existingKeys.add(rowKey);
+          }
+
+          const passedDate = passDateCol !== -1 ? parseExcelDate(row[passDateCol]) : (passedAmount > 0 ? invoiceDate : '');
+          const modeRaw = modeCol !== -1 && String(row[modeCol] || '').trim() ? String(row[modeCol]).trim().toUpperCase() : (passedAmount > 0 ? 'NEFT' : '');
+          const modeOfPayment = PAYMENT_MODES.includes(modeRaw) ? modeRaw : (modeRaw || (passedAmount > 0 ? 'NEFT' : ''));
+          const remarks = remarksCol !== -1 ? String(row[remarksCol] || '').trim() : '';
+
+          sumTotal += totalAmount;
+          sumPassed += passedAmount;
+
+          parsed.push({
+            billedToRemarks: customerName || 'Customer',
+            invoiceNo: rawInv || '-',
+            invoiceDate: invoiceDate || new Date().toISOString().split('T')[0],
+            taxableAmount,
+            igst,
+            sgst,
+            ugst,
+            taxAmount,
+            totalAmount,
+            itTds,
+            gstTds,
+            passedAmount,
+            passedDate,
+            modeOfPayment,
+            remarks
+          });
+        }
+
+        setDuplicateRows(duplicatesList);
+
+        if (parsed.length === 0) {
+          if (duplicateCount > 0) {
+            setToast({ message: `All ${duplicateCount} bills in the file are already in the Sales Ledger (Duplicates skipped). Click 'Duplicates Skipped' to view them.`, type: 'error' });
+          } else {
+            setToast({ message: 'No valid sales entries could be extracted from this sheet.', type: 'error' });
+          }
+          setUploading(false);
+          return;
+        }
+
+        setPreviewRows(parsed);
+        setUploadStats({
+          totalRows: parsed.length,
+          duplicateRows: duplicateCount,
+          totalAmount: sumTotal,
+          totalPassed: sumPassed,
+          totalBalance: Math.max(0, sumTotal - sumPassed)
+        });
+        const dupMsg = duplicateCount > 0 ? ` (${duplicateCount} duplicates skipped - Click Duplicates box to inspect)` : '';
+        setToast({ message: `Parsed ${parsed.length} new bills from "${file.name}"${dupMsg}. Click Confirm to Import!`, type: 'success' });
+      } catch (err) {
+        console.error('Failed to parse Excel:', err);
+        setToast({ message: 'Failed to read file: ' + err.message, type: 'error' });
+      } finally {
+        setUploading(false);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  // Confirm Batch Import into Sales Ledger
+  const handleConfirmImport = async () => {
+    if (previewRows.length === 0) return;
+    try {
+      setUploading(true);
+      await bulkCreateSalesLedgers(previewRows);
+      setToast({ message: `Successfully imported ${previewRows.length} sales bills into Sales Ledger!`, type: 'success' });
+      setIsUploadModalOpen(false);
+      setPreviewRows([]);
+      setUploadFile(null);
+      await loadAllSalesLedgerData();
+    } catch (err) {
+      console.error('Import failed:', err);
+      setToast({ message: 'Failed to import records: ' + err.message, type: 'error' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Download Sample Sales Ledger Excel Template
+  const handleDownloadSampleTemplate = () => {
+    const sampleHeaders = [
+      'Sl.No.',
+      'Billed To / Customer',
+      'Invoice No.',
+      'Date',
+      'Taxable Amount',
+      'IGST',
+      'SGST',
+      'UGST',
+      'Total Amount',
+      'Passed Amount',
+      'Passed Date',
+      'Mode of Payment',
+      'Remarks'
+    ];
+
+    const sampleRows = [
+      sampleHeaders,
+      [1, 'M/s. ABC Infrastructure Ltd, Chennai', 'INV/26-27/001', '05/04/2026', 25000, 4500, 0, 0, 29500, 29500, '10/04/2026', 'NEFT', 'Full Payment Received'],
+      [2, 'Tamil Nadu Water Supply & Drainage Board', 'INV/26-27/002', '12/04/2026', 48000, 0, 4320, 4320, 56640, 50000, '20/04/2026', 'RTGS', 'Partial Advance Received'],
+      [3, 'L&T Construction & Projects', 'INV/26-27/003', '18/04/2026', 15500, 2790, 0, 0, 18290, 0, '', 'NEFT', 'Pending Payment']
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(sampleRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sales Ledger');
+    XLSX.writeFile(wb, 'Sales_Ledger_Sample_Template.xlsx');
+  };
+
+  // Download Skipped Duplicates List as Excel
+  const handleDownloadDuplicatesExcel = () => {
+    if (duplicateRows.length === 0) return;
+    const headers = ['Sl.No.', 'Excel Row #', 'Customer / Billed To', 'Invoice No.', 'Date', 'Taxable Amount', 'Tax', 'Total Amount', 'Passed Amount', 'Reason'];
+    const rows = duplicateRows.map((d, i) => [
+      i + 1,
+      d.rowNum || '-',
+      d.billedTo,
+      d.invoiceNo,
+      d.invoiceDate,
+      d.taxableAmount,
+      d.taxAmount,
+      d.totalAmount,
+      d.passedAmount,
+      d.reason
+    ]);
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Skipped Duplicates');
+    XLSX.writeFile(wb, `Sales_Skipped_Duplicates_${Date.now()}.xlsx`);
+  };
+
   // Open Export Modal
   const handleOpenExportModal = () => {
     if (filteredLedgers.length === 0 && ledgerEntries.length === 0) {
@@ -1201,6 +1537,31 @@ export const SalesLedgerPage = () => {
             )}
           </button>
 
+          {/* Upload Excel Button */}
+          <button 
+            onClick={() => {
+              setUploadFile(null);
+              setPreviewRows([]);
+              setDuplicateRows([]);
+              setIsUploadModalOpen(true);
+            }} 
+            className="btn btn-outline" 
+            style={{ 
+              border: '1px solid rgba(56, 189, 248, 0.4)', 
+              color: '#38bdf8', 
+              fontSize: '0.85rem', 
+              padding: '0.55rem 1rem', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.45rem', 
+              fontWeight: 700 
+            }} 
+            title="Upload Sales Ledger Excel/CSV Sheet"
+          >
+            <FileUp size={16} />
+            <span>Upload Excel</span>
+          </button>
+
           {/* 2. Refresh & Sync */}
           <button onClick={loadAllSalesLedgerData} className="btn btn-outline" style={{ fontSize: '0.85rem', padding: '0.55rem 0.85rem' }} title="Refresh & Sync from Tax Invoices">
             <RefreshCw size={15} />
@@ -1506,6 +1867,22 @@ export const SalesLedgerPage = () => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+            {/* Upload Excel Button */}
+            <button 
+              onClick={() => {
+                setUploadFile(null);
+                setPreviewRows([]);
+                setDuplicateRows([]);
+                setIsUploadModalOpen(true);
+              }} 
+              className="btn btn-outline" 
+              style={{ border: '1px solid rgba(56, 189, 248, 0.4)', color: '#38bdf8', fontSize: '0.8rem', padding: '0.4rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }} 
+              title="Upload Sales Ledger Excel/CSV Sheet"
+            >
+              <FileUp size={15} />
+              <span>Upload Excel</span>
+            </button>
+
             {/* Export Excel Button (Opens Customizer Dialog) */}
             <button 
               onClick={handleOpenExportModal} 
@@ -3599,6 +3976,402 @@ export const SalesLedgerPage = () => {
                   <span>Print Statement (A4)</span>
                 </button>
               </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* EXCEL UPLOAD & BATCH IMPORT MODAL                            */}
+      {/* ============================================================ */}
+      {isUploadModalOpen && (
+        <div 
+          className="no-print-modal-overlay"
+          style={{ 
+            position: 'fixed', 
+            inset: 0, 
+            zIndex: 100000, 
+            background: 'rgba(0, 0, 0, 0.85)', 
+            backdropFilter: 'blur(6px)', 
+            display: 'flex', 
+            alignItems: 'flex-start', 
+            justifyContent: 'center', 
+            padding: '5rem 1rem 3rem 1rem',
+            overflowY: 'auto'
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !uploading) setIsUploadModalOpen(false);
+          }}
+        >
+          <div 
+            style={{ 
+              width: '100%', 
+              maxWidth: '900px', 
+              background: '#0f172a', 
+              border: '1.5px solid rgba(56, 189, 248, 0.4)', 
+              borderRadius: '16px', 
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.95)',
+              display: 'flex',
+              flexDirection: 'column',
+              maxHeight: 'calc(100vh - 6rem)',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{ padding: '1rem 1.5rem', background: 'rgba(30, 41, 59, 0.95)', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(56, 189, 248, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#38bdf8' }}>
+                  <FileUp size={20} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc', margin: 0 }}>
+                    Upload Sales Ledger Excel / CSV Sheet
+                  </h3>
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                    Bulk import sales bills with auto customer mapping, date, tax calculation, and duplicate protection.
+                  </span>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => !uploading && setIsUploadModalOpen(false)} 
+                className="btn btn-outline" 
+                style={{ padding: '0.35rem 0.65rem', borderRadius: '8px' }}
+                disabled={uploading}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', overflowY: 'auto' }}>
+              
+              {/* Instructions & Template Download Bar */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', background: 'rgba(30, 41, 59, 0.5)', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
+                  Need the standard format? Download the ready-to-fill Sales Ledger template.
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDownloadSampleTemplate}
+                  className="btn btn-outline"
+                  style={{ fontSize: '0.78rem', padding: '0.35rem 0.85rem', color: '#38bdf8', borderColor: '#38bdf8', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+                >
+                  <Download size={14} />
+                  <span>Download Sample Template (.xlsx)</span>
+                </button>
+              </div>
+
+              {/* Drag and Drop / File Input Box */}
+              <div 
+                onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                onDragOver={(e) => { e.preventDefault(); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    handleFileSelected(e.dataTransfer.files[0]);
+                  }
+                }}
+                style={{
+                  border: '2px dashed rgba(148, 163, 184, 0.35)',
+                  borderRadius: '12px',
+                  padding: '2rem 1.5rem',
+                  textAlign: 'center',
+                  background: 'rgba(15, 23, 42, 0.6)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.75rem'
+                }}
+              >
+                <input 
+                  type="file" 
+                  ref={fileInputRef}
+                  accept=".xlsx, .xls, .csv"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      handleFileSelected(e.target.files[0]);
+                    }
+                  }}
+                  style={{ display: 'none' }}
+                />
+
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(56, 189, 248, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#38bdf8' }}>
+                  <FileUp size={24} />
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc', marginBottom: '0.25rem' }}>
+                    {uploadFile ? `Selected: ${uploadFile.name}` : 'Click to Browse or Drag & Drop Excel/CSV File here'}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                    Supports <strong>.xlsx, .xls, .csv</strong> files with any number of rows
+                  </div>
+                </div>
+              </div>
+
+              {/* Parsed Preview Table & Statistics */}
+              {previewRows.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {/* Metric Summary Badges */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.625rem' }}>
+                    <div style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '0.65rem 0.85rem', borderRadius: '8px' }}>
+                      <div style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>New Bills to Import</div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#38bdf8' }}>{uploadStats.totalRows} Bills</div>
+                    </div>
+                    {uploadStats.duplicateRows > 0 && (
+                      <div 
+                        onClick={() => setIsDuplicatesModalOpen(true)}
+                        style={{ 
+                          background: 'rgba(239, 68, 68, 0.16)', 
+                          border: '1.5px solid rgba(239, 68, 68, 0.5)', 
+                          padding: '0.65rem 0.85rem', 
+                          borderRadius: '8px', 
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          boxShadow: '0 4px 12px rgba(239, 68, 68, 0.15)',
+                          transition: 'all 0.2s ease'
+                        }}
+                        title="Click to view all skipped duplicate bills in detail"
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '0.7rem', color: '#fca5a5', textTransform: 'uppercase', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <AlertCircle size={12} color="#f87171" /> Duplicates Skipped
+                          </span>
+                          <span style={{ fontSize: '0.625rem', background: '#ef4444', color: 'white', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '2px' }}>
+                            <Eye size={10} /> View ({duplicateRows.length})
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f87171' }}>
+                          {uploadStats.duplicateRows} Duplicate(s)
+                        </div>
+                      </div>
+                    )}
+                    <div style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.65rem 0.85rem', borderRadius: '8px' }}>
+                      <div style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Total Value</div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#34d399' }}>₹{uploadStats.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                    </div>
+                    <div style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '0.65rem 0.85rem', borderRadius: '8px' }}>
+                      <div style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Passed Amount</div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fbbf24' }}>₹{uploadStats.totalPassed.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                    </div>
+                    <div style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.65rem 0.85rem', borderRadius: '8px' }}>
+                      <div style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Balance Due</div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f87171' }}>₹{uploadStats.totalBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                    </div>
+                  </div>
+
+                  {/* Preview Scrollable Table */}
+                  <div style={{ maxHeight: '240px', overflowY: 'auto', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', background: 'rgba(15, 23, 42, 0.8)' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem', color: '#f8fafc' }}>
+                      <thead>
+                        <tr style={{ background: 'rgba(30, 41, 59, 0.95)', borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left' }}>
+                          <th style={{ padding: '6px 8px' }}>#</th>
+                          <th style={{ padding: '6px 8px' }}>Customer / Billed To</th>
+                          <th style={{ padding: '6px 8px' }}>Invoice No.</th>
+                          <th style={{ padding: '6px 8px' }}>Date</th>
+                          <th style={{ textAlign: 'right', padding: '6px 8px' }}>Taxable (₹)</th>
+                          <th style={{ textAlign: 'right', padding: '6px 8px' }}>Total (₹)</th>
+                          <th style={{ textAlign: 'right', padding: '6px 8px' }}>Passed (₹)</th>
+                          <th style={{ textAlign: 'right', padding: '6px 8px' }}>Balance (₹)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previewRows.map((r, idx) => {
+                          const bal = Math.max(0, (r.totalAmount || 0) - (r.passedAmount || 0));
+                          return (
+                            <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                              <td style={{ padding: '5px 8px', color: '#94a3b8' }}>{idx + 1}</td>
+                              <td style={{ padding: '5px 8px', fontWeight: 700, color: '#c7d2fe' }}>{r.billedToRemarks}</td>
+                              <td style={{ padding: '5px 8px', color: '#38bdf8' }}>{r.invoiceNo}</td>
+                              <td style={{ padding: '5px 8px' }}>{r.invoiceDate}</td>
+                              <td style={{ textAlign: 'right', padding: '5px 8px', color: '#cbd5e1' }}>₹{Number(r.taxableAmount || 0).toFixed(2)}</td>
+                              <td style={{ textAlign: 'right', padding: '5px 8px', fontWeight: 700, color: '#34d399' }}>₹{Number(r.totalAmount || 0).toFixed(2)}</td>
+                              <td style={{ textAlign: 'right', padding: '5px 8px', color: '#fbbf24' }}>₹{Number(r.passedAmount || 0).toFixed(2)}</td>
+                              <td style={{ textAlign: 'right', padding: '5px 8px', fontWeight: 700, color: bal > 0 ? '#f87171' : '#34d399' }}>₹{bal.toFixed(2)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ padding: '0.85rem 1.5rem', background: 'rgba(30, 41, 59, 0.95)', borderTop: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <button
+                type="button"
+                onClick={() => setIsUploadModalOpen(false)}
+                className="btn btn-outline"
+                style={{ padding: '0.5rem 1.25rem' }}
+                disabled={uploading}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleConfirmImport}
+                className="btn btn-primary"
+                disabled={previewRows.length === 0 || uploading}
+                style={{ 
+                  padding: '0.5rem 1.5rem', 
+                  fontWeight: 800, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem', 
+                  background: previewRows.length > 0 ? 'linear-gradient(135deg, #0ea5e9 0%, #10b981 100%)' : 'rgba(255,255,255,0.1)', 
+                  border: 'none',
+                  boxShadow: previewRows.length > 0 ? '0 4px 15px rgba(14, 165, 233, 0.4)' : 'none',
+                  cursor: previewRows.length > 0 ? 'pointer' : 'not-allowed'
+                }}
+              >
+                {uploading ? (
+                  <>
+                    <RefreshCw size={16} className="spin" />
+                    <span>Importing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={16} />
+                    <span>Confirm & Import ({previewRows.length}) Bills</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* VIEW SKIPPED DUPLICATES POP-UP MODAL                         */}
+      {/* ============================================================ */}
+      {isDuplicatesModalOpen && (
+        <div 
+          className="no-print-modal-overlay"
+          style={{ 
+            position: 'fixed', 
+            inset: 0, 
+            zIndex: 100001, 
+            background: 'rgba(0, 0, 0, 0.9)', 
+            backdropFilter: 'blur(8px)', 
+            display: 'flex', 
+            alignItems: 'flex-start', 
+            justifyContent: 'center', 
+            padding: '6.5rem 1rem 3rem 1rem',
+            overflowY: 'auto'
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsDuplicatesModalOpen(false);
+          }}
+        >
+          <div 
+            style={{ 
+              width: '100%', 
+              maxWidth: '920px', 
+              background: '#0f172a', 
+              border: '1.5px solid rgba(239, 68, 68, 0.5)', 
+              borderRadius: '16px', 
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.98)',
+              display: 'flex',
+              flexDirection: 'column',
+              maxHeight: 'calc(100vh - 8rem)',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{ padding: '1rem 1.5rem', background: 'rgba(30, 41, 59, 0.95)', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171' }}>
+                  <AlertCircle size={22} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc', margin: 0 }}>
+                    Skipped Duplicate Bills ({duplicateRows.length})
+                  </h3>
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                    The following bills were skipped because the same Customer & Invoice No. already exists in your database with the same Date
+                  </span>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setIsDuplicatesModalOpen(false)} 
+                className="btn btn-outline" 
+                style={{ padding: '0.35rem 0.65rem', borderRadius: '8px' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
+                  Exact matches with existing entries (Customer + Invoice No. + Date):
+                </span>
+                <button
+                  type="button"
+                  onClick={handleDownloadDuplicatesExcel}
+                  className="btn btn-outline"
+                  style={{ fontSize: '0.75rem', padding: '0.3rem 0.75rem', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.4)', display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700 }}
+                >
+                  <Download size={13} />
+                  <span>Download Skipped Duplicates (.xlsx)</span>
+                </button>
+              </div>
+
+              <div style={{ maxHeight: '380px', overflowY: 'auto', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', background: 'rgba(15, 23, 42, 0.8)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem', color: '#f8fafc' }}>
+                  <thead>
+                    <tr style={{ background: 'rgba(30, 41, 59, 0.95)', borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left' }}>
+                      <th style={{ padding: '6px 8px' }}>#</th>
+                      <th style={{ padding: '6px 8px' }}>Row in Excel</th>
+                      <th style={{ padding: '6px 8px' }}>Customer / Billed To</th>
+                      <th style={{ padding: '6px 8px' }}>Invoice No.</th>
+                      <th style={{ padding: '6px 8px' }}>Date</th>
+                      <th style={{ textAlign: 'right', padding: '6px 8px' }}>Total (₹)</th>
+                      <th style={{ textAlign: 'right', padding: '6px 8px' }}>Passed (₹)</th>
+                      <th style={{ padding: '6px 8px' }}>Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {duplicateRows.map((d, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(239, 68, 68, 0.04)' }}>
+                        <td style={{ padding: '5px 8px', color: '#94a3b8' }}>{idx + 1}</td>
+                        <td style={{ padding: '5px 8px', color: '#f87171', fontWeight: 700 }}>Line {d.rowNum}</td>
+                        <td style={{ padding: '5px 8px', fontWeight: 700, color: '#fbcfe8' }}>{d.billedTo}</td>
+                        <td style={{ padding: '5px 8px', color: '#38bdf8' }}>{d.invoiceNo}</td>
+                        <td style={{ padding: '5px 8px' }}>{d.invoiceDate}</td>
+                        <td style={{ textAlign: 'right', padding: '5px 8px', fontWeight: 700, color: '#34d399' }}>₹{Number(d.totalAmount || 0).toFixed(2)}</td>
+                        <td style={{ textAlign: 'right', padding: '5px 8px', color: '#fbbf24' }}>₹{Number(d.passedAmount || 0).toFixed(2)}</td>
+                        <td style={{ padding: '5px 8px', color: '#fca5a5', fontSize: '0.7rem' }}>{d.reason}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ padding: '0.85rem 1.5rem', background: 'rgba(30, 41, 59, 0.95)', borderTop: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setIsDuplicatesModalOpen(false)}
+                className="btn btn-outline"
+                style={{ padding: '0.45rem 1.25rem' }}
+              >
+                Close
+              </button>
             </div>
 
           </div>

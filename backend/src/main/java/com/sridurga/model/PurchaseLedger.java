@@ -19,10 +19,10 @@ public class PurchaseLedger {
     @Column(name = "dealer_store_name", columnDefinition = "TEXT")
     private String dealerStoreName;
 
-    @Column(name = "invoice_no", nullable = false)
-    private String invoiceNo;
+    @Column(name = "invoice_no")
+    private String invoiceNo = "-";
 
-    @Column(name = "invoice_date", nullable = false)
+    @Column(name = "invoice_date")
     private LocalDate invoiceDate;
 
     @Column(name = "taxable_amount", precision = 18, scale = 2)
@@ -64,6 +64,22 @@ public class PurchaseLedger {
 
     @PrePersist
     protected void onCreate() {
+        if (this.invoiceNo == null || this.invoiceNo.trim().isEmpty()) {
+            this.invoiceNo = "-";
+        }
+        if (this.invoiceDate == null) {
+            this.invoiceDate = LocalDate.now();
+        }
+        if (this.taxableAmount == null) this.taxableAmount = BigDecimal.ZERO;
+        if (this.taxAmount == null) this.taxAmount = BigDecimal.ZERO;
+        if (this.totalAmount == null) this.totalAmount = BigDecimal.ZERO;
+        if (this.paidAmount == null) this.paidAmount = BigDecimal.ZERO;
+        if (this.dealerStoreName == null && this.supplierRemarks != null) {
+            this.dealerStoreName = this.supplierRemarks;
+        }
+        if (this.supplierRemarks == null && this.dealerStoreName != null) {
+            this.supplierRemarks = this.dealerStoreName;
+        }
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
         computeBalance();
@@ -71,6 +87,19 @@ public class PurchaseLedger {
 
     @PreUpdate
     protected void onUpdate() {
+        if (this.invoiceNo == null || this.invoiceNo.trim().isEmpty()) {
+            this.invoiceNo = "-";
+        }
+        if (this.invoiceDate == null) {
+            this.invoiceDate = LocalDate.now();
+        }
+        if (this.taxableAmount == null) this.taxableAmount = BigDecimal.ZERO;
+        if (this.taxAmount == null) this.taxAmount = BigDecimal.ZERO;
+        if (this.totalAmount == null) this.totalAmount = BigDecimal.ZERO;
+        if (this.paidAmount == null) this.paidAmount = BigDecimal.ZERO;
+        if (this.dealerStoreName == null && this.supplierRemarks != null) {
+            this.dealerStoreName = this.supplierRemarks;
+        }
         this.updatedAt = LocalDateTime.now();
         computeBalance();
     }

@@ -39,7 +39,26 @@ public class SalesLedgerController {
 
     @PostMapping("/batch")
     public List<SalesLedger> createBatchSalesLedgers(@RequestBody List<SalesLedger> ledgers) {
-        return salesLedgerRepository.saveAll(ledgers);
+        long currentCount = salesLedgerRepository.count();
+        List<SalesLedger> savedList = new java.util.ArrayList<>();
+        for (int i = 0; i < ledgers.size(); i++) {
+            SalesLedger l = ledgers.get(i);
+            if (l.getSerialNumber() == null) {
+                l.setSerialNumber((int) (currentCount + savedList.size() + 1));
+            }
+            if (l.getInvoiceNo() == null || l.getInvoiceNo().trim().isEmpty()) {
+                l.setInvoiceNo("-");
+            }
+            if (l.getInvoiceDate() == null) {
+                l.setInvoiceDate(java.time.LocalDate.now());
+            }
+            try {
+                savedList.add(salesLedgerRepository.save(l));
+            } catch (Exception ex) {
+                System.err.println("Could not save sales ledger row: " + l.getInvoiceNo() + ". Reason: " + ex.getMessage());
+            }
+        }
+        return savedList;
     }
 
     @PutMapping("/{id}")

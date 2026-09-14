@@ -9,4 +9,5 @@ import java.util.List;
 public interface PurchaseLedgerRepository extends JpaRepository<PurchaseLedger, Long> {
     List<PurchaseLedger> findAllByOrderByInvoiceDateDesc();
     boolean existsByDealerStoreNameIgnoreCaseAndInvoiceNoIgnoreCase(String dealerStoreName, String invoiceNo);
+    boolean existsByDealerStoreNameIgnoreCaseAndInvoiceNoIgnoreCaseAndInvoiceDate(String dealerStoreName, String invoiceNo, java.time.LocalDate invoiceDate);
 }

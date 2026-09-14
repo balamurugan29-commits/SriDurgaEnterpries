@@ -1422,6 +1422,76 @@ export const createSalesLedger = async (ledgerData) => {
   }
 };
 
+export const bulkCreateSalesLedgers = async (entries) => {
+  try {
+    const res = await api.post('/sales-ledger/batch', entries);
+    const savedItems = Array.isArray(res.data) ? res.data : [];
+    const local = localStorage.getItem('sri_durga_sales_ledger');
+    const list = local ? JSON.parse(local) : [];
+
+    // Merge saved items into local storage
+    const existingKeys = new Set(list.map(l => {
+      const c = (l.billedToRemarks || '').trim().toUpperCase();
+      const inv = (l.invoiceNo || '').trim().toUpperCase();
+      const dt = (l.invoiceDate || '').trim();
+      return (c && inv && inv !== '-' && inv !== 'N/A') ? `${c}___${inv}___${dt}` : (l.id ? String(l.id) : null);
+    }).filter(Boolean));
+
+    const newSavedToMerge = [];
+    for (const item of savedItems) {
+      const c = (item.billedToRemarks || '').trim().toUpperCase();
+      const inv = (item.invoiceNo || '').trim().toUpperCase();
+      const dt = (item.invoiceDate || '').trim();
+      const key = (c && inv && inv !== '-' && inv !== 'N/A') ? `${c}___${inv}___${dt}` : (item.id ? String(item.id) : null);
+      if (key && !existingKeys.has(key)) {
+        existingKeys.add(key);
+        newSavedToMerge.push(item);
+      }
+    }
+
+    const merged = [...newSavedToMerge, ...list];
+    localStorage.setItem('sri_durga_sales_ledger', JSON.stringify(merged));
+    return savedItems;
+  } catch (err) {
+    console.warn('Backend batch endpoint unavailable, using client storage fallback for bulkCreateSalesLedgers', err);
+    const local = localStorage.getItem('sri_durga_sales_ledger');
+    let list = local ? JSON.parse(local) : [];
+    const created = [];
+    const existingKeys = new Set(list.map(l => {
+      const c = (l.billedToRemarks || '').trim().toUpperCase();
+      const inv = (l.invoiceNo || '').trim().toUpperCase();
+      const dt = (l.invoiceDate || '').trim();
+      return (c && inv && inv !== '-' && inv !== 'N/A') ? `${c}___${inv}___${dt}` : null;
+    }).filter(Boolean));
+
+    for (let i = 0; i < entries.length; i++) {
+      const item = entries[i];
+      const c = (item.billedToRemarks || '').trim().toUpperCase();
+      const inv = (item.invoiceNo || '').trim().toUpperCase();
+      const dt = (item.invoiceDate || '').trim();
+
+      if (c && inv && inv !== '-' && inv !== 'N/A') {
+        const key = `${c}___${inv}___${dt}`;
+        if (existingKeys.has(key)) {
+          continue;
+        }
+        existingKeys.add(key);
+      }
+
+      const newEntry = {
+        ...item,
+        id: Date.now() + i,
+        serialNumber: list.length + 1 + created.length,
+        createdAt: new Date().toISOString()
+      };
+      list.unshift(newEntry);
+      created.push(newEntry);
+    }
+    localStorage.setItem('sri_durga_sales_ledger', JSON.stringify(list));
+    return created;
+  }
+};
+
 export const updateSalesLedger = async (id, ledgerData) => {
   try {
     const res = await api.put(`/sales-ledger/${id}`, ledgerData);
@@ -1464,14 +1534,14 @@ export const deleteSalesLedger = async (id) => {
 export const fetchPurchaseLedgers = async () => {
   try {
     const res = await api.get('/purchase-ledger');
-    const dbList = res.data || [];
+    const dbList = Array.isArray(res.data) ? res.data : [];
     const local = localStorage.getItem('sri_durga_purchase_ledger');
     const localList = local ? JSON.parse(local) : [];
 
-    // Auto-sync localStorage to MS SQL Server if database has no rows
+    // If database is empty but local storage has records, auto-sync all local to DB
     if (dbList.length === 0 && localList.length > 0) {
       try {
-        console.log(`Auto-syncing ${localList.length} purchase ledger records to MS SQL Server database...`);
+        console.log(`Auto-syncing ${localList.length} purchase ledger records to database...`);
         const synced = await api.post('/purchase-ledger/bulk', localList);
         if (synced.data && synced.data.length > 0) {
           localStorage.setItem('sri_durga_purchase_ledger', JSON.stringify(synced.data));
@@ -1483,6 +1553,48 @@ export const fetchPurchaseLedgers = async () => {
       return localList;
     }
 
+    // If database has records, check if there are any unsynced records in localStorage
+    if (localList.length > 0) {
+      const dbKeys = new Set();
+      dbList.forEach(item => {
+        if (item.id) dbKeys.add(String(item.id));
+        const d = (item.dealerStoreName || item.supplierRemarks || '').trim().toUpperCase();
+        const inv = (item.invoiceNo || '').trim().toUpperCase();
+        if (d && inv && inv !== '-' && inv !== 'N/A') {
+          dbKeys.add(`${d}___${inv}`);
+        }
+      });
+
+      const unsyncedFromLocal = localList.filter(l => {
+        if (l.id && dbKeys.has(String(l.id))) return false;
+        const d = (l.dealerStoreName || l.supplierRemarks || '').trim().toUpperCase();
+        const inv = (l.invoiceNo || '').trim().toUpperCase();
+        if (d && inv && inv !== '-' && inv !== 'N/A' && dbKeys.has(`${d}___${inv}`)) {
+          return false;
+        }
+        return true;
+      });
+
+      if (unsyncedFromLocal.length > 0) {
+        console.log(`Found ${unsyncedFromLocal.length} unsynced purchase records in client storage. Syncing to database...`);
+        try {
+          const synced = await api.post('/purchase-ledger/bulk', unsyncedFromLocal);
+          if (synced.data && synced.data.length > 0) {
+            const combined = [...synced.data, ...dbList];
+            localStorage.setItem('sri_durga_purchase_ledger', JSON.stringify(combined));
+            return combined;
+          }
+        } catch (syncErr) {
+          console.warn('Syncing unsynced purchase records to DB failed; keeping both in local view:', syncErr);
+        }
+        // Fallback: merge unsynced local with dbList so user never loses their data!
+        const mergedList = [...unsyncedFromLocal, ...dbList];
+        localStorage.setItem('sri_durga_purchase_ledger', JSON.stringify(mergedList));
+        return mergedList;
+      }
+    }
+
+    // Both match or local had no extras: safely store dbList
     if (dbList.length > 0) {
       localStorage.setItem('sri_durga_purchase_ledger', JSON.stringify(dbList));
     }
@@ -1498,8 +1610,18 @@ export const createPurchaseLedger = async (ledgerData) => {
   try {
     const res = await api.post('/purchase-ledger', ledgerData);
     const local = localStorage.getItem('sri_durga_purchase_ledger');
-    const list = local ? JSON.parse(local) : [];
-    list.unshift(res.data);
+    let list = local ? JSON.parse(local) : [];
+    // Ensure this new record is added without discarding existing uploaded files
+    const existingIdx = list.findIndex(l => (res.data.id && l.id === res.data.id) || (
+      (l.dealerStoreName || '').trim().toUpperCase() === (res.data.dealerStoreName || '').trim().toUpperCase() &&
+      (l.invoiceNo || '').trim().toUpperCase() === (res.data.invoiceNo || '').trim().toUpperCase() &&
+      res.data.invoiceNo !== '-' && res.data.invoiceNo !== 'N/A'
+    ));
+    if (existingIdx >= 0) {
+      list[existingIdx] = res.data;
+    } else {
+      list.unshift(res.data);
+    }
     localStorage.setItem('sri_durga_purchase_ledger', JSON.stringify(list));
     return res.data;
   } catch (err) {
@@ -1507,14 +1629,16 @@ export const createPurchaseLedger = async (ledgerData) => {
     const local = localStorage.getItem('sri_durga_purchase_ledger');
     const list = local ? JSON.parse(local) : [];
     
-    // Duplicate check per dealer + invoiceNo (ignoring dashes)
+    // Duplicate check per dealer + invoiceNo + invoiceDate (ignoring dashes)
     const dealer = (ledgerData.dealerStoreName || '').trim().toUpperCase();
     const inv = (ledgerData.invoiceNo || '').trim().toUpperCase();
+    const date = (ledgerData.invoiceDate || '').trim();
     if (dealer && inv && inv !== '-' && inv !== 'N/A' && list.some(l => 
       (l.dealerStoreName || l.supplierRemarks || '').trim().toUpperCase() === dealer && 
-      (l.invoiceNo || '').trim().toUpperCase() === inv
+      (l.invoiceNo || '').trim().toUpperCase() === inv &&
+      (l.invoiceDate || '').trim() === date
     )) {
-      throw new Error(`Duplicate entry: Invoice No. ${ledgerData.invoiceNo} already exists for ${ledgerData.dealerStoreName}!`);
+      throw new Error(`Duplicate entry: Invoice No. ${ledgerData.invoiceNo} dated ${date} already exists for ${ledgerData.dealerStoreName}!`);
     }
 
     const newEntry = {
@@ -1532,31 +1656,55 @@ export const createPurchaseLedger = async (ledgerData) => {
 export const bulkCreatePurchaseLedgers = async (entries) => {
   try {
     const res = await api.post('/purchase-ledger/bulk', entries);
+    const savedItems = Array.isArray(res.data) ? res.data : [];
     const local = localStorage.getItem('sri_durga_purchase_ledger');
     const list = local ? JSON.parse(local) : [];
-    const merged = [...(res.data || []), ...list];
+    
+    // Merge saved items without duplicates
+    const existingKeys = new Set(list.map(l => {
+      const d = (l.dealerStoreName || l.supplierRemarks || '').trim().toUpperCase();
+      const inv = (l.invoiceNo || '').trim().toUpperCase();
+      const dt = (l.invoiceDate || '').trim();
+      return (d && inv && inv !== '-' && inv !== 'N/A') ? `${d}___${inv}___${dt}` : (l.id ? String(l.id) : null);
+    }).filter(Boolean));
+
+    const newSavedToMerge = [];
+    for (const item of savedItems) {
+      const d = (item.dealerStoreName || item.supplierRemarks || '').trim().toUpperCase();
+      const inv = (item.invoiceNo || '').trim().toUpperCase();
+      const dt = (item.invoiceDate || '').trim();
+      const key = (d && inv && inv !== '-' && inv !== 'N/A') ? `${d}___${inv}___${dt}` : (item.id ? String(item.id) : null);
+      if (key && !existingKeys.has(key)) {
+        existingKeys.add(key);
+        newSavedToMerge.push(item);
+      }
+    }
+
+    const merged = [...newSavedToMerge, ...list];
     localStorage.setItem('sri_durga_purchase_ledger', JSON.stringify(merged));
-    return res.data;
+    return savedItems;
   } catch (err) {
-    console.warn('Backend bulk endpoint unavailable, using client storage batch fallback');
+    console.warn('Backend bulk endpoint unavailable, using client storage batch fallback', err);
     const local = localStorage.getItem('sri_durga_purchase_ledger');
     let list = local ? JSON.parse(local) : [];
     const created = [];
     const existingKeys = new Set(list.map(l => {
       const d = (l.dealerStoreName || l.supplierRemarks || '').trim().toUpperCase();
       const inv = (l.invoiceNo || '').trim().toUpperCase();
-      return (d && inv && inv !== '-' && inv !== 'N/A') ? `${d}___${inv}` : null;
+      const dt = (l.invoiceDate || '').trim();
+      return (d && inv && inv !== '-' && inv !== 'N/A') ? `${d}___${inv}___${dt}` : null;
     }).filter(Boolean));
 
     for (let i = 0; i < entries.length; i++) {
       const item = entries[i];
       const d = (item.dealerStoreName || item.supplierRemarks || '').trim().toUpperCase();
       const inv = (item.invoiceNo || '').trim().toUpperCase();
+      const dt = (item.invoiceDate || '').trim();
 
       if (d && inv && inv !== '-' && inv !== 'N/A') {
-        const key = `${d}___${inv}`;
+        const key = `${d}___${inv}___${dt}`;
         if (existingKeys.has(key)) {
-          continue; // Skip duplicate for same dealer
+          continue; // Skip duplicate only for same dealer + inv + date
         }
         existingKeys.add(key);
       }

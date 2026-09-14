@@ -166,6 +166,8 @@ export const PurchaseLedgerPage = () => {
   // Statement PDF Preferences & Filter States
   const [statementType, setStatementType] = useState('SUMMARY'); // 'SUMMARY' or 'INDIVIDUAL_PAGES'
   const [statementBalanceFilter, setStatementBalanceFilter] = useState('ALL_NON_ZERO'); // 'ALL_NON_ZERO', 'DUES_ONLY', 'ADVANCE_ONLY', 'ALL'
+  const [selectedPrintPartyKeys, setSelectedPrintPartyKeys] = useState(null); // null = all selected by default
+  const [selectedPrintBillIds, setSelectedPrintBillIds] = useState(null); // null = all bills selected by default
 
   // Pagination States (Page Split & Page Size Selector)
   const [currentPage, setCurrentPage] = useState(1);
@@ -213,9 +215,83 @@ export const PurchaseLedgerPage = () => {
     }));
   };
 
-  // Form Field Change with Real-Time Calculations
+  // Helper to load an existing purchase bill into the form state
+  const loadBillDetails = (item, overrideMode) => {
+    if (!item) return;
+    setEditingItem(item);
+    if (overrideMode) setModalMode(overrideMode);
+
+    const total = Number(item.totalAmount) || 0;
+    const paid = Number(item.paidAmount || item.passedAmount) || 0;
+    const balance = total > 0 ? Math.max(0, total - paid) : 0;
+    const taxable = Number(item.taxableAmount) || 0;
+    const tax = Number(item.taxAmount) || 0;
+
+    let inferredRate = 18;
+    if (taxable > 0 && tax > 0) {
+      const ratio = Math.round((tax / taxable) * 100);
+      if ([18, 12, 5, 28, 0].includes(ratio)) inferredRate = ratio;
+      else inferredRate = 'CUSTOM';
+    } else if (taxable > 0 && tax === 0) {
+      inferredRate = 0;
+    }
+    setTaxRate(inferredRate);
+
+    setFormData({
+      dealerStoreName: item.dealerStoreName || item.supplierRemarks || '',
+      invoiceNo: item.invoiceNo || '',
+      invoiceDate: item.invoiceDate || new Date().toISOString().split('T')[0],
+      taxableAmount: item.taxableAmount !== undefined && item.taxableAmount !== null && Number(item.taxableAmount) > 0 ? String(item.taxableAmount) : (taxable === 0 && (item.taxableAmount !== undefined && item.taxableAmount !== null) ? '0.00' : ''),
+      taxAmount: item.taxAmount !== undefined && item.taxAmount !== null && Number(item.taxAmount) > 0 ? String(item.taxAmount) : (inferredRate === 0 && taxable > 0 ? '0.00' : ''),
+      totalAmount: item.totalAmount !== undefined && item.totalAmount !== null && Number(item.totalAmount) > 0 ? String(item.totalAmount) : (total > 0 ? String(total) : ''),
+      paidAmount: (item.paidAmount !== undefined && item.paidAmount !== null && Number(item.paidAmount) > 0) ? String(item.paidAmount) : ((item.passedAmount !== undefined && item.passedAmount !== null && Number(item.passedAmount) > 0) ? String(item.passedAmount) : ''),
+      paymentDate: item.paymentDate || item.passedDate || new Date().toISOString().split('T')[0],
+      modeOfPayment: item.modeOfPayment && item.modeOfPayment !== '-' && item.modeOfPayment !== 'N/A' ? item.modeOfPayment : 'NEFT',
+      balanceAmount: String(balance.toFixed(2))
+    });
+  };
+
+  // Form Field Change with Real-Time Calculations & Smart Bill Switch
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
+    // Auto-switch to existing bill if dealerStoreName changes and matches existing purchase bill
+    if (name === 'dealerStoreName') {
+      const trimmedVal = value.trim().toUpperCase();
+      const currentInv = (formData.invoiceNo || '').trim().toUpperCase();
+
+      if (trimmedVal) {
+        const matched = purchaseEntries.filter(p => (p.dealerStoreName || p.supplierRemarks || '').trim().toUpperCase() === trimmedVal);
+        if (currentInv && currentInv !== '-' && currentInv !== '--') {
+          const exact = matched.find(b => (b.invoiceNo || '').trim().toUpperCase() === currentInv);
+          if (exact) {
+            loadBillDetails(exact);
+            return;
+          }
+        } else if (matched.length === 1 && modalMode === 'VALUATION_TAX') {
+          loadBillDetails(matched[0]);
+          return;
+        }
+      }
+    }
+
+    // Auto-switch if invoiceNo matches an existing bill for currently selected dealer
+    if (name === 'invoiceNo') {
+      const trimmedInv = value.trim().toUpperCase();
+      const currentDealer = (formData.dealerStoreName || '').trim().toUpperCase();
+
+      if (currentDealer && trimmedInv && trimmedInv !== '-' && trimmedInv !== '--') {
+        const exact = purchaseEntries.find(p => 
+          (p.dealerStoreName || p.supplierRemarks || '').trim().toUpperCase() === currentDealer &&
+          (p.invoiceNo || '').trim().toUpperCase() === trimmedInv
+        );
+        if (exact) {
+          loadBillDetails(exact);
+          return;
+        }
+      }
+    }
+
     setFormData(prev => {
       const updated = { ...prev, [name]: value };
 
@@ -273,8 +349,10 @@ export const PurchaseLedgerPage = () => {
     setEditingItem(null);
     setModalMode('VALUATION_TAX');
     setTaxRate(18); // Default 18% GST
+
+    const activeDealer = (filterDealer || '').trim();
     setFormData({
-      dealerStoreName: '',
+      dealerStoreName: activeDealer,
       invoiceNo: '',
       invoiceDate: new Date().toISOString().split('T')[0],
       taxableAmount: '',
@@ -285,40 +363,26 @@ export const PurchaseLedgerPage = () => {
       modeOfPayment: '',
       balanceAmount: ''
     });
+
+    if (activeDealer) {
+      const matched = purchaseEntries.filter(p => (p.dealerStoreName || p.supplierRemarks || '').trim().toUpperCase() === activeDealer.toUpperCase());
+      if (matched.length === 1) {
+        loadBillDetails(matched[0], 'VALUATION_TAX');
+      }
+    }
+
+    setIsModalOpen(true);
+  };
+
+  // Open Modal directly for recording Payment on a specific bill
+  const handleOpenPaymentModal = (item) => {
+    loadBillDetails(item, 'VALUATION_TAX');
     setIsModalOpen(true);
   };
 
   // Open Modal for Full Edit
   const handleOpenEditModal = (item) => {
-    setEditingItem(item);
-    setModalMode('FULL_EDIT');
-    const total = Number(item.totalAmount) || 0;
-    const paid = Number(item.paidAmount || item.passedAmount) || 0;
-    const balance = total > 0 ? Math.max(0, total - paid) : 0;
-    const taxable = Number(item.taxableAmount) || 0;
-    const tax = Number(item.taxAmount) || 0;
-
-    let inferredRate = 'CUSTOM';
-    if (taxable > 0 && tax > 0) {
-      const ratio = Math.round((tax / taxable) * 100);
-      if ([18, 12, 5, 28, 0].includes(ratio)) inferredRate = ratio;
-    } else if (taxable > 0 && tax === 0) {
-      inferredRate = 0;
-    }
-    setTaxRate(inferredRate);
-
-    setFormData({
-      dealerStoreName: item.dealerStoreName || item.supplierRemarks || '',
-      invoiceNo: item.invoiceNo || '',
-      invoiceDate: item.invoiceDate || '',
-      taxableAmount: item.taxableAmount !== undefined && item.taxableAmount !== null && Number(item.taxableAmount) > 0 ? String(item.taxableAmount) : '',
-      taxAmount: item.taxAmount !== undefined && item.taxAmount !== null && Number(item.taxAmount) > 0 ? String(item.taxAmount) : '',
-      totalAmount: item.totalAmount !== undefined && item.totalAmount !== null && Number(item.totalAmount) > 0 ? String(item.totalAmount) : '',
-      paidAmount: (item.paidAmount !== undefined && item.paidAmount !== null && Number(item.paidAmount) > 0) ? String(item.paidAmount) : ((item.passedAmount !== undefined && item.passedAmount !== null && Number(item.passedAmount) > 0) ? String(item.passedAmount) : ''),
-      paymentDate: item.paymentDate || item.passedDate || '',
-      modeOfPayment: item.modeOfPayment || (paid > 0 ? 'NEFT' : ''),
-      balanceAmount: String(balance.toFixed(2))
-    });
+    loadBillDetails(item, 'FULL_EDIT');
     setIsModalOpen(true);
   };
 
@@ -349,15 +413,17 @@ export const PurchaseLedgerPage = () => {
 
     if (trimmedDealer && !isDash) {
       const isDuplicate = purchaseEntries.some(item => {
-        if (editingItem && item.id === editingItem.id) return false;
+        if (editingItem && (item.id === editingItem.id || String(item.id) === String(editingItem.id))) return false;
         const existingDealer = (item.dealerStoreName || item.supplierRemarks || '').trim().toUpperCase();
         const existingInv = (item.invoiceNo || '').trim().toUpperCase();
-        return existingDealer === trimmedDealer && existingInv === trimmedInv;
+        const existingDate = (item.invoiceDate || '').trim();
+        const enteredDate = (formData.invoiceDate || '').trim();
+        return existingDealer === trimmedDealer && existingInv === trimmedInv && existingDate === enteredDate;
       });
 
       if (isDuplicate) {
         setToast({ 
-          message: `Duplicate Entry! A bill with Invoice No. "${formData.invoiceNo}" already exists for "${formData.dealerStoreName}".`, 
+          message: `Duplicate Entry! A bill with Invoice No. "${formData.invoiceNo}" dated ${formData.invoiceDate} already exists for "${formData.dealerStoreName}".`, 
           type: 'error' 
         });
         return;
@@ -579,6 +645,13 @@ export const PurchaseLedgerPage = () => {
     return Array.from(names).sort();
   }, [purchaseEntries]);
 
+  // Matched Bills for currently selected dealer in form (for auto-linking in VALUATION_TAX mode)
+  const matchedBillsForDealer = useMemo(() => {
+    const d = (formData.dealerStoreName || '').trim().toUpperCase();
+    if (!d) return [];
+    return purchaseEntries.filter(p => (p.dealerStoreName || p.supplierRemarks || '').trim().toUpperCase() === d);
+  }, [formData.dealerStoreName, purchaseEntries]);
+
   // Full Resolved Dealer Name for Statement (resolves substring search -> full dealer name)
   const resolvedDealerName = useMemo(() => {
     if (!filterDealer || !filterDealer.trim()) {
@@ -668,6 +741,7 @@ export const PurchaseLedgerPage = () => {
 
     if (filterDealer && filterDealer.trim()) {
       // For a specific dealer: Opening Balance + Total Purchases - Total Paid
+      agg.openingBalance = openingBalance;
       agg.balanceAmount = Math.max(0, (openingBalance + agg.totalAmount) - agg.paidAmount);
     } else {
       // For ALL parties: Group by dealer, subtract payments against invoices party-wise, and sum true net pending balances
@@ -685,10 +759,13 @@ export const PurchaseLedgerPage = () => {
       });
 
       let totalAllPartiesBalance = 0;
+      let totalAllPartiesOpening = 0;
       const allDealerKeys = new Set([
         ...Object.keys(partyMap),
         ...Object.keys(dealerOpenings).map(k => k.trim().toUpperCase()).filter(k => k !== 'DEFAULT')
       ]);
+
+      const cutoffDate = fromDate || getActiveFinancialYearStartIso();
 
       allDealerKeys.forEach(dealerUpper => {
         const pData = partyMap[dealerUpper] || { total: 0, paid: 0 };
@@ -702,16 +779,38 @@ export const PurchaseLedgerPage = () => {
           }
         }
 
-        const partyNetBalance = (opBal + pData.total) - pData.paid;
+        // Add prior unpaid purchases (dated before cutoffDate e.g. last year)
+        let priorUnpaid = 0;
+        purchaseEntries.forEach(item => {
+          const d = (item.dealerStoreName || item.supplierRemarks || '').trim().toUpperCase();
+          if (d === dealerUpper || d.includes(dealerUpper) || dealerUpper.includes(d)) {
+            const itemDate = item.invoiceDate || item.paymentDate || item.passedDate;
+            let isPrior = false;
+            if (itemDate && itemDate < cutoffDate) isPrior = true;
+            else if (!itemDate && item.invoiceNo && (item.invoiceNo.includes('/25-26') || item.invoiceNo.includes('/24-25')) && cutoffDate >= '2026-04-01') isPrior = true;
+
+            if (isPrior) {
+              const t = Number(item.totalAmount) || ((Number(item.taxableAmount) || 0) + (Number(item.taxAmount) || 0));
+              const p = Number(item.paidAmount || item.passedAmount) || 0;
+              priorUnpaid += (t - p);
+            }
+          }
+        });
+
+        const fullPartyOp = opBal + priorUnpaid;
+        totalAllPartiesOpening += fullPartyOp;
+
+        const partyNetBalance = (fullPartyOp + pData.total) - pData.paid;
         if (partyNetBalance > 0) {
           totalAllPartiesBalance += partyNetBalance;
         }
       });
 
+      agg.openingBalance = totalAllPartiesOpening;
       agg.balanceAmount = totalAllPartiesBalance;
     }
     return agg;
-  }, [filteredPurchases, openingBalance, filterDealer, dealerOpenings]);
+  }, [filteredPurchases, openingBalance, filterDealer, dealerOpenings, fromDate, purchaseEntries]);
 
   // Handler to set/save Opening Balance for current dealer
   const handleSaveOpeningBalance = (newAmount) => {
@@ -823,12 +922,13 @@ export const PurchaseLedgerPage = () => {
           return !s || s === '-' || s === '--' || s.toUpperCase() === 'N/A' || s.toUpperCase() === 'NA';
         };
 
-        // Existing keys per (Dealer Name + Invoice No)
+        // Existing keys per (Dealer Name + Invoice No + Invoice Date)
         const existingKeys = new Set(
           purchaseEntries.map(e => {
             const d = (e.dealerStoreName || e.supplierRemarks || '').trim().toUpperCase();
             const inv = (e.invoiceNo || '').trim().toUpperCase();
-            return (d && inv && !isDashOrEmpty(inv)) ? `${d}___${inv}` : null;
+            const dt = (e.invoiceDate || '').trim();
+            return (d && inv && !isDashOrEmpty(inv)) ? `${d}___${inv}___${dt}` : null;
           }).filter(Boolean)
         );
 
@@ -844,7 +944,8 @@ export const PurchaseLedgerPage = () => {
           const rawInv = invNoCol !== -1 ? String(row[invNoCol] || '').trim() : '';
           if (!dealerStoreName && !rawInv) continue;
 
-          const invoiceDate = dateCol !== -1 ? parseExcelDate(row[dateCol]) : new Date().toISOString().split('T')[0];
+          const parsedDate = dateCol !== -1 ? parseExcelDate(row[dateCol]) : '';
+          const invoiceDate = parsedDate || new Date().toISOString().split('T')[0];
           const taxableAmount = taxableCol !== -1 ? (parseFloat(row[taxableCol]) || 0) : 0;
           const taxAmount = taxCol !== -1 ? (parseFloat(row[taxCol]) || 0) : 0;
           let totalAmount = totalCol !== -1 ? (parseFloat(row[totalCol]) || 0) : 0;
@@ -853,11 +954,11 @@ export const PurchaseLedgerPage = () => {
           }
           const paidAmount = paidCol !== -1 ? (parseFloat(row[paidCol]) || 0) : 0;
 
-          // Duplicate check ONLY for the SAME Dealer with the SAME Invoice No (ignoring dashes / empty)
+          // Duplicate check ONLY for the SAME Dealer with the SAME Invoice No and SAME Date
           const dealerKey = dealerStoreName.trim().toUpperCase();
           const invKey = rawInv.trim().toUpperCase();
           if (dealerKey && invKey && !isDashOrEmpty(invKey)) {
-            const rowKey = `${dealerKey}___${invKey}`;
+            const rowKey = `${dealerKey}___${invKey}___${invoiceDate}`;
             if (existingKeys.has(rowKey)) {
               duplicateCount++;
               duplicatesList.push({
@@ -869,9 +970,9 @@ export const PurchaseLedgerPage = () => {
                 taxAmount,
                 totalAmount,
                 paidAmount,
-                reason: 'Already exists for this Dealer in Database'
+                reason: 'Already exists for this Dealer with same Date in Database'
               });
-              continue; // Skip duplicate for this specific dealer
+              continue; // Skip duplicate only for same dealer + same invoice + same date
             }
             existingKeys.add(rowKey);
           }
@@ -1455,6 +1556,9 @@ export const PurchaseLedgerPage = () => {
             ₹{totals.balanceAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-subtle)' }}>
+            {totals.openingBalance !== undefined && totals.openingBalance !== 0 ? (
+              <span>Last Year: <strong style={{ color: '#10b981' }}>₹{totals.openingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> • </span>
+            ) : null}
             {totals.balanceAmount > 0 ? 'Pending Outward Dues' : 'All Dues Cleared'}
           </span>
         </div>
@@ -1939,6 +2043,14 @@ export const PurchaseLedgerPage = () => {
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
                           <button
+                            onClick={() => handleOpenPaymentModal(l)}
+                            className="btn btn-outline"
+                            style={{ padding: '0.35rem 0.55rem', color: '#34d399', background: 'rgba(52, 211, 153, 0.12)', borderColor: 'rgba(52, 211, 153, 0.4)' }}
+                            title="Record Payment / Settle this Bill"
+                          >
+                            <IndianRupee size={14} />
+                          </button>
+                          <button
                             onClick={() => handleOpenEditModal(l)}
                             className="btn btn-outline"
                             style={{ padding: '0.35rem 0.55rem', color: '#f472b6', background: 'rgba(236, 72, 153, 0.15)', borderColor: 'rgba(236, 72, 153, 0.4)' }}
@@ -2164,12 +2276,12 @@ export const PurchaseLedgerPage = () => {
                 <div>
                   <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#f8fafc', margin: 0 }}>
                     {modalMode === 'DEALER_INVOICE' && (editingItem ? 'Edit Dealer & Invoice Details' : '1. Dealer & Invoice Details Entry')}
-                    {modalMode === 'VALUATION_TAX' && (editingItem ? 'Edit Valuation & Tax Details' : '2. Valuation & Tax Entry')}
+                    {modalMode === 'VALUATION_TAX' && (editingItem ? `2. Settle / Pay Bill #${editingItem.invoiceNo || '-'}` : '2. Valuation & Tax Entry')}
                     {modalMode === 'FULL_EDIT' && 'Edit Purchase Entry'}
                   </h3>
                   <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
                     {modalMode === 'DEALER_INVOICE' && 'Enter dealer/store name, invoice number, and bill date.'}
-                    {modalMode === 'VALUATION_TAX' && 'Enter taxable value, GST tax rate, and payment settlement.'}
+                    {modalMode === 'VALUATION_TAX' && (editingItem ? `Settling balance for ${formData.dealerStoreName || 'supplier'}. Enter payment amount or settle full balance.` : 'Enter taxable value, GST tax rate, and payment settlement.')}
                     {modalMode === 'FULL_EDIT' && 'Update dealer, invoice, tax calculation, and payment details.'}
                   </span>
                 </div>
@@ -2243,9 +2355,17 @@ export const PurchaseLedgerPage = () => {
               {/* In VALUATION_TAX entry mode: Select / Confirm Dealer & Invoice context */}
               {modalMode === 'VALUATION_TAX' && (
                 <div style={{ padding: '0.85rem 1rem', background: 'rgba(56, 189, 248, 0.08)', borderRadius: '10px', border: '1px solid rgba(56, 189, 248, 0.25)' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.6rem' }}>
-                    Linked Dealer & Invoice
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Linked Dealer & Invoice
+                    </div>
+                    {editingItem && (
+                      <span style={{ fontSize: '0.72rem', background: 'rgba(52, 211, 153, 0.2)', color: '#34d399', padding: '2px 8px', borderRadius: '4px', fontWeight: 800 }}>
+                        ✓ Linked to Existing Bill #{editingItem.invoiceNo || '-'}
+                      </span>
+                    )}
                   </div>
+
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem' }}>
                     <div>
                       <label className="form-label" style={{ fontSize: '0.72rem' }}>Name of Dealer/Store <span style={{ color: '#f87171' }}>*</span></label>
@@ -2272,12 +2392,20 @@ export const PurchaseLedgerPage = () => {
                       <input
                         type="text"
                         name="invoiceNo"
+                        list="dealerInvoicesDatalist"
                         placeholder="e.g. INV-2026/410 (or -)"
                         className="form-input"
                         style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem' }}
                         value={formData.invoiceNo}
                         onChange={handleInputChange}
                       />
+                      <datalist id="dealerInvoicesDatalist">
+                        {matchedBillsForDealer.map(b => (
+                          <option key={b.id || b.invoiceNo} value={b.invoiceNo}>
+                            {`Bill #${b.invoiceNo || '-'} (Due: ₹${(Number(b.totalAmount || 0) - Number(b.paidAmount || b.passedAmount || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })})`}
+                          </option>
+                        ))}
+                      </datalist>
                     </div>
                     <div>
                       <label className="form-label" style={{ fontSize: '0.72rem' }}>Date</label>
@@ -2291,6 +2419,66 @@ export const PurchaseLedgerPage = () => {
                       />
                     </div>
                   </div>
+
+                  {/* Dropdown selector for existing bills of this dealer */}
+                  {matchedBillsForDealer.length > 0 && (
+                    <div style={{ marginTop: '0.75rem', paddingTop: '0.65rem', borderTop: '1px dashed rgba(56, 189, 248, 0.3)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <FileText size={13} />
+                          <span>Previous Bills for "{formData.dealerStoreName}" ({matchedBillsForDealer.length} available)</span>
+                        </span>
+                        {editingItem && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingItem(null);
+                              setFormData(prev => ({
+                                ...prev,
+                                invoiceNo: '',
+                                taxableAmount: '',
+                                taxAmount: '',
+                                totalAmount: '',
+                                paidAmount: '',
+                                balanceAmount: '0.00'
+                              }));
+                            }}
+                            style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.7rem', textDecoration: 'underline' }}
+                          >
+                            + Enter New Bill Instead
+                          </button>
+                        )}
+                      </div>
+                      <select
+                        className="form-input"
+                        style={{ fontSize: '0.78rem', padding: '0.4rem 0.6rem', borderColor: '#38bdf8', background: '#0f172a', color: '#f8fafc' }}
+                        value={editingItem ? (editingItem.id || editingItem.invoiceNo) : ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (!val) {
+                            setEditingItem(null);
+                            return;
+                          }
+                          const selected = matchedBillsForDealer.find(b => String(b.id || b.invoiceNo) === String(val));
+                          if (selected) {
+                            loadBillDetails(selected);
+                          }
+                        }}
+                      >
+                        <option value="">-- Click to Select Existing Bill to Pay / Settle --</option>
+                        {matchedBillsForDealer.map(b => {
+                          const t = Number(b.totalAmount) || 0;
+                          const p = Number(b.paidAmount || b.passedAmount) || 0;
+                          const bal = Math.max(0, t - p);
+                          return (
+                            <option key={b.id || b.invoiceNo} value={b.id || b.invoiceNo}>
+                              Bill #{b.invoiceNo || '-'} ({formatCellDate(b.invoiceDate)}) — Total: ₹{t.toLocaleString('en-IN', { minimumFractionDigits: 2 })} | Paid: ₹{p.toLocaleString('en-IN', { minimumFractionDigits: 2 })} | Pending Due: ₹{bal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -2387,8 +2575,52 @@ export const PurchaseLedgerPage = () => {
               {/* SECTION 3: PAYMENT & BALANCE (Shown in VALUATION_TAX and FULL_EDIT) */}
               {(modalMode === 'VALUATION_TAX' || modalMode === 'FULL_EDIT') && (
                 <div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
-                    3. Payment & Settlement
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      3. Payment & Settlement
+                    </div>
+                    {Number(formData.totalAmount) > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const tot = parseFloat(formData.totalAmount) || 0;
+                            setFormData(prev => ({
+                              ...prev,
+                              paidAmount: tot.toFixed(2),
+                              balanceAmount: '0.00',
+                              paymentDate: prev.paymentDate || new Date().toISOString().split('T')[0],
+                              modeOfPayment: prev.modeOfPayment && prev.modeOfPayment !== '' ? prev.modeOfPayment : 'NEFT'
+                            }));
+                          }}
+                          className="btn btn-outline"
+                          style={{
+                            fontSize: '0.72rem',
+                            padding: '0.2rem 0.6rem',
+                            fontWeight: 800,
+                            color: '#34d399',
+                            borderColor: 'rgba(52, 211, 153, 0.4)',
+                            background: 'rgba(52, 211, 153, 0.12)'
+                          }}
+                          title="Pay entire bill total / full settlement"
+                        >
+                          ⚡ Pay Full Balance (₹{Number(formData.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })})
+                        </button>
+                        {parseFloat(formData.paidAmount) > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const tot = parseFloat(formData.totalAmount) || 0;
+                              setFormData(prev => ({ ...prev, paidAmount: '', balanceAmount: tot.toFixed(2) }));
+                            }}
+                            className="btn btn-outline"
+                            style={{ fontSize: '0.72rem', padding: '0.2rem 0.45rem', color: '#94a3b8', borderColor: 'rgba(255,255,255,0.2)' }}
+                          >
+                            Reset
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
                     <div>
@@ -2498,7 +2730,7 @@ export const PurchaseLedgerPage = () => {
                     <Save size={16} />
                     <span>
                       {modalMode === 'DEALER_INVOICE' && (editingItem ? 'Update Dealer Details' : 'Save Dealer & Invoice')}
-                      {modalMode === 'VALUATION_TAX' && (editingItem ? 'Update Valuation & Tax' : 'Save Valuation & Tax')}
+                      {modalMode === 'VALUATION_TAX' && (editingItem ? 'Update Payment & Valuation' : 'Save Valuation & Tax')}
                       {modalMode === 'FULL_EDIT' && 'Update Purchase Entry'}
                     </span>
                   </button>
@@ -3153,6 +3385,42 @@ export const PurchaseLedgerPage = () => {
                       partyMap[dUpper].entries.push(item);
                     });
 
+                    // Pre-calculate prior unpaid balances (Last Year Balance = prior purchases - prior paid)
+                    const priorPartyBalanceMap = {};
+                    rawEntries.forEach(item => {
+                      const itemDate = item.invoiceDate || item.paymentDate || item.passedDate;
+                      let isPrior = false;
+                      if (itemDate && itemDate < cutoffDate) {
+                        isPrior = true;
+                      } else if (!itemDate && item.invoiceNo && (item.invoiceNo.includes('/25-26') || item.invoiceNo.includes('/24-25')) && cutoffDate >= '2026-04-01') {
+                        isPrior = true;
+                      }
+
+                      if (isPrior) {
+                        const dName = (item.dealerStoreName || item.supplierRemarks || 'UNKNOWN').trim();
+                        const dUpper = dName.toUpperCase();
+                        if (!priorPartyBalanceMap[dUpper]) {
+                          priorPartyBalanceMap[dUpper] = { dealerName: dName, priorPurchases: 0, priorPaid: 0 };
+                        }
+                        const t = Number(item.totalAmount) || ((Number(item.taxableAmount) || 0) + (Number(item.taxAmount) || 0));
+                        const p = Number(item.paidAmount || item.passedAmount) || 0;
+                        priorPartyBalanceMap[dUpper].priorPurchases += t;
+                        priorPartyBalanceMap[dUpper].priorPaid += p;
+
+                        if (!partyMap[dUpper]) {
+                          partyMap[dUpper] = {
+                            dealerName: dName,
+                            totalAmount: 0,
+                            paidAmount: 0,
+                            taxableAmount: 0,
+                            taxAmount: 0,
+                            billCount: 0,
+                            entries: []
+                          };
+                        }
+                      }
+                    });
+
                     // Include any dealers with saved opening balances that had no bills in this period
                     Object.entries(dealerOpenings).forEach(([k, val]) => {
                       const cleanK = k.trim();
@@ -3170,32 +3438,23 @@ export const PurchaseLedgerPage = () => {
                       }
                     });
 
-                    let totalOpeningSum = 0;
-                    let totalPurchasesSum = 0;
-                    let totalPaidSum = 0;
-                    let totalPendingDue = 0;
-                    let totalExtraAmount = 0;
-
                     const allConsolidatedSuppliers = Object.values(partyMap).map(d => {
                       const upper = d.dealerName.toUpperCase();
-                      let opBal = 0;
+                      let baseOp = 0;
                       for (const [k, val] of Object.entries(dealerOpenings)) {
                         const cleanK = k.trim().toUpperCase();
                         if (cleanK === upper || cleanK.includes(upper) || upper.includes(cleanK)) {
-                          opBal = Number(val) || 0;
+                          baseOp = Number(val) || 0;
                           break;
                         }
                       }
-                      const netBal = (opBal + d.totalAmount) - d.paidAmount;
 
-                      totalOpeningSum += opBal;
-                      totalPurchasesSum += d.totalAmount;
-                      totalPaidSum += d.paidAmount;
-                      if (netBal > 0) {
-                        totalPendingDue += netBal;
-                      } else if (netBal < 0) {
-                        totalExtraAmount += Math.abs(netBal);
-                      }
+                      // Last Year Balance = Prior Year Purchases - Prior Year Paid + any manual saved opening
+                      const priorData = priorPartyBalanceMap[upper] || { priorPurchases: 0, priorPaid: 0 };
+                      const calculatedPriorBalance = priorData.priorPurchases - priorData.priorPaid;
+                      const opBal = baseOp + calculatedPriorBalance;
+
+                      const netBal = (opBal + d.totalAmount) - d.paidAmount;
 
                       // Chronological running balance for this party's individual statement
                       const sortedDealerEntries = [...d.entries].sort((a, b) => {
@@ -3216,6 +3475,8 @@ export const PurchaseLedgerPage = () => {
                       return {
                         ...d,
                         openingBalance: opBal,
+                        priorPurchases: priorData.priorPurchases,
+                        priorPaid: priorData.priorPaid,
                         netBalance: netBal,
                         entries: entriesWithBal
                       };
@@ -3229,29 +3490,125 @@ export const PurchaseLedgerPage = () => {
                       return true; // 'ALL'
                     });
 
+                    // Checkbox Selection Logic for Statement Printing
+                    const isPartySelected = (dealerUpper) => {
+                      if (selectedPrintPartyKeys === null) return true;
+                      return selectedPrintPartyKeys.includes(dealerUpper);
+                    };
+
+                    const togglePrintParty = (dealerUpper) => {
+                      const currentSelected = selectedPrintPartyKeys === null
+                        ? consolidatedSuppliers.map(s => s.dealerName.toUpperCase())
+                        : [...selectedPrintPartyKeys];
+                      if (currentSelected.includes(dealerUpper)) {
+                        setSelectedPrintPartyKeys(currentSelected.filter(k => k !== dealerUpper));
+                      } else {
+                        setSelectedPrintPartyKeys([...currentSelected, dealerUpper]);
+                      }
+                    };
+
+                    const handleSelectAllPrintParties = () => {
+                      setSelectedPrintPartyKeys(consolidatedSuppliers.map(s => s.dealerName.toUpperCase()));
+                    };
+
+                    const handleDeselectAllPrintParties = () => {
+                      setSelectedPrintPartyKeys([]);
+                    };
+
+                    const handleExcludeTinyBalances = () => {
+                      const significant = consolidatedSuppliers
+                        .filter(s => Math.abs(s.netBalance) > 10.0)
+                        .map(s => s.dealerName.toUpperCase());
+                      setSelectedPrintPartyKeys(significant);
+                      setToast({ message: `Excluded suppliers with tiny balances (≤ ₹10). Printing ${significant.length} parties.`, type: 'info' });
+                    };
+
+                    const printedSuppliers = consolidatedSuppliers.filter(sup => isPartySelected(sup.dealerName.toUpperCase()));
+                    const allConsolidatedSelected = consolidatedSuppliers.length > 0 && printedSuppliers.length === consolidatedSuppliers.length;
+                    const isConsolidatedIndeterminate = printedSuppliers.length > 0 && printedSuppliers.length < consolidatedSuppliers.length;
+
+                    const printTotals = printedSuppliers.reduce((acc, s) => {
+                      acc.opening += s.openingBalance;
+                      acc.purchases += s.totalAmount;
+                      acc.paid += s.paidAmount;
+                      if (s.netBalance > 0) acc.pending += s.netBalance;
+                      else if (s.netBalance < 0) acc.extra += Math.abs(s.netBalance);
+                      return acc;
+                    }, { opening: 0, purchases: 0, paid: 0, pending: 0, extra: 0 });
+
                     // ---------------------------------------------------------------------
                     // FORMAT 1: INDIVIDUAL 1 DEALER PER A4 PAGE (PAGE-BREAK PER PARTY)
                     // ---------------------------------------------------------------------
                     if (statementType === 'INDIVIDUAL_PAGES') {
-                      if (consolidatedSuppliers.length === 0) {
+                      if (printedSuppliers.length === 0) {
                         return (
                           <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
-                            <h3 style={{ margin: '0 0 0.5rem 0', color: '#334155' }}>No Suppliers Matching Selected Filter</h3>
-                            <p style={{ fontSize: '0.85rem' }}>Try switching to "All Parties" or selecting another filter option above.</p>
+                            <h3 style={{ margin: '0 0 0.5rem 0', color: '#334155' }}>No Suppliers Selected for Printing</h3>
+                            <p style={{ fontSize: '0.85rem' }}>Select one or more suppliers using the checkboxes or click "Select All".</p>
                           </div>
                         );
                       }
 
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                          {consolidatedSuppliers.map((sup, pIdx) => (
+                          {/* Selection Toolbar (no-print) */}
+                          <div 
+                            className="no-print" 
+                            style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'space-between', 
+                              flexWrap: 'wrap', 
+                              gap: '0.65rem', 
+                              padding: '0.65rem 1rem', 
+                              background: '#f1f5f9', 
+                              borderRadius: '6px',
+                              border: '1.5px solid #cbd5e1' 
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
+                                Print Selection:
+                              </span>
+                              <button
+                                type="button"
+                                onClick={handleExcludeTinyBalances}
+                                className="btn btn-outline"
+                                style={{ padding: '0.28rem 0.7rem', fontSize: '0.75rem', borderRadius: '6px', fontWeight: 800, color: '#b45309', borderColor: '#f59e0b', background: '#fef3c7' }}
+                                title="Uncheck suppliers with balance ≤ ₹10 (10 paise, 20 paise, ₹1, ₹2, etc.) so they are skipped from print"
+                              >
+                                ⚡ Exclude Tiny Balances (≤ ₹10)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleSelectAllPrintParties}
+                                className="btn btn-outline"
+                                style={{ padding: '0.28rem 0.65rem', fontSize: '0.75rem', borderRadius: '6px', fontWeight: 700, color: '#1e293b', borderColor: '#94a3b8' }}
+                              >
+                                Select All ({consolidatedSuppliers.length})
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleDeselectAllPrintParties}
+                                className="btn btn-outline"
+                                style={{ padding: '0.28rem 0.65rem', fontSize: '0.75rem', borderRadius: '6px', fontWeight: 700, color: '#64748b', borderColor: '#cbd5e1' }}
+                              >
+                                Deselect All
+                              </button>
+                            </div>
+                            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0f172a' }}>
+                              Printing <span style={{ color: '#0284c7' }}>{printedSuppliers.length}</span> of <span>{consolidatedSuppliers.length}</span> Parties
+                            </div>
+                          </div>
+
+                          {printedSuppliers.map((sup, pIdx) => (
                             <div 
                               key={sup.dealerName} 
                               className="individual-party-page"
                               style={{ 
-                                pageBreakAfter: pIdx === consolidatedSuppliers.length - 1 ? 'auto' : 'always', 
-                                breakAfter: pIdx === consolidatedSuppliers.length - 1 ? 'auto' : 'page',
-                                borderBottom: pIdx === consolidatedSuppliers.length - 1 ? 'none' : '2px dashed #cbd5e1',
+                                pageBreakAfter: pIdx === printedSuppliers.length - 1 ? 'auto' : 'always', 
+                                breakAfter: pIdx === printedSuppliers.length - 1 ? 'auto' : 'page',
+                                borderBottom: pIdx === printedSuppliers.length - 1 ? 'none' : '2px dashed #cbd5e1',
                                 paddingBottom: '2.5rem',
                                 minHeight: '850px',
                                 display: 'flex',
@@ -3282,7 +3639,7 @@ export const PurchaseLedgerPage = () => {
                                     <div>
                                       <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Name of Dealer / Supplier:</div>
                                       <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#000000', marginTop: '3px' }}>{sup.dealerName}</div>
-                                      <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '3px' }}>Dealer Sl. No: #{pIdx + 1} of {consolidatedSuppliers.length}</div>
+                                      <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '3px' }}>Dealer Sl. No: #{pIdx + 1} of {printedSuppliers.length}</div>
                                     </div>
                                     <div style={{ textAlign: 'right', fontSize: '0.85rem' }}>
                                       <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Statement Period:</div>
@@ -3301,20 +3658,20 @@ export const PurchaseLedgerPage = () => {
                                       <tbody>
                                         {sup.openingBalance !== 0 && (
                                           <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                            <td style={{ padding: '8px 14px', fontWeight: 700, color: '#475569' }}>Opening Balance</td>
-                                            <td style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 800, color: '#16a34a' }}>
+                                            <td style={{ padding: '8px 14px', fontWeight: 700, color: '#475569' }}>Opening Balance / Last Year Balance</td>
+                                            <td style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 800, color: sup.openingBalance > 0 ? '#16a34a' : '#1e40af' }}>
                                               ₹{sup.openingBalance.toFixed(2)}
                                             </td>
                                           </tr>
                                         )}
                                         <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                          <td style={{ padding: '8px 14px', fontWeight: 700, color: '#475569' }}>Total Purchases / Bills</td>
+                                          <td style={{ padding: '8px 14px', fontWeight: 700, color: '#475569' }}>Total Purchases / Bills (Current Period)</td>
                                           <td style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>
                                             ₹{sup.totalAmount.toFixed(2)}
                                           </td>
                                         </tr>
                                         <tr style={{ borderBottom: '1.5px solid #000000' }}>
-                                          <td style={{ padding: '8px 14px', fontWeight: 700, color: '#475569' }}>Total Paid Amount</td>
+                                          <td style={{ padding: '8px 14px', fontWeight: 700, color: '#475569' }}>Total Paid Amount (Current Period)</td>
                                           <td style={{ padding: '8px 14px', textAlign: 'right', fontWeight: 800, color: '#1e40af' }}>
                                             ₹{sup.paidAmount.toFixed(2)}
                                           </td>
@@ -3389,7 +3746,58 @@ export const PurchaseLedgerPage = () => {
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#000000', fontSize: '0.9rem', fontWeight: 800, padding: '0 1rem' }}>
                             <span>From: &nbsp; {fromDate ? new Date(fromDate).toLocaleDateString('en-GB') : getActiveFinancialYearStartDate()} &nbsp; To: &nbsp; {toDate ? new Date(toDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}</span>
-                            <span>Showing {consolidatedSuppliers.length} Parties</span>
+                            <span>Showing {printedSuppliers.length} of {consolidatedSuppliers.length} Parties</span>
+                          </div>
+                        </div>
+
+                        {/* Top Selection Toolbar (no-print) */}
+                        <div 
+                          className="no-print" 
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'space-between', 
+                            flexWrap: 'wrap', 
+                            gap: '0.65rem', 
+                            marginBottom: '1rem',
+                            padding: '0.65rem 1rem', 
+                            background: '#f8fafc', 
+                            borderRadius: '6px',
+                            border: '1.5px solid #cbd5e1' 
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
+                              Print Selection:
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleExcludeTinyBalances}
+                              className="btn btn-outline"
+                              style={{ padding: '0.28rem 0.7rem', fontSize: '0.75rem', borderRadius: '6px', fontWeight: 800, color: '#b45309', borderColor: '#f59e0b', background: '#fef3c7' }}
+                              title="Uncheck suppliers with balance ≤ ₹10 (10 paise, 20 paise, ₹1, ₹2, etc.) so they are skipped from print"
+                            >
+                              ⚡ Exclude Tiny Balances (≤ ₹10)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleSelectAllPrintParties}
+                              className="btn btn-outline"
+                              style={{ padding: '0.28rem 0.65rem', fontSize: '0.75rem', borderRadius: '6px', fontWeight: 700, color: '#1e293b', borderColor: '#94a3b8' }}
+                            >
+                              Select All ({consolidatedSuppliers.length})
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleDeselectAllPrintParties}
+                              className="btn btn-outline"
+                              style={{ padding: '0.28rem 0.65rem', fontSize: '0.75rem', borderRadius: '6px', fontWeight: 700, color: '#64748b', borderColor: '#cbd5e1' }}
+                            >
+                              Deselect All
+                            </button>
+                          </div>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0f172a' }}>
+                            Printing <span style={{ color: '#0284c7' }}>{printedSuppliers.length}</span> of <span>{consolidatedSuppliers.length}</span> Parties
                           </div>
                         </div>
 
@@ -3399,6 +3807,19 @@ export const PurchaseLedgerPage = () => {
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', fontFamily: 'Calibri, "Segoe UI", Arial, sans-serif' }}>
                           <thead>
                             <tr style={{ borderBottom: '1.5px solid #000000', color: '#000000', fontWeight: 800 }}>
+                              <th style={{ textAlign: 'center', padding: '8px 4px', width: '45px' }} className="no-print">
+                                <input 
+                                  type="checkbox" 
+                                  checked={allConsolidatedSelected}
+                                  ref={input => { if (input) input.indeterminate = isConsolidatedIndeterminate; }}
+                                  onChange={() => {
+                                    if (allConsolidatedSelected) handleDeselectAllPrintParties();
+                                    else handleSelectAllPrintParties();
+                                  }}
+                                  title="Toggle All Parties for Print"
+                                  style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#9333ea' }}
+                                />
+                              </th>
                               <th style={{ textAlign: 'center', padding: '8px 4px', width: '50px' }}>Sl. No.</th>
                               <th style={{ textAlign: 'left', padding: '8px 6px' }}>Name of Dealer / Supplier</th>
                               <th style={{ textAlign: 'right', padding: '8px 6px' }}>Opening Balance</th>
@@ -3408,63 +3829,91 @@ export const PurchaseLedgerPage = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {consolidatedSuppliers.map((sup, idx) => (
-                              <tr key={idx} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                                <td style={{ textAlign: 'center', padding: '6px 4px', fontWeight: 700 }}>{idx + 1}</td>
-                                <td style={{ padding: '6px 6px', fontWeight: 700, color: '#111827' }}>{sup.dealerName}</td>
-                                <td style={{ textAlign: 'right', padding: '6px 6px', color: sup.openingBalance > 0 ? '#16a34a' : '#9ca3af' }}>
-                                  {sup.openingBalance !== 0 ? sup.openingBalance.toFixed(2) : '-'}
-                                </td>
-                                <td style={{ textAlign: 'right', padding: '6px 6px', fontWeight: 700 }}>
-                                  {sup.totalAmount > 0 ? sup.totalAmount.toFixed(2) : '-'}
-                                </td>
-                                <td style={{ textAlign: 'right', padding: '6px 6px', color: sup.paidAmount > 0 ? '#1e40af' : '#9ca3af', fontWeight: sup.paidAmount > 0 ? 700 : 400 }}>
-                                  {sup.paidAmount > 0 ? sup.paidAmount.toFixed(2) : '-'}
-                                </td>
-                                <td style={{ 
-                                  textAlign: 'right', 
-                                  padding: '6px 6px', 
-                                  fontWeight: 800, 
-                                  color: sup.netBalance > 0 ? '#dc2626' : (sup.netBalance < 0 ? '#1e40af' : '#16a34a') 
-                                }}>
-                                  {sup.netBalance > 0 ? (
-                                    sup.netBalance.toFixed(2)
-                                  ) : sup.netBalance < 0 ? (
-                                    <span>
-                                      -{Math.abs(sup.netBalance).toFixed(2)}{' '}
-                                      <small style={{ fontSize: '0.7rem', fontWeight: 800, color: '#1e40af', background: '#dbeafe', padding: '1px 3px', borderRadius: '3px' }}>
-                                        Extra
-                                      </small>
-                                    </span>
-                                  ) : (
-                                    '0.00'
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
+                            {consolidatedSuppliers.map((sup, idx) => {
+                              const isChecked = isPartySelected(sup.dealerName.toUpperCase());
+                              return (
+                                <tr 
+                                  key={sup.dealerName} 
+                                  className={isChecked ? '' : 'no-print'}
+                                  style={{ 
+                                    borderBottom: '1px solid #f3f4f6',
+                                    opacity: isChecked ? 1 : 0.45,
+                                    background: isChecked ? 'transparent' : '#f8fafc'
+                                  }}
+                                >
+                                  <td style={{ textAlign: 'center', padding: '6px 4px' }} className="no-print">
+                                    <input 
+                                      type="checkbox" 
+                                      checked={isChecked} 
+                                      onChange={() => togglePrintParty(sup.dealerName.toUpperCase())}
+                                      style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: '#9333ea' }}
+                                    />
+                                  </td>
+                                  <td style={{ textAlign: 'center', padding: '6px 4px', fontWeight: 700 }}>{idx + 1}</td>
+                                  <td style={{ padding: '6px 6px', fontWeight: 700, color: '#111827' }}>
+                                    {sup.dealerName}
+                                    {!isChecked && (
+                                      <span style={{ marginLeft: '6px', fontSize: '0.72rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                                        (Excluded from Print)
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td style={{ textAlign: 'right', padding: '6px 6px', color: sup.openingBalance > 0 ? '#16a34a' : '#9ca3af' }}>
+                                    {sup.openingBalance !== 0 ? sup.openingBalance.toFixed(2) : '-'}
+                                  </td>
+                                  <td style={{ textAlign: 'right', padding: '6px 6px', fontWeight: 700 }}>
+                                    {sup.totalAmount > 0 ? sup.totalAmount.toFixed(2) : '-'}
+                                  </td>
+                                  <td style={{ textAlign: 'right', padding: '6px 6px', color: sup.paidAmount > 0 ? '#1e40af' : '#9ca3af', fontWeight: sup.paidAmount > 0 ? 700 : 400 }}>
+                                    {sup.paidAmount > 0 ? sup.paidAmount.toFixed(2) : '-'}
+                                  </td>
+                                  <td style={{ 
+                                    textAlign: 'right', 
+                                    padding: '6px 6px', 
+                                    fontWeight: 800, 
+                                    color: sup.netBalance > 0 ? '#dc2626' : (sup.netBalance < 0 ? '#1e40af' : '#16a34a') 
+                                  }}>
+                                    {sup.netBalance > 0 ? (
+                                      sup.netBalance.toFixed(2)
+                                    ) : sup.netBalance < 0 ? (
+                                      <span>
+                                        -{Math.abs(sup.netBalance).toFixed(2)}{' '}
+                                        <small style={{ fontSize: '0.7rem', fontWeight: 800, color: '#1e40af', background: '#dbeafe', padding: '1px 3px', borderRadius: '3px' }}>
+                                          Extra
+                                        </small>
+                                      </span>
+                                    ) : (
+                                      '0.00'
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
 
                             {/* Grand Totals & Extra / Advance Breakdown Summary */}
                             {exportIncludeTotals && (
                               <>
                                 <tr style={{ borderTop: '2px solid #000000', borderBottom: '1px solid #000000', fontWeight: 900, fontSize: '0.925rem' }}>
+                                  <td className="no-print" style={{ padding: '8px 4px' }}></td>
                                   <td colSpan={2} style={{ padding: '8px 6px', fontWeight: 900, textTransform: 'uppercase' }}>
-                                    GRAND TOTAL :
+                                    GRAND TOTAL ({printedSuppliers.length} Parties) :
                                   </td>
-                                  <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalOpeningSum.toFixed(2)}</td>
-                                  <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalPurchasesSum.toFixed(2)}</td>
-                                  <td style={{ textAlign: 'right', padding: '8px 6px' }}>{totalPaidSum.toFixed(2)}</td>
-                                  <td style={{ textAlign: 'right', padding: '8px 6px', color: totalPendingDue > 0 ? '#dc2626' : '#16a34a' }}>
-                                    {totalPendingDue.toFixed(2)}
+                                  <td style={{ textAlign: 'right', padding: '8px 6px' }}>{printTotals.opening.toFixed(2)}</td>
+                                  <td style={{ textAlign: 'right', padding: '8px 6px' }}>{printTotals.purchases.toFixed(2)}</td>
+                                  <td style={{ textAlign: 'right', padding: '8px 6px' }}>{printTotals.paid.toFixed(2)}</td>
+                                  <td style={{ textAlign: 'right', padding: '8px 6px', color: printTotals.pending > 0 ? '#dc2626' : '#16a34a' }}>
+                                    {printTotals.pending.toFixed(2)}
                                   </td>
                                 </tr>
 
                                 {/* Extra / Advance Payment Total Row */}
                                 <tr style={{ borderBottom: '1px solid #000000', fontWeight: 800, fontSize: '0.88rem', background: 'rgba(30, 64, 175, 0.04)' }}>
+                                  <td className="no-print" style={{ padding: '6px 4px' }}></td>
                                   <td colSpan={5} style={{ padding: '6px 6px', textAlign: 'right', color: '#1e40af', fontWeight: 800, textTransform: 'uppercase' }}>
                                     EXTRA / ADVANCE AMOUNT PAID :
                                   </td>
                                   <td style={{ textAlign: 'right', padding: '6px 6px', color: '#1e40af', fontWeight: 900 }}>
-                                    {totalExtraAmount > 0 ? `₹${totalExtraAmount.toFixed(2)}` : '0.00'}
+                                    {printTotals.extra > 0 ? `₹${printTotals.extra.toFixed(2)}` : '0.00'}
                                   </td>
                                 </tr>
                               </>
